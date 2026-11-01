@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Original WL_ACT2.C normal-enemy states; WL_STATE.C movement/sight and
+/* Original WL_ACT2.C enemy states; WL_STATE.C movement/sight and
    WL_PLAY.C DoActor. One tic per call. DOS actorat integer sentinels are
    separated into tilemap/staticblock and genuine actor pointers. */
 #include "WL_DEF.h"
@@ -247,6 +247,102 @@ statetype s_ssdie1 = {false,SPR_SS_DIE_1,15,NULL,A_DeathScream,&s_ssdie2};
 statetype s_ssdie2 = {false,SPR_SS_DIE_2,15,NULL,NULL,&s_ssdie3};
 statetype s_ssdie3 = {false,SPR_SS_DIE_3,15,NULL,NULL,&s_ssdie4};
 statetype s_ssdie4 = {false,SPR_SS_DEAD,0,NULL,NULL,&s_ssdie4};
+/* Hans, Gretel and ghost states from id Software WL_ACT2.C.
+   Original source/licensing: WOLFSRC/ and docs/LICENSING.md. */
+extern statetype s_bossstand;
+extern statetype s_bosschase1;
+extern statetype s_bosschase1s;
+extern statetype s_bosschase2;
+extern statetype s_bosschase3;
+extern statetype s_bosschase3s;
+extern statetype s_bosschase4;
+extern statetype s_bossdie1;
+extern statetype s_bossdie2;
+extern statetype s_bossdie3;
+extern statetype s_bossdie4;
+extern statetype s_bossshoot1;
+extern statetype s_bossshoot2;
+extern statetype s_bossshoot3;
+extern statetype s_bossshoot4;
+extern statetype s_bossshoot5;
+extern statetype s_bossshoot6;
+extern statetype s_bossshoot7;
+extern statetype s_bossshoot8;
+extern statetype s_gretelstand;
+extern statetype s_gretelchase1;
+extern statetype s_gretelchase1s;
+extern statetype s_gretelchase2;
+extern statetype s_gretelchase3;
+extern statetype s_gretelchase3s;
+extern statetype s_gretelchase4;
+extern statetype s_greteldie1;
+extern statetype s_greteldie2;
+extern statetype s_greteldie3;
+extern statetype s_greteldie4;
+extern statetype s_gretelshoot1;
+extern statetype s_gretelshoot2;
+extern statetype s_gretelshoot3;
+extern statetype s_gretelshoot4;
+extern statetype s_gretelshoot5;
+extern statetype s_gretelshoot6;
+extern statetype s_gretelshoot7;
+extern statetype s_gretelshoot8;
+extern statetype s_blinkychase1;
+extern statetype s_blinkychase2;
+extern statetype s_clydechase1;
+extern statetype s_clydechase2;
+extern statetype s_pinkychase1;
+extern statetype s_pinkychase2;
+extern statetype s_inkychase1;
+extern statetype s_inkychase2;
+
+statetype s_bossstand	= {false,SPR_BOSS_W1,0,T_Stand,NULL,&s_bossstand};
+statetype s_bosschase1 	= {false,SPR_BOSS_W1,10,T_Chase,NULL,&s_bosschase1s};
+statetype s_bosschase1s	= {false,SPR_BOSS_W1,3,NULL,NULL,&s_bosschase2};
+statetype s_bosschase2 	= {false,SPR_BOSS_W2,8,T_Chase,NULL,&s_bosschase3};
+statetype s_bosschase3 	= {false,SPR_BOSS_W3,10,T_Chase,NULL,&s_bosschase3s};
+statetype s_bosschase3s	= {false,SPR_BOSS_W3,3,NULL,NULL,&s_bosschase4};
+statetype s_bosschase4 	= {false,SPR_BOSS_W4,8,T_Chase,NULL,&s_bosschase1};
+statetype s_bossdie1	= {false,SPR_BOSS_DIE1,15,NULL,A_DeathScream,&s_bossdie2};
+statetype s_bossdie2	= {false,SPR_BOSS_DIE2,15,NULL,NULL,&s_bossdie3};
+statetype s_bossdie3	= {false,SPR_BOSS_DIE3,15,NULL,NULL,&s_bossdie4};
+statetype s_bossdie4	= {false,SPR_BOSS_DEAD,0,NULL,NULL,&s_bossdie4};
+statetype s_bossshoot1 	= {false,SPR_BOSS_SHOOT1,30,NULL,NULL,&s_bossshoot2};
+statetype s_bossshoot2 	= {false,SPR_BOSS_SHOOT2,10,NULL,T_Shoot,&s_bossshoot3};
+statetype s_bossshoot3 	= {false,SPR_BOSS_SHOOT3,10,NULL,T_Shoot,&s_bossshoot4};
+statetype s_bossshoot4 	= {false,SPR_BOSS_SHOOT2,10,NULL,T_Shoot,&s_bossshoot5};
+statetype s_bossshoot5 	= {false,SPR_BOSS_SHOOT3,10,NULL,T_Shoot,&s_bossshoot6};
+statetype s_bossshoot6 	= {false,SPR_BOSS_SHOOT2,10,NULL,T_Shoot,&s_bossshoot7};
+statetype s_bossshoot7 	= {false,SPR_BOSS_SHOOT3,10,NULL,T_Shoot,&s_bossshoot8};
+statetype s_bossshoot8 	= {false,SPR_BOSS_SHOOT1,10,NULL,NULL,&s_bosschase1};
+statetype s_gretelstand	= {false,SPR_GRETEL_W1,0,T_Stand,NULL,&s_gretelstand};
+statetype s_gretelchase1 	= {false,SPR_GRETEL_W1,10,T_Chase,NULL,&s_gretelchase1s};
+statetype s_gretelchase1s	= {false,SPR_GRETEL_W1,3,NULL,NULL,&s_gretelchase2};
+statetype s_gretelchase2 	= {false,SPR_GRETEL_W2,8,T_Chase,NULL,&s_gretelchase3};
+statetype s_gretelchase3 	= {false,SPR_GRETEL_W3,10,T_Chase,NULL,&s_gretelchase3s};
+statetype s_gretelchase3s	= {false,SPR_GRETEL_W3,3,NULL,NULL,&s_gretelchase4};
+statetype s_gretelchase4 	= {false,SPR_GRETEL_W4,8,T_Chase,NULL,&s_gretelchase1};
+statetype s_greteldie1	= {false,SPR_GRETEL_DIE1,15,NULL,A_DeathScream,&s_greteldie2};
+statetype s_greteldie2	= {false,SPR_GRETEL_DIE2,15,NULL,NULL,&s_greteldie3};
+statetype s_greteldie3	= {false,SPR_GRETEL_DIE3,15,NULL,NULL,&s_greteldie4};
+statetype s_greteldie4	= {false,SPR_GRETEL_DEAD,0,NULL,NULL,&s_greteldie4};
+statetype s_gretelshoot1 	= {false,SPR_GRETEL_SHOOT1,30,NULL,NULL,&s_gretelshoot2};
+statetype s_gretelshoot2 	= {false,SPR_GRETEL_SHOOT2,10,NULL,T_Shoot,&s_gretelshoot3};
+statetype s_gretelshoot3 	= {false,SPR_GRETEL_SHOOT3,10,NULL,T_Shoot,&s_gretelshoot4};
+statetype s_gretelshoot4 	= {false,SPR_GRETEL_SHOOT2,10,NULL,T_Shoot,&s_gretelshoot5};
+statetype s_gretelshoot5 	= {false,SPR_GRETEL_SHOOT3,10,NULL,T_Shoot,&s_gretelshoot6};
+statetype s_gretelshoot6 	= {false,SPR_GRETEL_SHOOT2,10,NULL,T_Shoot,&s_gretelshoot7};
+statetype s_gretelshoot7 	= {false,SPR_GRETEL_SHOOT3,10,NULL,T_Shoot,&s_gretelshoot8};
+statetype s_gretelshoot8 	= {false,SPR_GRETEL_SHOOT1,10,NULL,NULL,&s_gretelchase1};
+statetype s_blinkychase1 	= {false,SPR_BLINKY_W1,10,T_Ghosts,NULL,&s_blinkychase2};
+statetype s_blinkychase2 	= {false,SPR_BLINKY_W2,10,T_Ghosts,NULL,&s_blinkychase1};
+statetype s_clydechase1 	= {false,SPR_CLYDE_W1,10,T_Ghosts,NULL,&s_clydechase2};
+statetype s_clydechase2 	= {false,SPR_CLYDE_W2,10,T_Ghosts,NULL,&s_clydechase1};
+statetype s_pinkychase1 	= {false,SPR_PINKY_W1,10,T_Ghosts,NULL,&s_pinkychase2};
+statetype s_pinkychase2 	= {false,SPR_PINKY_W2,10,T_Ghosts,NULL,&s_pinkychase1};
+statetype s_inkychase1 		= {false,SPR_INKY_W1,10,T_Ghosts,NULL,&s_inkychase2};
+statetype s_inkychase2 		= {false,SPR_INKY_W2,10,T_Ghosts,NULL,&s_inkychase1};
+
 dirtype opposite[9] =
 	{west,southwest,south,southeast,east,northeast,north,northwest,nodir};
 dirtype diagonal[9][9] =
@@ -468,6 +564,7 @@ void MoveObj (objtype *ob, int32_t move)
   if (deltay < -MINACTORDIST || deltay > MINACTORDIST)
    goto moveok;
   
+  if (ob->obclass==ghostobj) TakeDamage(2,ob);
   switch (ob->dir)
   {
   case north:
@@ -652,12 +749,12 @@ void FirstSighting (objtype *ob)
  switch (ob->obclass)
  {
  case guardobj:
-
+  GameSound(HALTSND,ob);
   NewState (ob,&s_grdchase1);
   ob->speed *= 3;
   break;
  case officerobj:
-
+  GameSound(SPIONSND,ob);
   NewState (ob,&s_ofcchase1);
   ob->speed *= 5;
   break;
@@ -666,12 +763,20 @@ void FirstSighting (objtype *ob)
   ob->speed *= 3;
   break;
  case ssobj:
-
+  GameSound(SCHUTZADSND,ob);
   NewState (ob,&s_sschase1);
   ob->speed *= 4;
   break;
+ case bossobj:
+  GameSound(GUTENTAGSND,NULL);
+  NewState(ob,&s_bosschase1);ob->speed=SPDPATROL*3;
+  break;
+ case gretelobj:
+  GameSound(KEINSND,NULL);
+  NewState(ob,&s_gretelchase1);ob->speed*=3;
+  break;
  case dogobj:
-
+  GameSound(DOGBARKSND,ob);
   NewState (ob,&s_dogchase1);
   ob->speed *= 2;
   break;
@@ -825,6 +930,14 @@ void KillActor (objtype *ob)
   else
    PlaceItemType (bo_clip2,tilex,tiley);
   break;
+ case bossobj:
+  GivePoints(5000);NewState(ob,&s_bossdie1);
+  PlaceItemType(bo_key1,tilex,tiley);
+  break;
+ case gretelobj:
+  GivePoints(5000);NewState(ob,&s_greteldie1);
+  PlaceItemType(bo_key1,tilex,tiley);
+  break;
  case dogobj:
   GivePoints (200);
   NewState (ob,&s_dogdie1);
@@ -874,6 +987,12 @@ void T_Chase (objtype *ob)
    case mutantobj:
     NewState (ob,&s_mutshoot1);
     break;
+   case bossobj:
+    NewState(ob,&s_bossshoot1);
+    break;
+   case gretelobj:
+    NewState(ob,&s_gretelshoot1);
+    break;
    case ssobj:
     NewState (ob,&s_ssshoot1);
     break;
@@ -916,6 +1035,33 @@ void T_Chase (objtype *ob)
   if (ob->dir == nodir)
    return;
  }
+}
+
+/* WL_ACT2.C T_Ghosts. Ghosts are not shootable, but still reserve tiles
+   and use the original chase direction selection and contact damage. */
+void T_Ghosts(objtype *ob)
+{
+    if (ob->dir==nodir) {
+        SelectChaseDir(ob);
+        if (ob->dir==nodir) return;
+    }
+    int32_t move=ob->speed;
+    while (move) {
+        /* Bound the original negative-distance door case; do not snap through
+           a closed door or use a negative movement budget. */
+        if (ob->distance<0) {
+            unsigned door=(unsigned)(-ob->distance-1);
+            OpenDoor(door);
+            if (doorobjlist[door].action!=dr_open) return;
+            ob->distance=TILEGLOBAL;
+        }
+        if (move<ob->distance) { MoveObj(ob,move);break; }
+        ob->x=ob->tilex*TILEGLOBAL+TILEGLOBAL/2;
+        ob->y=ob->tiley*TILEGLOBAL+TILEGLOBAL/2;
+        move-=ob->distance;
+        SelectChaseDir(ob);
+        if (ob->dir==nodir) return;
+    }
 }
 
 /* WL_ACT2.C T_DogChase */
@@ -1053,11 +1199,13 @@ void T_Shoot (objtype *ob)
    damage = US_RndT()>>4;
   TakeDamage (damage,ob);
  }
+ GameSound(ob->obclass==ssobj ? SSFIRESND : ob->obclass==bossobj ? BOSSFIRESND : NAZIFIRESND,ob);
 }
 
 /* WL_ACT2.C T_Bite */
 void T_Bite (objtype *ob)
 {
+ GameSound(DOGATTACKSND,ob);
  int32_t dx,dy;
  
 
@@ -1154,10 +1302,10 @@ think:
  actorat[ob->tilex][ob->tiley] = ob;
 }
 
-/* Validate every reachable normal-enemy animation before entering play. */
+/* Validate all implemented enemy animations before entering play. */
 bool ValidateActorSprites(void)
 {
-    static const statetype *const states[]={&s_grdstand,&s_grdpath1,&s_grdpath1s,&s_grdpath2,&s_grdpath3,&s_grdpath3s,&s_grdpath4,&s_grdpain,&s_grdpain1,&s_grdshoot1,&s_grdshoot2,&s_grdshoot3,&s_grdchase1,&s_grdchase1s,&s_grdchase2,&s_grdchase3,&s_grdchase3s,&s_grdchase4,&s_grddie1,&s_grddie2,&s_grddie3,&s_grddie4,&s_dogpath1,&s_dogpath1s,&s_dogpath2,&s_dogpath3,&s_dogpath3s,&s_dogpath4,&s_dogjump1,&s_dogjump2,&s_dogjump3,&s_dogjump4,&s_dogjump5,&s_dogchase1,&s_dogchase1s,&s_dogchase2,&s_dogchase3,&s_dogchase3s,&s_dogchase4,&s_dogdie1,&s_dogdie2,&s_dogdie3,&s_dogdead,&s_ofcstand,&s_ofcpath1,&s_ofcpath1s,&s_ofcpath2,&s_ofcpath3,&s_ofcpath3s,&s_ofcpath4,&s_ofcpain,&s_ofcpain1,&s_ofcshoot1,&s_ofcshoot2,&s_ofcshoot3,&s_ofcchase1,&s_ofcchase1s,&s_ofcchase2,&s_ofcchase3,&s_ofcchase3s,&s_ofcchase4,&s_ofcdie1,&s_ofcdie2,&s_ofcdie3,&s_ofcdie4,&s_ofcdie5,&s_mutstand,&s_mutpath1,&s_mutpath1s,&s_mutpath2,&s_mutpath3,&s_mutpath3s,&s_mutpath4,&s_mutpain,&s_mutpain1,&s_mutshoot1,&s_mutshoot2,&s_mutshoot3,&s_mutshoot4,&s_mutchase1,&s_mutchase1s,&s_mutchase2,&s_mutchase3,&s_mutchase3s,&s_mutchase4,&s_mutdie1,&s_mutdie2,&s_mutdie3,&s_mutdie4,&s_mutdie5,&s_ssstand,&s_sspath1,&s_sspath1s,&s_sspath2,&s_sspath3,&s_sspath3s,&s_sspath4,&s_sspain,&s_sspain1,&s_ssshoot1,&s_ssshoot2,&s_ssshoot3,&s_ssshoot4,&s_ssshoot5,&s_ssshoot6,&s_ssshoot7,&s_ssshoot8,&s_ssshoot9,&s_sschase1,&s_sschase1s,&s_sschase2,&s_sschase3,&s_sschase3s,&s_sschase4,&s_ssdie1,&s_ssdie2,&s_ssdie3,&s_ssdie4};
+    static const statetype *const states[]={&s_grdstand,&s_grdpath1,&s_grdpath1s,&s_grdpath2,&s_grdpath3,&s_grdpath3s,&s_grdpath4,&s_grdpain,&s_grdpain1,&s_grdshoot1,&s_grdshoot2,&s_grdshoot3,&s_grdchase1,&s_grdchase1s,&s_grdchase2,&s_grdchase3,&s_grdchase3s,&s_grdchase4,&s_grddie1,&s_grddie2,&s_grddie3,&s_grddie4,&s_dogpath1,&s_dogpath1s,&s_dogpath2,&s_dogpath3,&s_dogpath3s,&s_dogpath4,&s_dogjump1,&s_dogjump2,&s_dogjump3,&s_dogjump4,&s_dogjump5,&s_dogchase1,&s_dogchase1s,&s_dogchase2,&s_dogchase3,&s_dogchase3s,&s_dogchase4,&s_dogdie1,&s_dogdie2,&s_dogdie3,&s_dogdead,&s_ofcstand,&s_ofcpath1,&s_ofcpath1s,&s_ofcpath2,&s_ofcpath3,&s_ofcpath3s,&s_ofcpath4,&s_ofcpain,&s_ofcpain1,&s_ofcshoot1,&s_ofcshoot2,&s_ofcshoot3,&s_ofcchase1,&s_ofcchase1s,&s_ofcchase2,&s_ofcchase3,&s_ofcchase3s,&s_ofcchase4,&s_ofcdie1,&s_ofcdie2,&s_ofcdie3,&s_ofcdie4,&s_ofcdie5,&s_mutstand,&s_mutpath1,&s_mutpath1s,&s_mutpath2,&s_mutpath3,&s_mutpath3s,&s_mutpath4,&s_mutpain,&s_mutpain1,&s_mutshoot1,&s_mutshoot2,&s_mutshoot3,&s_mutshoot4,&s_mutchase1,&s_mutchase1s,&s_mutchase2,&s_mutchase3,&s_mutchase3s,&s_mutchase4,&s_mutdie1,&s_mutdie2,&s_mutdie3,&s_mutdie4,&s_mutdie5,&s_ssstand,&s_sspath1,&s_sspath1s,&s_sspath2,&s_sspath3,&s_sspath3s,&s_sspath4,&s_sspain,&s_sspain1,&s_ssshoot1,&s_ssshoot2,&s_ssshoot3,&s_ssshoot4,&s_ssshoot5,&s_ssshoot6,&s_ssshoot7,&s_ssshoot8,&s_ssshoot9,&s_sschase1,&s_sschase1s,&s_sschase2,&s_sschase3,&s_sschase3s,&s_sschase4,&s_ssdie1,&s_ssdie2,&s_ssdie3,&s_ssdie4,&s_bossstand,&s_bosschase1,&s_bosschase1s,&s_bosschase2,&s_bosschase3,&s_bosschase3s,&s_bosschase4,&s_bossdie1,&s_bossdie2,&s_bossdie3,&s_bossdie4,&s_bossshoot1,&s_bossshoot2,&s_bossshoot3,&s_bossshoot4,&s_bossshoot5,&s_bossshoot6,&s_bossshoot7,&s_bossshoot8,&s_gretelstand,&s_gretelchase1,&s_gretelchase1s,&s_gretelchase2,&s_gretelchase3,&s_gretelchase3s,&s_gretelchase4,&s_greteldie1,&s_greteldie2,&s_greteldie3,&s_greteldie4,&s_gretelshoot1,&s_gretelshoot2,&s_gretelshoot3,&s_gretelshoot4,&s_gretelshoot5,&s_gretelshoot6,&s_gretelshoot7,&s_gretelshoot8,&s_blinkychase1,&s_blinkychase2,&s_clydechase1,&s_clydechase2,&s_pinkychase1,&s_pinkychase2,&s_inkychase1,&s_inkychase2};
     w3r_byte pixels[4096],mask[4096];
     for (unsigned i=0;i<sizeof(states)/sizeof(states[0]);++i) {
         const statetype *state=states[i];

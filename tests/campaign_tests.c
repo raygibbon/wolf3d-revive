@@ -52,6 +52,10 @@ static void TestStats(void)
         CHECK(NextMap(ep,9,ex_completed)==ep*10+back[ep]);
     }
     CHECK(NextMap(6,0,ex_completed)==60);
+    for (unsigned ep=0;ep<6;++ep) {
+        CHECK(NextMap(ep,8,ex_completed)==60 && NextMap(ep,8,ex_secretlevel)==60);
+        CHECK(NextMap(ep,0,ex_playing)==60 && NextMap(ep,10,ex_completed)==60);
+    }
     GameStop();
 }
 static void TestProgression(void)
@@ -121,13 +125,23 @@ static void TestOwned(void)
     for (unsigned diff=0;diff<4;++diff) for (unsigned ep=0;ep<6;++ep) for (unsigned map=0;map<10;++map) {
         CHECK(NewGame(diff,ep));gamestate.mapon=(int)map;
         if (!SetupGameLevel()) {
-            CHECK(strstr(CA_Error(),"Unported boss/ghost/victory")!=NULL);
+            CHECK(map==8 && strstr(CA_Error(),"Unported boss/ghost/victory")!=NULL);
             ++unsupported;
-        } else { CHECK(CA_Map()->number==ep*10+map);CHECK(ThreeDRefresh() && DrawStatus());++supported; }
+            if (!diff) printf("Unsupported E%uM%u: %s\n",ep+1,map+1,CA_Error());
+        } else {
+            CHECK(CA_Map()->number==ep*10+map);CHECK(ThreeDRefresh() && DrawStatus());++supported;
+            if ((ep==1 && map==7) || (ep==2 && map==9) || (ep==5 && map==9)) {
+                for (unsigned tic=0;tic<140;++tic) {
+                    ConnectAreas();
+                    for (unsigned i=0;i<objcount;++i) DoActor(&objlist[i]);
+                    if (tic%10==0) CHECK(ThreeDRefresh());
+                }
+            }
+        }
         ShutdownGameLevel();
     }
-    printf("Owned WL6: %u normal maps validated; %u maps explicitly require unported encounters.\n",supported,unsupported);
-    CHECK(supported==51*4 && unsupported==9*4);
+    printf("Owned WL6: %u map/difficulty combinations validated; %u maps explicitly require unported encounters.\n",supported,unsupported);
+    CHECK(supported==54*4 && unsupported==6*4);
 }
 int main(int argc,char **argv)
 {

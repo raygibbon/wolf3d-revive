@@ -24,7 +24,10 @@ bool NewGame(unsigned difficulty,unsigned episode)
 unsigned NextMap(unsigned episode,unsigned map,exit_t exit)
 {
     static const unsigned back[]={1,1,7,3,5,3}; /* WL_GAME.C ElevatorBackTo */
-    if (episode>5 || map>9) return 60;
+    /* Floor nine ends an episode; it must never advance to the secret floor.
+       Return an invalid-map sentinel until the original victory flow is ported. */
+    if (episode>5 || map>9 || map==8 ||
+        (exit!=ex_completed && exit!=ex_secretlevel)) return 60;
     return episode*10+(map==9 ? back[episode] : exit==ex_secretlevel ? 9 : map+1);
 }
 void ShutdownGameLevel(void) { CA_UncacheMap(); PM_Shutdown(); doornum=0; InitObjects();ResetPushwalls(); }

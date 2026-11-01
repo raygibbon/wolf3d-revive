@@ -5,11 +5,14 @@ This working tree preserves the original id Software source and history while
 preparing a faithful C11 / CART / SDL3 source port for Linux and Windows.
 Milestone 5 adds original enemies, combat, pickups and the HUD. The first
 Milestone 6 pass adds episode/difficulty selection, normal-level progression,
-secret pushwalls, elevator exits and intermission scoring. Boss/ghost/victory
-encounters, audio, saving/loading and configuration remain outstanding; this
-is not yet a complete original-game port.
+secret pushwalls, elevator exits and intermission scoring. Milestone 6A's first
+pass adds Hans, Gretel and four ghosts: 54 of 60 original maps now load at all
+four difficulties. Projectile bosses and all six episode finales remain
+unimplemented, along with audio, saving/loading and configuration. This is
+not yet a complete original-game port.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 6A actor progress and remaining campaign work <docs/MILESTONE6A.md>`_
 * `Milestone 6 progress and remaining work <docs/MILESTONE6.md>`_
 * `Milestone 5 combat slice <docs/MILESTONE5.md>`_
 * `Milestone 4 results and controls <docs/MILESTONE4.md>`_

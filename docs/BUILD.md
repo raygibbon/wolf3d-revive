@@ -2,9 +2,10 @@
 
 CART builds original menus and normal-level gameplay: sprites, enemies,
 weapons, pickups, HUD, life restarts, episode/difficulty selection, pushwalls,
-elevator exits, intermissions and progression. Boss/ghost/victory encounters,
-audio and save/load remain unported. See [milestone 6](MILESTONE6.md) for the
-precise scope and the nine maps that are explicitly rejected.
+elevator exits, intermissions and progression. Hans, Gretel and four ghosts
+are implemented; 54 maps load at all four difficulties. Projectile bosses,
+all six finale sequences, audio and save/load remain unported. See
+[milestone 6A](MILESTONE6A.md) for the precise verified scope.
 
 ## Local Linux build
 
@@ -101,7 +102,7 @@ movement, sprites, RNG, enemy AI, combat, pickups, HUD, death, campaign,
 intermission and pushwall tests with GCC C11 and strict warnings as errors. SDL readback
 and event-to-menu/game tests use the static SDK at `../cart/vendor/SDL` (override with `SDL_SDK`). The SDL tests use the dummy
 video/software renderer, requiring no desktop. Without that static SDK, those
-four tests report skips. Synthetic archives are generated in temporary
+five tests report skips. Synthetic archives are generated in temporary
 directories and removed; no asset fixtures come from commercial files.
 
 For an independent pixel-by-pixel oracle comparison using your owned files:

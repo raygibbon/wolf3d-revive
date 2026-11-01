@@ -2,6 +2,7 @@
 #ifndef WL_ACTOR_H
 #define WL_ACTOR_H
 #include "WL_SPRITES.h"
+#include "WL_SOUND.h"
 #define MAXACTORS 150
 #define MAXSTATS 400
 #define FL_SHOOTABLE 1U
@@ -67,9 +68,14 @@ void T_Stand(objtype *ob);
 void T_Path(objtype *ob);
 void T_Chase(objtype *ob);
 void T_DogChase(objtype *ob);
+void T_Ghosts(objtype *ob);
 void T_Shoot(objtype *ob);
 void T_Bite(objtype *ob);
 void A_DeathScream(objtype *ob);
+/* Optional synchronous sound sink. NULL actor means a non-positional sound.
+   The sink must not mutate simulation or retain the actor pointer. */
+void SetGameSoundHook(void (*hook)(soundnames,const objtype *));
+void GameSound(soundnames sound,const objtype *actor);
 void PlaceItemType(stat_t item,int x,int y);
 void GetBonus(statobj_t *obj);
 void GivePoints(int points);

@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_GAME.C ScanInfoPlane; WL_ACT1.C SpawnStatic/PlaceItemType;
    WL_STATE.C SpawnNewObj/TryWalk, using bounded arrays instead of DOS tags.
-   Normal enemies use the original difficulty bands and hit-point tables. */
+   Normal enemies use the original difficulty bands and hit-point tables;
+   Hans, Gretel and ghosts retain their specialised original spawn rules. */
 #include "WL_DEF.h"
 #include "ID_CA.h"
 #include "ID_US_1.h"
@@ -14,6 +15,10 @@ bool staticblock[64][64],spotvis[64][64],areabyplayer[37],madenoise;
 int areaMap[64][64],thrustspeed;
 gametype gamestate={.health=100,.ammo=8,.lives=3,.nextextra=40000,.weapon=wp_pistol,.bestweapon=wp_pistol,.chosenweapon=wp_pistol,.difficulty=2};
 extern statetype s_grdstand,s_grdpath1,s_grddie4,s_ofcstand,s_ofcpath1,s_ssstand,s_sspath1,s_mutstand,s_mutpath1,s_dogpath1;
+extern statetype s_bossstand,s_gretelstand,s_blinkychase1,s_clydechase1,s_pinkychase1,s_inkychase1;
+static void (*soundhook)(soundnames,const objtype *);
+void SetGameSoundHook(void (*hook)(soundnames,const objtype *)) { soundhook=hook; }
+void GameSound(soundnames sound,const objtype *actor) { if (soundhook) soundhook(sound,actor); }
 void InitObjects(void)
 {
     objcount=statcount=0;player.next=NULL;madenoise=false;
@@ -172,6 +177,23 @@ static bool SpawnNewObj(int x,int y,statetype *state,int kind,int direction,bool
        Both actors remain in the object list; the last mark owns actorat. */
     actorat[ob->tilex][ob->tiley]=ob;return true;
 }
+/* WL_ACT2.C SpawnBoss, SpawnGretel, SpawnGhosts. Ghosts intentionally
+   have no FL_SHOOTABLE or health assignment, despite the unused HP table. */
+static bool SpawnSpecial(int x,int y,unsigned tile)
+{
+    static const int health[4]={850,950,1050,1200};
+    static statetype *const ghosts[]={&s_blinkychase1,&s_clydechase1,&s_pinkychase1,&s_inkychase1};
+    bool ghost=tile>=224;
+    statetype *state=ghost ? ghosts[tile-224] : tile==214 ? &s_bossstand : &s_gretelstand;
+    int kind=ghost ? ghostobj : tile==214 ? bossobj : gretelobj;
+    if (!SpawnNewObj(x,y,state,kind,0,false,false)) return false;
+    objtype *ob=&objlist[objcount-1];
+    ob->flags=FL_AMBUSH|(ghost ? 0U : FL_SHOOTABLE);
+    ob->dir=ghost ? east : tile==214 ? south : north;
+    ob->speed=ghost ? SPDDOG : SPDPATROL;
+    ob->hitpoints=ghost ? 0 : health[gamestate.difficulty];
+    return true;
+}
 bool ScanInfoPlane(void)
 {
     const maptype *map=CA_Map();
@@ -199,9 +221,12 @@ bool ScanInfoPlane(void)
             if (!tilemap[x][y] || tilemap[x][y]>=64) return CA_Fail("Invalid pushwall marker");
             pushable[x][y]=true;++gamestate.secrettotal;continue;
         }
+        if (tile==214 || tile==197 || (tile>=224 && tile<=227)) {
+            if (!SpawnSpecial(x,y,tile)) return false;
+            continue;
+        }
         /* Do not silently erase encounters whose original actors are unported. */
-        if (tile==214 || tile==197 || tile==215 || tile==179 || tile==196 ||
-            tile==160 || tile==178 || (tile>=224 && tile<=227) || tile==99)
+        if (tile==215 || tile==179 || tile==196 || tile==160 || tile==178 || tile==99)
             return CA_Fail("Unported boss/ghost/victory actor %u in E%dM%d",tile,gamestate.episode+1,gamestate.mapon+1);
         /* WL_GAME.C ScanInfoPlane: two 36-code normal-enemy bands;
            mutants have their own two 18-code bands. Exclude boss codes. */
@@ -221,8 +246,28 @@ bool ScanInfoPlane(void)
     }
     ConnectAreas();return true;
 }
+/* WL_ACT2.C A_DeathScream, registered (non-UPLOAD), non-SPEAR version.
+   The easter-egg draw uses ID_CA's absolute mapon, not episode-local mapon. */
 void A_DeathScream(objtype *ob)
 {
-    /* No audio yet. Guard sound selection still consumes the original RNG. */
-    if (ob->obclass==guardobj) (void)US_RndT();
+    if (gamestate.episode*10+gamestate.mapon==9 && !US_RndT()) {
+        switch (ob->obclass) {
+        case mutantobj:case guardobj:case officerobj:case ssobj:case dogobj:
+            GameSound(DEATHSCREAM6SND,ob);return;
+        }
+    }
+    switch (ob->obclass) {
+    case guardobj: {
+        static const soundnames sounds[]={DEATHSCREAM1SND,DEATHSCREAM2SND,
+            DEATHSCREAM3SND,DEATHSCREAM4SND,DEATHSCREAM5SND,DEATHSCREAM7SND,
+            DEATHSCREAM8SND,DEATHSCREAM9SND};
+        GameSound(sounds[US_RndT()%8],ob);break;
+    }
+    case mutantobj:GameSound(AHHHGSND,ob);break;
+    case officerobj:GameSound(NEINSOVASSND,ob);break;
+    case ssobj:GameSound(LEBENSND,ob);break;
+    case dogobj:GameSound(DOGDEATHSND,ob);break;
+    case bossobj:GameSound(MUTTISND,NULL);break;
+    case gretelobj:GameSound(MEINSND,NULL);break;
+    }
 }

@@ -148,3 +148,11 @@ def campaign_files(directory):
     for n in range(60): struct.pack_into('<I',head,2+4*n,8)
     (directory/'MAPHEAD.WL6').write_bytes(head)
     vswap_file(directory,64)
+
+
+def boss_files(directory):
+    game_files(directory)
+    def setup(p):
+        for x,code in ((20,214),(24,197),(30,224),(34,225),(38,226),(42,227)):
+            p[1][10*64+x]=code
+    map_files(directory,setup)
