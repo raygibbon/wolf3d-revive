@@ -1,14 +1,16 @@
 # Milestone 6 — first implementation pass: normal-level progression
 
-## Current status after the first Milestone 6A pass
+## Current status after Milestone 6A Part 2
 
-Hans, Gretel and the four ghosts are implemented. Owned-data validation now
-loads/renders **54 of 60 maps at all four difficulties (216/240 combinations)**.
-E2M8, E3M10 and E6M10 are newly supported; all six episode finales still fail
-explicitly. Projectile bosses, BJ victory sequences and episode endings
-remain unported. See [MILESTONE6A.md](MILESTONE6A.md) for source references,
-tests, differences and limitations. The remainder of this document records
-the earlier Milestone 6 pass and its original 51-map baseline.
+All original bosses, required projectiles and all six episode completion
+paths are implemented. Owned-data validation now loads/renders/simulates
+**all 60 maps at all four difficulties (240/240 combinations)**. Controlled
+SDL weapon fights exercise every finale, Mecha Hitler's transformation,
+cinematics, original statistics/articles and return through scores to menu.
+See [MILESTONE6A.md](MILESTONE6A.md) for source references, test results,
+differences and limitations. Full navigated playthroughs, audio and saves
+remain outstanding. The remainder records the earlier Milestone 6 pass and
+its original 51-map baseline, not the current actor/finale support.
 
 2026-11-02. This is an incremental, working gameplay/progression slice, **not
 completion of Milestone 6 or of the original game**. Audio, saving/loading,

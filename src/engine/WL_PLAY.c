@@ -9,12 +9,14 @@
 #include <math.h>
 static uint64_t lasttimecount;
 static bool running,finished,intermission;
+static unsigned victorypage;
+bool GameVictoryPresentation(void) { return victorypage!=0; }
 bool GameIntermission(void) { return intermission; }
 static unsigned deathphase,deathwait;
 static int deathangle;
 static uint32_t fizzlernd;
 bool GameFinished(void) { return finished; }
-static bool DrawPlayScreen(void)
+void DrawPlayBorder(void)
 {
     VWB_Bar(0,0,320,160,127);
     VWB_Bar(VIEWX,VIEWY,VIEWWIDTH,VIEWHEIGHT,0);
@@ -23,7 +25,10 @@ static bool DrawPlayScreen(void)
     VWB_Vlin(VIEWY-1,VIEWY+VIEWHEIGHT,VIEWX-1,0);
     VWB_Vlin(VIEWY-1,VIEWY+VIEWHEIGHT,VIEWX+VIEWWIDTH,125);
     framebuffer[(VIEWY+VIEWHEIGHT)*320+VIEWX-1]=124;
-    return VWB_DrawPic(0,160,STATUSBARPIC) && DrawStatus();
+}
+static bool DrawPlayScreen(void)
+{
+    DrawPlayBorder();return VWB_DrawPic(0,160,STATUSBARPIC) && DrawStatus();
 }
 bool GameProbe(void)
 {
@@ -40,7 +45,7 @@ bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty)
     deathphase=deathwait=0;finished=intermission=false;
     lasttimecount=ticks;running=true; IN_ClearKeysDown(); return true;
 }
-void GameStop(void) { FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
+void GameStop(void) { victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 static bool Down(unsigned scan) { return Keyboard[scan] || IN_PressPending(scan); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and
@@ -97,21 +102,39 @@ bool GameStep(uint64_t ticks)
     if (intermission) {
         if (!IN_AnyPressed()) return true;
         unsigned next=NextMap((unsigned)gamestate.episode,(unsigned)gamestate.mapon,playstate);
-        if (next>=60 || next/10!=(unsigned)gamestate.episode) return CA_Fail("Episode finale not ported");
+        if (next>=60 || next/10!=(unsigned)gamestate.episode) return CA_Fail("Invalid campaign progression");
         gamestate.oldscore=gamestate.score;gamestate.mapon=(int)(next%10);
         ShutdownGameLevel();
         if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) return false;
         intermission=false;IN_ClearKeysDown();return true;
     }
+    if (victorypage) {
+        if (victorypage==1) {
+            if (IN_AnyPressed()) {
+                IN_ClearKeysDown();if (!StartEndText()) return false;victorypage=2;
+            }
+        } else {
+            bool done=false;if (!StepEndText(&done)) return false;
+            if (done) { finished=true;ResetEndText(); }
+        }
+        return true;
+    }
     for (uint64_t tic=0;tic<elapsed;++tic) {
         if (finished) break;
         if (gamestate.died) { if (!Died(ticks-elapsed+tic+1)) return false;continue; }
+        if (DeathCameraActive()) { if (!StepDeathCamera()) return false;continue; }
         if (gamestate.TimeCount<UINT32_MAX) ++gamestate.TimeCount;
-        UpdateFace();
+        /* Original T_Player returns before face/input in BJ victory; T_Attack
+           still updates the face, while s_deathcam has no player thinker. */
+        if (!gamestate.victoryflag || (gamestate.attackframe && player.state!=&s_deathcam)) UpdateFace();
         thrustspeed=0;
         MoveDoors();MovePWalls();
-        if (IN_ConsumePress(sc_Space)) Cmd_Use();
+        if (IN_ConsumePress(sc_Space) && !gamestate.victoryflag) Cmd_Use();
+        if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
+            FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
+        }
         if (playstate!=ex_playing) {
+            if (gamestate.mapon==8) return CA_Fail("Invalid secret exit on episode finale");
             gamestate.keys=0;FinishPaletteShifts();
             levelratio_t stats=LevelStats();
             if (gamestate.mapon<8) LevelRatios[gamestate.mapon]=stats;
@@ -121,13 +144,22 @@ bool GameStep(uint64_t ticks)
         int move=(Down(0x2a) || Down(0x36)) ? 70 : 35;
         int cx=(Down(sc_RightArrow) ? move : 0)-(Down(sc_LeftArrow) ? move : 0);
         int cy=(Down(sc_DownArrow) ? move : 0)-(Down(sc_UpArrow) ? move : 0);
-        ControlMovement(cx,cy,Down(0x38));
+        if (gamestate.victoryflag) {
+            if (player.state==&s_deathcam) ++player.temp1;
+            else VictorySpin();
+        }
+        else ControlMovement(cx,cy,Down(0x38));
         ConnectAreas();
-        T_Attack(Down(0x1d));
-        for (unsigned i=0;i<objcount;++i) DoActor(&objlist[i]);
+        if (!gamestate.victoryflag) T_Attack(Down(0x1d));
+        for (objtype *ob=player.next;ob;ob=ob->next) {
+            DoActor(ob);if (DeathCameraActive()) break;
+        }
+        if (ActorAllocationFailed()) return false;
         madenoise=false;
         IN_ClearPressed();
-        if (!UpdatePaletteShifts() || !ThreeDRefresh() || !DrawStatus()) return false;
+        /* A_StartDeathCam's original blocking hold begins before the outer
+           palette update. Keep that ordering while its wait is resumed. */
+        if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh() || !DrawStatus()) return false;
     }
     return true;
 }

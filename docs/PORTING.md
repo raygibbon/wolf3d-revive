@@ -11,8 +11,12 @@ normal-enemy state machines, combat, pickups, HUD and death/life restarts;
 see [milestone 5 results](MILESTONE5.md). The first Milestone 6 pass adds
 normal-level progression, episode/difficulty selection, secret pushwalls and
 intermission scoring; see [current scope and remaining work](MILESTONE6.md).
-Remaining items
-below are the incremental engine plan, not claims of completed gameplay.
+Milestone 6A now implements remaining bosses/projectiles, BJ/death-camera
+victories and original episode statistics/end articles. All 240 owned-map
+combinations and controlled SDL finale fights are covered; see
+[Milestone 6A](MILESTONE6A.md) for verification and playthrough limits.
+Remaining items below are the incremental engine plan, not claims of
+completed gameplay.
 
 ## Source-file inventory
 

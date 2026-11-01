@@ -30,6 +30,7 @@ static void TestSpawn(void)
     CHECK(gamestate.weapon==wp_pistol && gamestate.treasuretotal==3);
     objtype *guard=Guard();CHECK(guard && guard->tilex==5 && guard->tiley==2 && guard->dir==west && guard->hitpoints==25 && guard->state==&s_grdstand);
     CHECK(objlist[1].obclass==dogobj && objlist[1].tilex==8 && objlist[1].tiley==5 && objlist[1].x==9*65536+32768);
+    CHECK(!actorat[9][5] && actorat[8][5]==&objlist[1]);
     CHECK(staticblock[3][4] && !staticblock[3][5]);
     objtype test=player;test.x=3*65536+32768;test.y=4*65536+32768;CHECK(!TryMove(&test));
     test.y=5*65536+32768;CHECK(TryMove(&test));
@@ -56,7 +57,7 @@ static void TestSprites(void)
     CHECK(framebuffer[(VIEWY+60)*320+VIEWX+119]==201); /* equality occludes */
     CHECK(SimpleScaleShape(120,0,64));CHECK(framebuffer[(VIEWY+60)*320+VIEWX+119]==100);
     /* Equal screen positions must be sorted by original projected height. */
-    objcount=0;statcount=2;
+    InitObjects();statcount=2;
     statobjlist[0]=(statobj_t){4,2,SPR_STAT_0,dressing,false};
     statobjlist[1]=(statobj_t){5,2,SPR_STAT_1,dressing,false};
     unsigned char *near=(unsigned char *)PM_GetPage(PMSpriteStart+SPR_STAT_0,NULL);

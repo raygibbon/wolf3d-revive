@@ -111,13 +111,22 @@ bool AsmRefresh(int angle,rayhit *hit)
     }
     return CA_Fail("Ray traversal exceeded map bounds");
 }
+/* WL_DRAW.C vgaCeiling: episode/map-specific original ceiling palette. */
+static const w3r_byte vgaCeiling[60]={
+    0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,
+    0x4e,0x4e,0x4e,0x1d,0x8d,0x4e,0x1d,0x2d,0x1d,0x8d,
+    0x1d,0x1d,0x1d,0x1d,0x1d,0x2d,0xdd,0x1d,0x1d,0x98,
+    0x1d,0x9d,0x2d,0xdd,0xdd,0x9d,0x2d,0x4d,0x1d,0xdd,
+    0x7d,0x1d,0x2d,0x2d,0xdd,0xd7,0x1d,0x1d,0x1d,0x2d,
+    0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd,
+};
 bool ThreeDRefresh(void)
 {
     memset(spotvis,0,sizeof(spotvis));
     spotvis[player.tilex][player.tiley]=true;
     for (unsigned y=0;y<VIEWHEIGHT;++y)
         for (unsigned x=0;x<VIEWWIDTH;++x)
-            framebuffer[(VIEWY+y)*320+VIEWX+x]=(w3r_byte)(y<VIEWHEIGHT/2 ? 0x1d : 0x19);
+            framebuffer[(VIEWY+y)*320+VIEWX+x]=(w3r_byte)(y<VIEWHEIGHT/2 ? vgaCeiling[gamestate.episode*10+gamestate.mapon] : 0x19);
     rayhit previous={0}; unsigned postx=0,postwidth=0;
     const w3r_byte *post=NULL;
     for (unsigned x=0;x<VIEWWIDTH;++x) {
@@ -139,6 +148,11 @@ bool ThreeDRefresh(void)
     if (!DrawScaleds()) return false;
     static const unsigned weapons[4]={SPR_KNIFEREADY,SPR_PISTOLREADY,SPR_MACHINEGUNREADY,SPR_CHAINREADY};
     if (gamestate.died) return true;
+    if (gamestate.victoryflag) {
+        if (player.state==&s_deathcam && (player.temp1&32))
+            return SimpleScaleShape(VIEWWIDTH/2,SPR_DEATHCAM,VIEWHEIGHT+1);
+        return true;
+    }
     return SimpleScaleShape(VIEWWIDTH/2,weapons[gamestate.weapon]+(unsigned)gamestate.weaponframe,VIEWHEIGHT+1);
 }
 
@@ -169,7 +183,7 @@ int CalcRotate(const objtype *ob)
 {
     static const int dirangle[9]={0,45,90,135,180,225,270,315,360};
     int viewangle=player.angle+(VIEWWIDTH/2-ob->viewx)/8;
-    int angle=(viewangle-180)-dirangle[ob->dir]+ANGLES/16;
+    int angle=(viewangle-180)-(ob->obclass==rocketobj ? ob->angle : dirangle[ob->dir])+ANGLES/16;
     angle%=ANGLES;if (angle<0) angle+=ANGLES;
     return ob->state->rotate==2 ? 4*(angle/(ANGLES/2)) : angle/(ANGLES/8);
 }
@@ -184,8 +198,8 @@ bool DrawScaleds(void)
         if (TransformTile(ob->tilex,ob->tiley,&x,&height) && ob->bonus && !gamestate.died) { GetBonus(ob);continue; }
         if (height && count<49) { vis[count].x=x;vis[count].height=height;vis[count++].shape=ob->shapenum; }
     }
-    for (unsigned i=0;i<objcount;++i) {
-        objtype *ob=&objlist[i];ob->flags&=~FL_VISABLE;
+    for (objtype *ob=player.next;ob;ob=ob->next) {
+        ob->flags&=~FL_VISABLE;
         if (!ob->state || !ob->state->shapenum) continue;
         bool visible=spotvis[ob->tilex][ob->tiley];
         for (int dx=-1;dx<=1;++dx) for (int dy=-1;dy<=1;++dy) {

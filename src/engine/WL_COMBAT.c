@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 objtype *killerobj;
+static objtype killersnapshot;
 static int facecount;
 static bool attackheld,gotgatgun,lastgatgun;
 static gametype laststatus;
@@ -39,7 +40,8 @@ void TakeDamage(int points,objtype *attacker)
     gotgatgun=false;
     StartDamageFlash(points);
     gamestate.health-=points;
-    if (gamestate.health<=0) { gamestate.health=0;gamestate.died=true;killerobj=attacker; }
+    if (gamestate.health<=0) { gamestate.health=0;gamestate.died=true;
+        if (attacker) { killersnapshot=*attacker;killerobj=&killersnapshot; } else killerobj=NULL; }
 }
 void GetBonus(statobj_t *ob)
 {

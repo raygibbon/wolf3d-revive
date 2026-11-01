@@ -65,6 +65,7 @@ static bool Write(int x,int y,const char *text)
         if (ch>='0' && ch<='9') pic=L_NUM0PIC+ch-'0';
         else if (ch>='A' && ch<='Z') pic=L_APIC+ch-'A';
         else if (ch==':') { pic=L_COLONPIC;advance=8; }
+        else if (ch=='\'') { pic=L_APOSTROPHEPIC;advance=8; }
         else if (ch=='!') { pic=L_EXPOINTPIC;advance=8; }
         else if (ch=='%') pic=L_PERCENTPIC;
         if (pic>=0 && !VWB_DrawPic(nx,ny,pic)) return false;
@@ -91,4 +92,34 @@ bool DrawLevelCompleted(const levelratio_t *r)
         Write(9,14,"kill ratio") && Write(5,16,"secret ratio") && Write(1,18,"treasure ratio") &&
         WriteNumber(37,14,r->kill) && WriteNumber(37,16,r->secret) && WriteNumber(37,18,r->treasure) &&
         Write(37,14,"%") && Write(37,16,"%") && Write(37,18,"%") && DrawStatus();
+}
+
+bool DrawDeathCameraMessage(void) { return Write(0,7,"Let's see that again!"); }
+
+/* WL_INTER.C Victory: the original eight-floor averages, time and time code. */
+bool DrawVictory(void)
+{
+    unsigned seconds=0,kill=0,secret=0,treasure=0;
+    for (unsigned i=0;i<8;++i) {
+        seconds+=LevelRatios[i].seconds;kill+=LevelRatios[i].kill;
+        secret+=LevelRatios[i].secret;treasure+=LevelRatios[i].treasure;
+    }
+    unsigned minutes=seconds/60;seconds%=60;
+    if (minutes>99) minutes=seconds=99;
+    VWB_Bar(0,0,320,160,127);
+    char time[16];(void)snprintf(time,sizeof(time),"%02u:%02u",minutes,seconds);
+    if (!Write(18,2,"you win!") || !Write(14,6,"total time") || !Write(12,12,"averages") ||
+        !Write(14,14,"kill    %") || !Write(10,16,"secret    %") || !Write(6,18,"treasure    %") ||
+        !VWB_DrawPic(8,4,L_BJWINSPIC) || !Write(14,8,time) ||
+        !WriteNumber(30,14,kill/8) || !WriteNumber(30,16,secret/8) ||
+        !WriteNumber(30,18,treasure/8)) return false;
+    if (gamestate.difficulty>=2) {
+        if (!VWB_DrawPic(240,64,C_TIMECODEPIC)) return false;
+        char code[4];code[0]=(char)(((minutes/10)^(minutes%10)^10)+'A');
+        code[1]=(char)(((seconds/10)^(seconds%10)^10)+'A');
+        code[2]=(char)((code[0]^code[1])+'A');code[3]=0;
+        fontnumber=0;fontcolor=0x47;PrintX=241;PrintY=72;
+        if (!US_Print(code)) return false;
+    }
+    return DrawStatus();
 }

@@ -120,6 +120,8 @@ class EngineTests(unittest.TestCase):
                                     *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "campaign-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/boss_tests.c"),
                                     *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "boss-tests")], check=True)
+        subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/finale_tests.c"),
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "finale-tests")], check=True)
         cls.engine = cls.output / "engine-tests"
         cls.compiler = cc + flags
         cls.binary = Path(os.environ.get("WOLF3D_BINARY", ROOT / "build/cart-sdl/linux/wolf3d-revive"))
@@ -175,13 +177,15 @@ class EngineTests(unittest.TestCase):
         campaign_files(self.data)
         subprocess.run([str(self.output / "campaign-tests"), str(self.data)], check=True)
 
-    def test_unported_encounters_rejected(self):
+    def test_all_original_encounter_codes(self):
         from game_fixtures import game_files, map_files
         game_files(self.data)
         for code in (160, 178, 179, 196, 215, 99):
             with self.subTest(code=code):
                 map_files(self.data, lambda p: p[1].__setitem__(15*64+15, code))
-                self.assertIn("Unported boss/ghost/victory", self.level_check().stderr)
+                result = subprocess.run([str(self.binary), "--data", str(self.data), "--check-level"],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_special_actors(self):
         from game_fixtures import boss_files
@@ -197,6 +201,20 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(len(expected), 46)
         self.assertEqual(states(ROOT / "src/engine/WL_STATE.c"), expected)
 
+    def test_finales_and_projectiles(self):
+        from game_fixtures import finale_files
+        finale_files(self.data)
+        subprocess.run([str(self.output / "finale-tests"), str(self.data)], check=True)
+
+    def test_remaining_boss_states_match_dos_source(self):
+        pattern = r"statetype (s_(?:schabb|gift|fat|fake|mecha|hitler|needle|fire|rocket|smoke|boom|bj|deathcam)\w*)\s*=\s*({[^;]+});"
+        def states(paths):
+            return {name: re.sub(r"\s+", "", value) for path in paths for name, value in
+                    re.findall(pattern, path.read_text(errors="replace"))}
+        expected = states([ROOT / "WOLFSRC/WL_ACT2.C"])
+        self.assertGreater(len(expected), 100)
+        self.assertEqual(states([ROOT / "src/engine/WL_ACT2.c", ROOT / "src/engine/WL_VICTORY.c"]), expected)
+
     def test_missing_special_actor_sprites(self):
         from game_fixtures import boss_files
         boss_files(self.data)
@@ -204,7 +222,8 @@ class EngineTests(unittest.TestCase):
         path = self.data / "VSWAP.WL6"
         saved = path.read_bytes()
         count, start, end = struct.unpack_from("<HHH", saved)
-        for shape in ("SPR_BOSS_DEAD", "SPR_GRETEL_SHOOT3", "SPR_CLYDE_W2"):
+        for shape in ("SPR_BOSS_DEAD", "SPR_GRETEL_SHOOT3", "SPR_CLYDE_W2", "SPR_HYPO3",
+                      "SPR_ROCKET_8", "SPR_FIRE2", "SPR_HITLER_DEAD", "SPR_BJ_JUMP4", "SPR_DEATHCAM"):
             with self.subTest(shape=shape):
                 page = start + names.index(shape)
                 self.assertLess(page, end)
@@ -457,6 +476,23 @@ class EngineTests(unittest.TestCase):
                        "-o",str(program)],check=True)
         env = dict(os.environ, SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
         subprocess.run([str(program),str(self.data)],env=env,check=True)
+
+    def test_finale_sdl_events(self):
+        sdk = Path(os.environ.get("SDL_SDK", ROOT.parent / "cart/vendor/SDL"))
+        library = sdk / "build/libSDL3.a"
+        if not library.is_file():
+            self.skipTest("SDL_SDK must point to a built static SDL3 checkout")
+        from game_fixtures import finale_files
+        finale_files(self.data)
+        program = self.output / "finale-sdl-tests"
+        sources = [str(p) for p in sorted((ROOT / "src").rglob("*.c")) if p.name != "main.c"]
+        subprocess.run(self.compiler + ["-I" + str(ROOT / "src"), "-I" + str(sdk / "include"),
+                       str(ROOT / "tests/finale_sdl_tests.c"), *sources, str(library), "-pthread", "-lm",
+                       "-o", str(program)], check=True)
+        env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_RENDER_DRIVER="software")
+        subprocess.run([str(program), str(self.data)], env=env, check=True)
+        if os.environ.get("WOLF3D_DATA"):
+            subprocess.run([str(program), os.environ["WOLF3D_DATA"], "owned"], env=env, check=True)
 
     def test_boss_sdl_events(self):
         sdk = Path(os.environ.get("SDL_SDK", ROOT.parent / "cart/vendor/SDL"))

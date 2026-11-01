@@ -767,6 +767,12 @@ void FirstSighting (objtype *ob)
   NewState (ob,&s_sschase1);
   ob->speed *= 4;
   break;
+ case schabbobj:GameSound(SCHABBSHASND,NULL);NewState(ob,&s_schabbchase1);ob->speed*=3;break;
+ case giftobj:GameSound(EINESND,NULL);NewState(ob,&s_giftchase1);ob->speed*=3;break;
+ case fatobj:GameSound(ERLAUBENSND,NULL);NewState(ob,&s_fatchase1);ob->speed*=3;break;
+ case fakeobj:GameSound(TOT_HUNDSND,NULL);NewState(ob,&s_fakechase1);ob->speed*=3;break;
+ case mechahitlerobj:GameSound(DIESND,NULL);NewState(ob,&s_mechachase1);ob->speed*=3;break;
+ case realhitlerobj:GameSound(DIESND,NULL);NewState(ob,&s_hitlerchase1);ob->speed*=5;break;
  case bossobj:
   GameSound(GUTENTAGSND,NULL);
   NewState(ob,&s_bosschase1);ob->speed=SPDPATROL*3;
@@ -930,6 +936,16 @@ void KillActor (objtype *ob)
   else
    PlaceItemType (bo_clip2,tilex,tiley);
   break;
+ case schabbobj:
+  GivePoints(5000);gamestate.killx=player.x;gamestate.killy=player.y;
+  NewState(ob,&s_schabbdie1);A_DeathScream(ob);break;
+ case giftobj:case fatobj:case realhitlerobj:
+  GivePoints(5000);gamestate.killx=player.x;gamestate.killy=player.y;
+  NewState(ob,ob->obclass==giftobj ? &s_giftdie1 : ob->obclass==fatobj ? &s_fatdie1 : &s_hitlerdie1);
+  if (ob->obclass==realhitlerobj) A_DeathScream(ob);
+  break;
+ case fakeobj:GivePoints(2000);NewState(ob,&s_fakedie1);break;
+ case mechahitlerobj:GivePoints(5000);NewState(ob,&s_mechadie1);break;
  case bossobj:
   GivePoints(5000);NewState(ob,&s_bossdie1);
   PlaceItemType(bo_key1,tilex,tiley);
@@ -987,6 +1003,8 @@ void T_Chase (objtype *ob)
    case mutantobj:
     NewState (ob,&s_mutshoot1);
     break;
+   case mechahitlerobj:NewState(ob,&s_mechashoot1);break;
+   case realhitlerobj:NewState(ob,&s_hitlershoot1);break;
    case bossobj:
     NewState(ob,&s_bossshoot1);
     break;
@@ -1199,7 +1217,9 @@ void T_Shoot (objtype *ob)
    damage = US_RndT()>>4;
   TakeDamage (damage,ob);
  }
- GameSound(ob->obclass==ssobj ? SSFIRESND : ob->obclass==bossobj ? BOSSFIRESND : NAZIFIRESND,ob);
+ GameSound(ob->obclass==ssobj ? SSFIRESND :
+    (ob->obclass==bossobj || ob->obclass==mechahitlerobj || ob->obclass==realhitlerobj) ? BOSSFIRESND :
+    (ob->obclass==giftobj || ob->obclass==fatobj) ? MISSILEFIRESND : NAZIFIRESND,ob);
 }
 
 /* WL_ACT2.C T_Bite */
@@ -1234,6 +1254,7 @@ void T_Bite (objtype *ob)
 /* WL_PLAY.C DoActor */
 void DoActor (objtype *ob)
 {
+ if (!ob || !ob->state) return;
  void (*think)(objtype *);
  if (!ob->active && !areabyplayer[ob->areanumber])
   return;
@@ -1247,7 +1268,7 @@ void DoActor (objtype *ob)
    think (ob);
    if (!ob->state)
    {
-    ob->state=NULL;
+    RemoveActor(ob);
     return;
    }
   }
@@ -1267,15 +1288,14 @@ void DoActor (objtype *ob)
    think (ob);
    if (!ob->state)
    {
-    ob->state=NULL;
+    RemoveActor(ob);
     return;
    }
   }
   ob->state = ob->state->next;
   if (!ob->state)
   {
-   ob->state=NULL;
-   return;
+   RemoveActor(ob);return;
   }
   if (!ob->state->tictime)
   {
@@ -1291,8 +1311,7 @@ think:
   think (ob);
   if (!ob->state)
   {
-   ob->state=NULL;
-   return;
+   RemoveActor(ob);return;
   }
  }
  if (ob->flags&FL_NEVERMARK)
@@ -1315,5 +1334,5 @@ bool ValidateActorSprites(void)
             if (!PM_DecodeSprite(shape,pixels,mask)) return false;
         }
     }
-    return true;
+    return ValidateBossSprites();
 }

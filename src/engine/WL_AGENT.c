@@ -2,6 +2,7 @@
 /* WL_AGENT.C TryMove, ClipMove, Thrust and ControlMovement.
    Same MINDIST square, axis-slide order and movement/angle constants. */
 #include "WL_DEF.h"
+#include "ID_CA.h"
 static int anglefrac;
 void ResetMovement(void) { anglefrac=0; }
 bool TryMove(const objtype *ob)
@@ -41,6 +42,7 @@ void Thrust(int angle,int32_t speed)
     int32_t dy=-FixedByFrac(speed,sintable[angle]);
     ClipMove(&player,dx,dy);
     player.tilex=player.x/65536; player.tiley=player.y/65536;
+    if (CA_Map()->planes[1][player.tiley*64+player.tilex]==99) (void)VictoryTile();
 }
 void ControlMovement(int controlx,int controly,bool strafe)
 {

@@ -11,6 +11,7 @@
 objtype objlist[MAXACTORS],*actorat[64][64];
 statobj_t statobjlist[MAXSTATS];
 unsigned objcount,statcount;
+static bool allocated[MAXACTORS],allocationfailed;
 bool staticblock[64][64],spotvis[64][64],areabyplayer[37],madenoise;
 int areaMap[64][64],thrustspeed;
 gametype gamestate={.health=100,.ammo=8,.lives=3,.nextextra=40000,.weapon=wp_pistol,.bestweapon=wp_pistol,.chosenweapon=wp_pistol,.difficulty=2};
@@ -21,10 +22,45 @@ void SetGameSoundHook(void (*hook)(soundnames,const objtype *)) { soundhook=hook
 void GameSound(soundnames sound,const objtype *actor) { if (soundhook) soundhook(sound,actor); }
 void InitObjects(void)
 {
-    objcount=statcount=0;player.next=NULL;madenoise=false;
+    objcount=statcount=0;player.next=NULL;player.state=NULL;madenoise=false;
+    memset(allocated,0,sizeof(allocated));allocationfailed=false;
     memset(objlist,0,sizeof(objlist));memset(actorat,0,sizeof(actorat));
     memset(staticblock,0,sizeof(staticblock));memset(spotvis,0,sizeof(spotvis));
     memset(areabyplayer,0,sizeof(areabyplayer));
+}
+/* WL_PLAY.C GetNewActor/RemoveObj, with an explicit bounded failure path.
+   objcount is the occupied-array high-water mark, not the linked-list count. */
+bool ActorAllocationFailed(void) { return allocationfailed; }
+objtype *GetNewActor(void)
+{
+    unsigned slot=0;while (slot<MAXACTORS && allocated[slot]) ++slot;
+    if (slot==MAXACTORS) { allocationfailed=true;(void)CA_Fail("Actor pool exhausted");return NULL; }
+    objtype *ob=&objlist[slot];allocated[slot]=true;
+    memset(ob,0,sizeof(*ob));
+    if (slot>=objcount) objcount=slot+1;
+    objtype *tail=&player;while (tail->next) tail=tail->next;
+    tail->next=ob;return ob;
+}
+void RemoveActor(objtype *ob)
+{
+    if (!ob || ob==&player) return;
+    objtype *prev=&player;while (prev->next && prev->next!=ob) prev=prev->next;
+    if (prev->next!=ob) return;
+    prev->next=ob->next;
+    for (int x=0;x<64;++x) for (int y=0;y<64;++y)
+        if (actorat[x][y]==ob) actorat[x][y]=NULL;
+    allocated[ob-objlist]=false;ob->state=NULL;ob->flags=0;
+}
+objtype *SpawnActor(int x,int y,statetype *state)
+{
+    if (x<1 || y<1 || x>62 || y>62) {
+        allocationfailed=true;(void)CA_Fail("Invalid actor position");return NULL;
+    }
+    objtype *ob=GetNewActor();if (!ob) return NULL;
+    ob->state=state;ob->ticcount=state->tictime ? US_RndT()%state->tictime : 0;
+    ob->x=x*TILEGLOBAL+32768;ob->y=y*TILEGLOBAL+32768;
+    ob->tilex=x;ob->tiley=y;ob->areanumber=areaMap[x][y];ob->dir=nodir;
+    actorat[x][y]=ob;return ob;
 }
 void NewState(objtype *ob,statetype *state) { ob->state=state;ob->ticcount=state->tictime; }
 static const int dirx[9]={1,1,0,-1,-1,-1,0,1,0};
@@ -45,7 +81,7 @@ bool TryWalk(objtype *ob)
     if (ob->dir<0 || ob->dir>=nodir) return false;
     int dx=dirx[ob->dir],dy=diry[ob->dir],x=ob->tilex+dx,y=ob->tiley+dy,door=-1;
     bool diag=dx && dy;
-    if (!CheckTile(x,y,diag || ob->obclass==dogobj,&door)) return false;
+    if (!CheckTile(x,y,diag || ob->obclass==dogobj || ob->obclass==fakeobj,&door)) return false;
     if (diag && (!CheckTile(ob->tilex+dx,ob->tiley,true,&door) ||
                  !CheckTile(ob->tilex,ob->tiley+dy,true,&door))) return false;
     ob->tilex=x;ob->tiley=y;
@@ -153,10 +189,7 @@ void PlaceItemType(stat_t item,int x,int y)
 static bool SpawnNewObj(int x,int y,statetype *state,int kind,int direction,bool patrol,bool dead)
 {
     if (objcount>=MAXACTORS || x<=0 || y<=0 || x>=63 || y>=63 || (tilemap[x][y] && tilemap[x][y]!=64)) return CA_Fail("Invalid/too many actors");
-    objtype *ob=&objlist[objcount++];
-    if (objcount==1) player.next=ob;else objlist[objcount-2].next=ob;
-    ob->state=state;ob->ticcount=state->tictime ? US_RndT()%state->tictime : 0;
-    ob->x=x*TILEGLOBAL+32768;ob->y=y*TILEGLOBAL+32768;ob->tilex=x;ob->tiley=y;
+    objtype *ob=SpawnActor(x,y,state);if (!ob) return false;
     ob->dir=direction*2;ob->areanumber=areaMap[x][y];ob->obclass=dead ? inertobj : kind;
     if (!dead) {
         ob->flags=FL_SHOOTABLE;
@@ -168,6 +201,7 @@ static bool SpawnNewObj(int x,int y,statetype *state,int kind,int direction,bool
     if (patrol) {
         /* SpawnPatrol reserves the initial forward tile unconditionally,
            even a closed door (owned E4M6 on hard). Keep that original move. */
+        actorat[x][y]=NULL; /* Original SpawnPatrol releases its birth tile. */
         ob->active=true;ob->distance=TILEGLOBAL;
         ob->tilex+=dirx[ob->dir];ob->tiley+=diry[ob->dir];
         if (ob->tilex<=0 || ob->tiley<=0 || ob->tilex>=63 || ob->tiley>=63)
@@ -177,21 +211,39 @@ static bool SpawnNewObj(int x,int y,statetype *state,int kind,int direction,bool
        Both actors remain in the object list; the last mark owns actorat. */
     actorat[ob->tilex][ob->tiley]=ob;return true;
 }
-/* WL_ACT2.C SpawnBoss, SpawnGretel, SpawnGhosts. Ghosts intentionally
+/* WL_ACT2.C original boss spawning and SpawnGhosts. Ghosts intentionally
    have no FL_SHOOTABLE or health assignment, despite the unused HP table. */
 static bool SpawnSpecial(int x,int y,unsigned tile)
 {
     static const int health[4]={850,950,1050,1200};
     static statetype *const ghosts[]={&s_blinkychase1,&s_clydechase1,&s_pinkychase1,&s_inkychase1};
     bool ghost=tile>=224;
-    statetype *state=ghost ? ghosts[tile-224] : tile==214 ? &s_bossstand : &s_gretelstand;
-    int kind=ghost ? ghostobj : tile==214 ? bossobj : gretelobj;
-    if (!SpawnNewObj(x,y,state,kind,0,false,false)) return false;
+    statetype *state=NULL;int kind=ghostobj,dir=east,hp=0;
+    if (ghost) state=ghosts[tile-224];
+    else {
+        hp=health[gamestate.difficulty];
+        switch (tile) {
+        case 214:state=&s_bossstand;kind=bossobj;dir=south;break;
+        case 197:state=&s_gretelstand;kind=gretelobj;dir=north;break;
+        case 196: {
+            static const int schabbhp[]={850,950,1550,2400};
+            state=&s_schabbstand;kind=schabbobj;dir=south;hp=schabbhp[gamestate.difficulty];break;
+        }
+        case 215:state=&s_giftstand;kind=giftobj;dir=north;break;
+        case 179:state=&s_fatstand;kind=fatobj;dir=south;break;
+        case 160:state=&s_fakestand;kind=fakeobj;dir=north;hp=200+100*gamestate.difficulty;break;
+        case 178: {
+            static const int mecha[]={800,950,1050,1200};
+            state=&s_mechastand;kind=mechahitlerobj;dir=south;hp=mecha[gamestate.difficulty];break;
+        }
+        }
+    }
+    if (!state || !SpawnNewObj(x,y,state,kind,0,false,false)) return false;
     objtype *ob=&objlist[objcount-1];
-    ob->flags=FL_AMBUSH|(ghost ? 0U : FL_SHOOTABLE);
-    ob->dir=ghost ? east : tile==214 ? south : north;
-    ob->speed=ghost ? SPDDOG : SPDPATROL;
-    ob->hitpoints=ghost ? 0 : health[gamestate.difficulty];
+    ob->flags=FL_AMBUSH|(ghost ? 0U : FL_SHOOTABLE);ob->dir=dir;
+    ob->speed=ghost ? SPDDOG : SPDPATROL;ob->hitpoints=hp;
+    /* SpawnSchabbs/Gift/Fat/Hitler use five tics when digitized audio is off. */
+    s_schabbdie2.tictime=s_giftdie2.tictime=s_fatdie2.tictime=s_hitlerdie2.tictime=5;
     return true;
 }
 bool ScanInfoPlane(void)
@@ -221,13 +273,17 @@ bool ScanInfoPlane(void)
             if (!tilemap[x][y] || tilemap[x][y]>=64) return CA_Fail("Invalid pushwall marker");
             pushable[x][y]=true;++gamestate.secrettotal;continue;
         }
-        if (tile==214 || tile==197 || (tile>=224 && tile<=227)) {
+        if (tile==214 || tile==197 || tile==196 || tile==215 || tile==179 ||
+            tile==160 || tile==178 || (tile>=224 && tile<=227)) {
             if (!SpawnSpecial(x,y,tile)) return false;
             continue;
         }
-        /* Do not silently erase encounters whose original actors are unported. */
-        if (tile==215 || tile==179 || tile==196 || tile==160 || tile==178 || tile==99)
-            return CA_Fail("Unported boss/ghost/victory actor %u in E%dM%d",tile,gamestate.episode+1,gamestate.mapon+1);
+        /* EXITTILE is a movement trigger, not an actor to allocate at startup. */
+        if (tile==99) {
+            if (x<1 || y<1 || x>62 || y>61 || (tilemap[x][y] && tilemap[x][y]!=64))
+                return CA_Fail("Invalid victory tile");
+            continue;
+        }
         /* WL_GAME.C ScanInfoPlane: two 36-code normal-enemy bands;
            mutants have their own two 18-code bands. Exclude boss codes. */
         if (tile>=180 && tile<=213) { if (gamestate.difficulty<3) continue;tile-=36; }
@@ -269,5 +325,11 @@ void A_DeathScream(objtype *ob)
     case dogobj:GameSound(DOGDEATHSND,ob);break;
     case bossobj:GameSound(MUTTISND,NULL);break;
     case gretelobj:GameSound(MEINSND,NULL);break;
+    case schabbobj:GameSound(MEINGOTTSND,NULL);break;
+    case giftobj:GameSound(DONNERSND,NULL);break;
+    case fatobj:GameSound(ROSESND,NULL);break;
+    case fakeobj:GameSound(HITLERHASND,NULL);break;
+    case mechahitlerobj:GameSound(SCHEISTSND,NULL);break;
+    case realhitlerobj:GameSound(EVASND,NULL);break;
     }
 }

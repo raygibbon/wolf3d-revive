@@ -85,7 +85,7 @@ bool DemoLoop(uint64_t ticks)
     }
     if (VL_Fading() || Attract()) return true;
     if (state == UI_GAME) {
-        if (IN_ConsumePress(sc_Escape)) { GameStop(); return Transition(UI_MENU,ticks,10); }
+        if (!GameVictoryPresentation() && IN_ConsumePress(sc_Escape)) { GameStop(); return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
         if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
         return true;

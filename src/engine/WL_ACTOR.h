@@ -35,6 +35,7 @@ typedef struct {
     int health,ammo,lives,keys,score,nextextra,weapon,bestweapon,chosenweapon;
     int attackframe,weaponframe,attackcount,faceframe,killcount,killtotal,treasurecount,treasuretotal;
     int episode,mapon,difficulty,oldscore,secretcount,secrettotal;
+    int32_t killx,killy;
     uint32_t TimeCount;
     bool died,victoryflag;
 } gametype;
@@ -48,6 +49,10 @@ extern bool staticblock[64][64],spotvis[64][64],areabyplayer[37],madenoise;
 extern unsigned wallheight[VIEWWIDTH];
 extern int areaMap[64][64],thrustspeed;
 void InitObjects(void);
+objtype *GetNewActor(void);
+objtype *SpawnActor(int x,int y,statetype *state);
+void RemoveActor(objtype *ob);
+bool ActorAllocationFailed(void);
 bool ValidateActorSprites(void);
 bool ScanInfoPlane(void);
 void ConnectAreas(void);
@@ -99,4 +104,5 @@ int CalcRotate(const objtype *ob);
 bool DrawScaleds(void);
 bool ScaleShape(int xcenter,unsigned shapenum,unsigned height);
 bool SimpleScaleShape(int xcenter,unsigned shapenum,unsigned height);
+#include "WL_ACT2.h"
 #endif

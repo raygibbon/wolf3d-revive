@@ -3,13 +3,12 @@ Wolf3D Revive development
 
 This working tree preserves the original id Software source and history while
 preparing a faithful C11 / CART / SDL3 source port for Linux and Windows.
-Milestone 5 adds original enemies, combat, pickups and the HUD. The first
-Milestone 6 pass adds episode/difficulty selection, normal-level progression,
-secret pushwalls, elevator exits and intermission scoring. Milestone 6A's first
-pass adds Hans, Gretel and four ghosts: 54 of 60 original maps now load at all
-four difficulties. Projectile bosses and all six episode finales remain
-unimplemented, along with audio, saving/loading and configuration. This is
-not yet a complete original-game port.
+Milestone 6A implements original enemies and bosses, boss projectiles,
+weapons, pickups, secrets, progression and all six episode endings. All 60
+owned maps load/render/simulate at four difficulties; controlled SDL weapon
+fights verify all six finale paths. Full navigated episode playthroughs and
+DOS equivalence are not claimed. Audio, saving/loading, configuration and
+Enhanced Mode remain later work.
 
 * `Build and validation <docs/BUILD.md>`_
 * `Milestone 6A actor progress and remaining campaign work <docs/MILESTONE6A.md>`_

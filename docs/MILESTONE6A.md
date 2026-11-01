@@ -1,175 +1,262 @@
-# Milestone 6A — first pass: Hans, Gretel and ghosts
+# Milestone 6A — original campaign actors and completion
 
-2026-11-02. **The original campaign is still incomplete.** This pass ports two
-bosses and four ghosts, improves sound-event/RNG fidelity and guards finale
-routing. It does not implement projectile bosses, BJ victory actors, death
-cameras or episode endings. No complete episode playthrough is claimed.
+2026-11-02. All original bosses, required projectiles and the six episode
+completion paths are implemented. **All 60 owned WL6 maps load, render and
+simulate at all four difficulties: 240/240 combinations.** Controlled SDL
+weapon fights exercise all six finales, their statistics, both original
+ending pages, scores and return to the menu.
 
-## Baseline and source review
+This is not a claim of six fully navigated episode playthroughs, DOS demo
+compatibility or pixel-perfect equivalence. The controlled tests reposition
+the player and refresh health/ammunition; their exact limits are below.
+Audio playback, save/load and Enhanced Mode remain outside this milestone.
 
-The working tree was clean. `docs/MILESTONE5.md`, `docs/MILESTONE6.md`, the
-active engine and the corresponding original actor, movement, map, combat and
-progression code were reviewed before editing. The initial CART build passed;
-all 37 Python regressions passed with owned Steam data. The owned-map sweep
-confirmed 204 successful and 36 explicitly rejected map/difficulty combinations.
-Existing movement, doors, sprite rendering, weapons, pickups, RNG, pools and
-70 Hz state execution were reused.
+## Baseline and source provenance
 
-`WOLFSRC/` is unchanged. Code is ported from id Software's original sources,
-with the existing GPL-2.0-only engine licensing and provenance described in
-[LICENSING.md](LICENSING.md). No third-party port, assets or dependencies were
-imported. No CART or Ironclaw changes, commits or pushes were made. Upstream
-continues to have the disabled push URL.
+Part 1 added Hans, Gretel and four ghosts: 54 maps / 216 combinations and 42
+Python regressions passed. Part 2 began from a clean checkout and reproduced
+that build and test baseline before editing. Milestones 5, 6, the Part 1
+report, PORTING.md, BUILD.md, the active engine and original source were
+reviewed. Existing rendering, combat, movement, doors, pushwalls, selection,
+intermissions, inventory and RNG were extended.
 
-## Implemented behavior and original references
+All gameplay references are id Software's original `WOLFSRC/`, which remains
+unchanged. New engine/tests retain GPL-2.0-only notices and source attribution;
+see [LICENSING.md](LICENSING.md). No third-party port or dependency was added.
+Commercial assets are read from the owned Steam directory, never staged or
+bundled. No CART or Ironclaw files, commits or pushes were made. Upstream's
+push URL remains `DISABLED`.
 
-- `WL_ACT2.C` Hans and Gretel state tables: all 19 states each, including
-  stand, six chase states, eight shooting states and four death states.
-  Original shapes, non-directional rotation, thinkers/actions, successors and
-  durations are retained. The burst waits 30 tics, fires six times at ten-tic
-  intervals and returns to chase after 100 tics. The corpse is reached after
-  45 death-animation tics. Neither boss has a pain state.
-- `SpawnBoss` / `SpawnGretel`: codes 214 / 197, south / north initial facing,
-  patrol speed 512, shootable/ambush flags and health 850/950/1050/1200 for
-  baby/easy/medium/hard. `WL_STATE.C:SightPlayer` retains the one-tic boss
-  reaction delay. `FirstSighting` selects the original chase state and speed
-  1536. Hearing does not bypass ambush sight checks.
-- `T_Chase`, `T_Shoot`, `DamageActor`, `KillActor`: the existing original
-  algorithms now select the boss states. Hans retains his distance-times-2/3
-  accuracy advantage; Gretel uses the original ordinary shot calculation.
-  Surprise damage, difficulty damage scaling and player movement effects
-  reuse the existing combat rules. Each kill awards 5,000 points, increments
-  the kill count, removes shootability and drops the gold key at the physical
-  death position. Death does not itself complete these episodes.
-- `SpawnGhosts`, ghost states and `T_Ghosts`: codes 224/225/226/227 select
-  Blinky/Clyde/Pinky/Inky, each with its own two ten-tic animation states.
-  Ghosts start facing east at speed 1500 with the ambush flag. Original
-  spawning does **not** assign shootability or health, despite the unused
-  ghost entries in `starthitpoints`; these are not made killable here.
-  They contribute to `killtotal`, as in DOS. Shared direction selection,
-  occupancy, walls and movement remain; `WL_STATE.C:MoveObj` now restores
-  their two-points-per-tic player contact damage and movement rollback.
-- `A_DeathScream`, `FirstSighting`, `T_Shoot`, `T_Bite`: minimal synchronous
-  sound hooks carry the original `AUDIOWL6.H` sound identifiers and actor
-  position, or NULL for original non-positional boss sounds. No audio system
-  is initialized. The optional hook must not mutate simulation or retain an
-  actor pointer. With no hook installed the original RNG draws still occur.
-- Registered/non-SPEAR `A_DeathScream` now includes the rare death sound on
-  **absolute map index 9 (E1M10)**. It consumes a draw for every death scream
-  there, including bosses; eligible normal actors return early on a zero
-  draw. Guards otherwise consume their sound-selection draw. Other episodes'
-  tenth floors do not acquire that extra draw. This follows ID_CA's global
-  `mapon`, rather than confusing it with episode-local `gamestate.mapon`.
-- `NextMap` rejects floor nine (local index 8), invalid selections and a
-  non-exit play state with sentinel 60. It no longer interprets an ordinary
-  finale exit as entry to the secret floor. Ordinary exits through floor
-  eight and all six existing secret return routes remain intact. Finale
-  presentation remains explicitly unavailable.
+## Episode finale status
 
-## Files changed
+Display floor numbers are one-based; absolute map indices are zero-based.
+Each row is covered by the owned SDL weapon/completion regression.
 
-- `src/engine/WL_STATE.c`: original state tables, AI/combat integration, ghost
-  movement/contact and required sprite validation.
-- `src/engine/WL_OBJECT.c`: bounded special spawning and sound-event handling.
-- `src/engine/WL_ACTOR.h`, new `WL_SOUND.h`: thinker and sound-hook declarations
-  and original sound indices, without audio assets or playback code.
-- `src/engine/WL_GAME.c`: guarded final-floor routing.
-- `tests/boss_tests.c`, `tests/boss_sdl_tests.c`, `tests/game_fixtures.py`,
-  `tests/test_engine.py`, `tests/campaign_tests.c`: synthetic encounters,
-  source-table comparison, state/combat/RNG/limits/SDL and owned-map coverage.
-- `README.rst`, `docs/BUILD.md`, `docs/MILESTONE6.md` and this document: current
-  scope, validation and remaining work.
+| Episode finale | Absolute map | Boss encounters | Completion | Verified result |
+| --- | --- | --- | --- | --- |
+| E1M9 | 8 | Hans Grosse | Gold key, exit tile, BJ run/jump/yell | Statistics, both ending pages, scores, menu |
+| E2M9 | 18 | Dr. Schabbs | Needle fight, death camera/replay | Statistics, both ending pages, scores, menu |
+| E3M9 | 28 | Five Fake Hitlers, Mecha Hitler, Hitler | Flames, mecha corpse and inherited Hitler actor, death camera/replay | Statistics, both ending pages, scores, menu |
+| E4M9 | 38 | Giftmacher | Rockets, death camera/replay | Statistics, both ending pages, scores, menu |
+| E5M9 | 48 | Gretel Grosse | Gold key, exit tile, BJ run/jump/yell | Statistics, both ending pages, scores, menu |
+| E6M9 | 58 | General Fettgesicht | Rocket plus gun burst, death camera/replay | Statistics, both ending pages, scores, menu |
 
-## Supported maps and validation scope
+The E3 SDL fight verifies weapon-driven Mecha-to-Hitler completion in the
+original map containing all five Fake Hitlers. Fake Hitler's health,
+specialized thinker, eight-flame burst and flame collision are also covered
+separately by synthetic tests; the SDL test does not require killing every
+Fake Hitler before the final boss, nor does the original victory condition.
+No encounter or victory marker is removed, replaced or skipped for map
+validation. Loading a finale does not automatically complete it.
 
-All 60 original maps are checked at every difficulty, **240 combinations**.
-**54 maps load/render at every difficulty (216 combinations); all six finale
-maps remain explicitly rejected (24 combinations).** Newly supported maps:
+## Ported functions and rules
 
-| Display name | Absolute zero-based index | Newly supported encounters |
-| --- | --- | --- |
-| E2M8 | 17 | Two Hans actors |
-| E3M10 | 29 | All four ghosts |
-| E6M10 | 59 | Three Hans actors and Blinky |
+### Actors and combat
 
-Still rejected: E1M9 (BJ victory tiles), E2M9 (Schabbs), E3M9 (Mecha Hitler /
-Fake Hitler), E4M9 (Giftmacher), E5M9 (BJ victory tiles / Gretel), E6M9
-(Fettgesicht). Gretel's actor implementation is validated with synthetic maps;
-her real finale is not reported as supported merely because she can spawn.
-No encounter is removed or replaced to make an original map load.
+`WL_ACT2.C` supplies the complete non-SPEAR state tables for Hans, Gretel,
+Schabbs, Giftmacher, Fettgesicht, Fake Hitler, Mecha Hitler, Hitler, the four
+ghosts, needles, flames, rockets, smoke, explosions and BJ. Tests compare all
+46 Part 1 definitions and all 139 Part 2 definitions directly with DOS source,
+including shapes, rotation, tics, thinkers, actions and successors.
 
-The automated owned sweep also advances the three newly supported maps for
-140 actor tics per difficulty and renders periodically. This tests bounded
-runtime behavior; it is not player navigation or a playthrough.
+Original spawn codes are 214 (Hans), 197 (Gretel), 196 (Schabbs), 215 (Gift),
+179 (Fettgesicht), 160 (Fake Hitler), 178 (Mecha Hitler), and 224–227
+(Blinky/Clyde/Pinky/Inky). Initial facing, ambush/shootable flags and the
+four-difficulty health tables are retained. Hitler after transformation has
+500/700/800/900 health. Ghost spawning intentionally does not assign health
+or shootability, despite the unused ghost hit-point table entries.
 
-## Verification
+Ported/extended routines include `SpawnBoss`, `SpawnGretel`, `SpawnGhosts`,
+`SpawnSchabbs`, `SpawnGift`, `SpawnFat`, `SpawnFakeHitler`, `SpawnHitler`,
+`FirstSighting`, `SightPlayer`, `T_Chase`, `T_Schabb`, `T_Gift`, `T_Fat`,
+`T_Fake`, `SelectRunDir`, `DamageActor`, `KillActor`, `A_HitlerMorph`,
+`A_MechaSound` and `A_Slurpie`. Shared algorithms remain from `WL_STATE.C` and
+`WL_AGENT.C`. Specialized dodge/flee/attack logic is not replaced by guard AI.
 
-Commands follow [BUILD.md](BUILD.md): CART build, the Python suite with
-`WOLF3D_DATA`, and the combined ASan/UBSan application build followed by the
-same suite with `SANITIZE=1`. The SDL static archive is not instrumented.
+Hans retains his shot-distance accuracy advantage; Gretel uses the original
+ordinary shot calculation. Boss burst lengths, damage, score and drops
+remain original. Fake Hitler awards 2,000 points, other bosses 5,000, and
+Hans/Gretel drop the gold key. Mecha's death leaves its corpse and spawns the
+original Hitler state at its physical position, inheriting distance,
+direction and flags and consuming the original initial-state RNG draw.
+Mecha and Hitler each award their original points/kill count; no extra
+`killtotal` is invented for the transformation.
 
-Actual results:
+### Projectiles and actor ownership
 
-- CART `cart-sdl` Linux build passes.
-- All **42 Python regression cases pass**, including strict `-Werror` C
-  executables and synthetic/owned SDL encounter checks.
-- All **42 cases also pass with ASan/UBSan** on the application and C tests,
-  with the same owned data. No sanitizer diagnostics were reported.
-- The owned-data sweep evaluates all 240 combinations: 216 load/render
-  successes and 24 expected explicit finale rejections. Each newly supported
-  map/difficulty also passes 140 actor tics with periodic rendering.
-- Native desktop SDL software-renderer E2M8/E3M10 encounter checks pass.
-  Four local captures were visually inspected: Hans standing/firing,
-  original weapon/HUD, ghost standing/chasing, wall clipping and damage
-  palette flashes. The native check uses the same controlled encounter
-  setup described below; it is not a human playthrough.
-- `git diff --check` passes. No `WOLFSRC/` changes or commercial files appear
-  in the Git changes. No complete level or episode playthrough was performed.
+`T_SchabbThrow`, `T_GiftThrow`, `T_FakeFire`, `T_Projectile`,
+`ProjectileTryMove` and `A_Smoke` retain original targeting, speed,
+original float angle quantization, signed-magnitude fixed-point movement,
+wall/static/door collision, strict
+player-hit square, damage RNG and state transitions. Needles/rockets move at
+`0x2000`; flames at `0x1200` on state actions, rather than every tic. Rockets
+emit smoke and explode on walls. Player hits remove the projectile, as in
+DOS; no invented explosion splash damage is added. Rocket rotation uses its
+angle rather than its `nodir` direction.
 
-Regression coverage includes all six new spawn codes at all difficulties,
-original ghost spawn RNG, boss sight/reaction/speed, six-shot burst timing,
-Hans/Gretel accuracy differences, death animation and sound, points and gold
-key collection, ghost state cycles/contact/collision/door waits, sound RNG
-with and without a sink, missing offscreen special sprites, 150-actor pool
-success and 151-actor rejection, invalid boundary spawns and final-map
-routing. A separate oracle compares every field of all 46 new state
-definitions directly against `WOLFSRC/WL_ACT2.C`. Existing malformed archive,
-combat, sprite limits, input, progression, cleanup and Git-protection tests
-remain in the suite. Shutdown checks require `MM_TotalBytes() == 0`.
+`WL_PLAY.C:GetNewActor/RemoveObj` is adapted to the existing bounded array
+and original linked iteration order. Runtime objects append to the live
+list for simulation and drawing; removed projectile/effect slots are reusable.
+Patrol spawning releases its birth-cell mark before reserving its first move. Array `objcount` is a
+high-water mark, not a live-object count. Pool exhaustion reports an error
+through the existing game-error/menu path, replacing the original fatal
+`Quit`, without corrupting the list or silently losing a required morph.
+The killer's position is snapshotted before its projectile slot can be reused.
 
-The SDL encounter regression uses synthetic data and owned E2M8/E3M10. It
-positions the player for controlled encounters, opens nearby E2M8 doors via
-the existing door API, delivers real SDL Ctrl events, verifies weapon damage,
-ammunition and boss return fire, and simulates/render-checks ghost pursuit.
-It refreshes player health during the encounter. It is not an unassisted
-fight, a navigated level or a full episode playthrough. Commercial files are
-read in place; captures stay under ignored `build/checks/milestone6a/`.
+### Victory, cameras and progression
 
-## Differences and unfinished work
+`WL_AGENT.C:VictoryTile/VictorySpin` and `WL_ACT2.C:SpawnBJVictory`,
+`T_BJRun`, `T_BJJump`, `T_BJYell`, `T_BJDone`, `A_StartDeathCam` and
+`CheckPosition` are ported into resumed, bounded steps. Exit-plane code 99
+is recognized as a movement trigger. BJ runs the original six path choices,
+jumps, yells, waits in the final frame and sets `ex_victorious`.
 
-The existing fixed one-tic 70 Hz loop, DOS variable-tic/RNG sequence caveats
-and rendering differences remain as described in milestones 5 and 6. No
-bit-perfect, pixel-perfect or demo-perfect DOS equivalence is claimed.
+Death cameras preserve the initial 100-tic hold, grey fizzle, original message,
+300-tic acknowledgement timeout, original angle/position search, death-state
+replay and final 100-tic hold. Grey and viewport replay fizzles use the
+original 70- and 20-frame candidate budgets and LFSR respectively. Their
+bounded full traversals take 144 and 41 simulation tics. The unacknowledged
+initial camera setup therefore takes 585 tics. The blinking original
+`SPR_DEATHCAM` overlay uses a replay counter following the original
+post-fizzle clock reset. Cinematic input cannot move/use/fire, and a death
+camera does not run BJ's spin or consume face-look RNG.
 
-One deliberate safety adaptation is added to `T_Ghosts`: the original thinker
-has no negative-distance door wait, although `TryWalk` can reserve a closed
-door. This port waits through the existing door API, as `T_Chase` does,
-rather than subtracting a negative distance and snapping through the door.
-Door waits are regression tested. Other ghost chase and contact rules remain
-original.
+`WL_INTER.C:Victory` draws the original victory artwork, eight-floor average
+ratios, summed time, 99:99 clamp and medium/hard verification code. The HUD
+retains the final score. `WL_TEXT.C:EndText/ShowArticle/PageLayout` renders the
+actual six external end articles with original artwork, colors, word wrapping,
+picture margins, borders and page numbering. Arrows, Enter and Page Up/Down
+navigate; Escape closes the article, followed by scores and menu.
 
-Remaining Milestone 6A work:
+`GameStep` distinguishes ordinary/secret exits, boss/BJ victory and player
+death/restart. `NextMap` never maps a finale to another episode or the secret
+floor; finale victory is handled separately. Existing secret-floor return
+routes `{1,1,7,3,5,3}`, ordinary inventory carry, key reset, bonuses and
+same-floor death restart remain tested. All 60 original per-map ceiling
+colors are now selected from `WL_DRAW.C:vgaCeiling`.
 
-1. Schabbs, Fake/Mecha/real Hitler, Giftmacher and Fettgesicht, including all
-   projectile states, reusable bounded runtime actor allocation, collision,
-   damage, effects, morphing, timing and sound hooks.
-2. BJ victory tile/movement/animation, death cameras, episode statistics and
-   original narrative/victory screens. Hans/Gretel finale maps remain blocked
-   until this works. Do not substitute an elevator intermission for victory.
-3. Complete all 240 map/difficulty combinations successfully, then validate
-   combat and actual navigated episode playthroughs, secret routes and final
-   sequences. The current 216 successes are load/render validation only.
-4. Broader original gameplay sound hooks where calls are still absent. Audio,
-   saves and Enhanced Mode remain reserved for later milestones.
+### Sound and RNG
 
-Windows linking/runtime and DOS equivalence were not tested in this pass.
+The existing synchronous sound-event hook now includes original new boss
+sight/death/attack sounds, mecha footsteps, slurpie, projectile launch/impact
+and BJ yell. Original non-positional boss sounds use NULL actor. No SDL audio
+backend is initialized. Hook consumers must not retain actor pointers or
+mutate simulation.
+
+Registered WL6 death-scream selection still consumes its original RNG even
+without a sink, including the rare extra draw on **absolute map index 9,
+E1M10**, rather than every episode's secret floor. Original Schabbs/Hitler
+immediate death-sound calls and their later state actions remain. The four
+sound-dependent boss `die2` delays use the original **digitized-audio-off
+five tics**, consistent with the current audio-free profile; Milestone 6B
+must restore the original 140-tic selection when digitized audio is enabled.
+
+## Files modified
+
+- New `src/engine/WL_ACT2.c/.h`: remaining boss/projectile states and routines,
+  fleeing, morph, effects and sprite requirements.
+- New `src/engine/WL_VICTORY.c`: BJ, death-camera timing/placement, fizzle and
+  replay lifecycle.
+- New `src/engine/WL_TEXT.c`: bounded original ending-article layout/navigation.
+- `WL_OBJECT.c`, `WL_STATE.c`, `WL_ACTOR.h`, `WL_DEF.h`: spawning, actor
+  allocation/removal, enemy integration, sound events and required state data.
+- `WL_AGENT.c`, `WL_COMBAT.c`, `WL_DRAW.c`: victory tiles, stable killer data,
+  rocket orientation, camera overlay and original map ceiling colors.
+- `WL_PLAY.c`, `WL_GAME.c`, `WL_INTER.c`, `WL_MAIN.c`: cinematic/progression
+  flow, player control/RNG rules, original statistics and frontend return.
+- New `tests/finale_tests.c`, `tests/finale_sdl_tests.c`; updated
+  `campaign_tests.c`, `combat_tests.c`, `game_fixtures.py`, `test_engine.py`.
+- README, BUILD.md, PORTING.md, MILESTONE6.md and this report: verified scope.
+
+## Validation and playthrough coverage
+
+Commands are in [BUILD.md](BUILD.md):
+
+```sh
+./build/tools/cart build --profile cart-sdl
+WOLF3D_DATA="$HOME/.steam/steam/steamapps/common/Wolfenstein 3D/base" \
+  python3 -m unittest discover -s tests -v
+```
+
+Verified results on the final code:
+
+| Check | Result |
+| --- | --- |
+| CART `cart-sdl` Linux build | Pass |
+| Standard owned-data Python/C/SDL suite | 45/45 pass |
+| ASan/UBSan application and C tests, same owned-data suite | 45/45 pass; no sanitizer diagnostics |
+| Owned map/difficulty sweep | 240/240 load, render and run 140 actor tics safely |
+| Native Linux SDL software-renderer finale harness | All six medium-difficulty controlled weapon/completion paths pass |
+| MinGW C11 strict compile-only checks | All 31 application modules pass |
+| Source-table comparisons | All 185 special/projectile/victory definitions match the original static tables |
+| Shutdown ownership checks and Git whitespace checks | Pass |
+
+The regression suite has 45 Python cases, including strict `-Werror` C tests.
+The same suite passes with the combined ASan/UBSan application and C-test
+procedure. The final sanitizer executable was built with the documented flags
+as `build/checks/wolf3d-revive-part2-final-asan` and selected through
+`WOLF3D_BINARY`. The reused SDL static archive itself is not instrumented.
+
+Coverage includes:
+
+- All 240 owned map/difficulty combinations: spawn, required sprite decoding,
+  initial render, 140 actor tics, periodic rendering and resource cleanup.
+- All boss spawns/health/facing, source-table equality, specialized attacks,
+  flame emission cadence, projectile-wall/player/door/static collision,
+  original damage RNG and rocket effects/removal.
+- Morph position/flags/distance/direction/health/RNG and preserved mecha
+  corpse; 1,000 effect-slot reuse cycles, exhaustion, killer-slot reuse, stable
+  sprite order after reuse and released patrol birth-cell reservations.
+- All four death-camera bosses, exact hold/fizzle budgets, frozen camera and
+  input/RNG behavior, BJ animation/yell, all six articles and frontend return.
+- Average-ratio truncation, total-time arithmetic/clamp and difficulty code,
+  death/restart on a boss floor, secret routes, missing boss/projectile/BJ/
+  overlay sprites, malformed article headers/end markers and existing corrupt
+  maps/archives, limits, combat, input, rendering and Git safeguards.
+- MinGW C11 compile-only checking for all 31 application modules. Windows
+  linking/runtime remain unverified without a Windows SDL SDK/runtime.
+
+**Controlled gameplay coverage:** `finale_sdl_tests.c` loads every owned finale
+without removing actors. It opens nearby doors through the existing door API,
+positions the player, aims and delivers actual SDL Ctrl input through the
+existing chaingun/combat simulation at the original medium difficulty.
+Health and ammunition are refreshed; spawn/health tests and the map sweep
+cover all four difficulties.
+It verifies boss death, the original Mecha-to-Hitler transition, collected gold
+keys and exit tiles where applicable, complete cinematics, statistics, both
+article pages, scores and menu. Initial floor ratios are zero in these tests
+because preceding floors were not played. It does not claim those zero
+statistics represent a full episode run.
+
+Native Linux desktop software-renderer checks use the same harness. Captures
+of all six victory statistics and all twelve original ending pages were
+visually inspected. Additional boss, morph and replay captures remain under
+ignored `build/checks/milestone6a-part2/`; no commercial files are in Git.
+
+**No complete navigated floor or episode playthrough was performed.** Tests
+establish controlled combat/completion paths and bounded simulation, not
+unassisted player navigation through six campaigns.
+
+## Differences and remaining work
+
+- The established fixed one-tic 70 Hz loop remains. DOS variable-tic batching
+  can change probabilistic AI/RNG ordering. No DOS recording, bit-perfect,
+  demo-perfect or pixel-perfect equivalence is claimed. Existing ray/scaler
+  adaptations and original baseline caveats remain.
+- Runtime pool exhaustion becomes a recoverable explicit game error. Killer
+  snapshots, bounded camera searches, sprite/map checks and clipped fizzle
+  writes replace unsafe DOS pointer/border behavior.
+- The Part 1 ghost closed-door wait adaptation remains: a negative movement
+  distance waits through the existing door API instead of snapping through a
+  closed door.
+- Internal statistics/article boundaries draw on the next frame instead of
+  reproducing every original palette fade. Existing intermissions still use
+  their immediate-final-results path; count-up/BJ breathing and initial-level
+  preload/fizzle presentation are not expanded here.
+- Article layout targets the six registered WL6 end articles. They use page,
+  color and graphic commands. Bounded location/bar/comment commands are also
+  supported; timed-picture commands are rejected and are not present in any
+  of these six articles. This is not a generalized modding/text engine.
+- Qualifying high-score name entry/persistence, audio/music, saves, demos,
+  Windows runtime verification and full navigated playthroughs remain. Audio
+  is Milestone 6B; save/load and Enhanced Mode remain later work.

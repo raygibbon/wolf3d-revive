@@ -121,27 +121,21 @@ static void TestPushwalls(void)
 }
 static void TestOwned(void)
 {
-    unsigned supported=0,unsupported=0;
+    unsigned supported=0;
     for (unsigned diff=0;diff<4;++diff) for (unsigned ep=0;ep<6;++ep) for (unsigned map=0;map<10;++map) {
         CHECK(NewGame(diff,ep));gamestate.mapon=(int)map;
-        if (!SetupGameLevel()) {
-            CHECK(map==8 && strstr(CA_Error(),"Unported boss/ghost/victory")!=NULL);
-            ++unsupported;
-            if (!diff) printf("Unsupported E%uM%u: %s\n",ep+1,map+1,CA_Error());
-        } else {
-            CHECK(CA_Map()->number==ep*10+map);CHECK(ThreeDRefresh() && DrawStatus());++supported;
-            if ((ep==1 && map==7) || (ep==2 && map==9) || (ep==5 && map==9)) {
-                for (unsigned tic=0;tic<140;++tic) {
-                    ConnectAreas();
-                    for (unsigned i=0;i<objcount;++i) DoActor(&objlist[i]);
-                    if (tic%10==0) CHECK(ThreeDRefresh());
-                }
-            }
+        CHECK(SetupGameLevel());
+        CHECK(CA_Map()->number==ep*10+map);CHECK(ThreeDRefresh() && DrawStatus());++supported;
+        for (unsigned tic=0;tic<140;++tic) {
+            ConnectAreas();
+            for (objtype *ob=player.next;ob;ob=ob->next) DoActor(ob);
+            CHECK(!ActorAllocationFailed());
+            if (tic%10==0) CHECK(ThreeDRefresh());
         }
         ShutdownGameLevel();
     }
-    printf("Owned WL6: %u map/difficulty combinations validated; %u maps explicitly require unported encounters.\n",supported,unsupported);
-    CHECK(supported==54*4 && unsupported==6*4);
+    printf("Owned WL6: %u map/difficulty combinations load, render and simulate safely.\n",supported);
+    CHECK(supported==240);
 }
 int main(int argc,char **argv)
 {

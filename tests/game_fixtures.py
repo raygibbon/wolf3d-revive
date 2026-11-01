@@ -66,7 +66,7 @@ def game_files(directory):
         chunks[index]=bytearray(graph[offset:end])
     dims=bytearray(bytes(int(f'{v:08b}'[::-1],2) for v in chunks[0][4:]))
     struct.pack_into('<HH',dims,(86-3)*4,320,40)
-    for chunk in (*range(19,23),*range(30,36),*range(43,85),*range(91,135)):
+    for chunk in (*range(19,23),*range(30,38),*range(43,86),*range(91,135)):
         width,height=(48,24) if 91<=chunk<=94 else (8,16) if chunk<=108 else (24,32)
         if chunk in (95,96,97):width,height=8,16
         if chunk<43: width,height=(48,24)
@@ -74,6 +74,13 @@ def game_files(directory):
         if chunk in (44,82,83):width,height=8,16
         struct.pack_into('<HH',dims,(chunk-3)*4,width,height)
         chunks[chunk]=struct.pack('<I',width*height)+encode(bytes([chunk])*(width*height))
+    for chunk,width,height in ((6,320,8),(7,8,168),(8,8,168),(9,304,24)):
+        struct.pack_into('<HH',dims,(chunk-3)*4,width,height)
+        chunks[chunk]=struct.pack('<I',width*height)+encode(bytes([chunk])*(width*height))
+    for chunk in range(143,149):
+        article=(b'^P\n^C00Original synthetic ending\n^G40,240,109\n'
+                 b'Words wrap around the picture.\n^P\n^c0fSecond page\n^E\n')
+        chunks[chunk]=struct.pack('<I',len(article))+encode(article)
     chunks[0]=struct.pack('<I',len(dims))+encode(dims)
     chunks[86]=struct.pack('<I',12800)+encode(bytes([86])*12800)
     out=bytearray();offsets=[0xffffff]*150
@@ -156,3 +163,16 @@ def boss_files(directory):
         for x,code in ((20,214),(24,197),(30,224),(34,225),(38,226),(42,227)):
             p[1][10*64+x]=code
     map_files(directory,setup)
+
+
+def finale_files(directory):
+    game_files(directory)
+    def setup(p):
+        for x,code in ((10,196),(18,160),(26,178),(34,215),(42,179)):
+            p[1][30*64+x]=code
+        p[1][20*64+50]=99
+        # Original BJ path travels north, with enough clear space for the camera.
+    map_files(directory,setup)
+    head=bytearray((directory/'MAPHEAD.WL6').read_bytes())
+    for n in range(60): struct.pack_into('<I',head,2+4*n,8)
+    (directory/'MAPHEAD.WL6').write_bytes(head)

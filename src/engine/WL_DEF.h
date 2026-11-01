@@ -15,7 +15,7 @@
 #define VIEWY 20
 typedef struct objstruct {
     int32_t x,y; int angle,tilex,tiley;
-    int dir,obclass,areanumber,hitpoints,ticcount,temp2,viewx,viewheight;
+    int dir,obclass,areanumber,hitpoints,ticcount,temp1,temp2,viewx,viewheight;
     int32_t speed,distance,transx,transy;
     unsigned flags;
     bool active;
@@ -58,9 +58,21 @@ bool DoorSolid(unsigned door);
 bool NewGame(unsigned difficulty,unsigned episode);
 bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty);
 bool GameStart(uint64_t ticks);
-typedef enum { ex_playing,ex_completed,ex_secretlevel } exit_t;
+typedef enum { ex_playing,ex_completed,ex_secretlevel,ex_victorious } exit_t;
 extern exit_t playstate;
 bool GameIntermission(void);
+bool VictoryTile(void);
+void VictorySpin(void);
+void ResetVictory(void);
+bool DeathCameraActive(void);
+bool StepDeathCamera(void);
+void DrawPlayBorder(void);
+bool DrawDeathCameraMessage(void);
+bool DrawVictory(void);
+bool StartEndText(void);
+bool StepEndText(bool *done);
+void ResetEndText(void);
+bool GameVictoryPresentation(void);
 unsigned NextMap(unsigned episode,unsigned map,exit_t exit);
 typedef struct { unsigned kill,secret,treasure,seconds,par; int bonus; } levelratio_t;
 extern levelratio_t LevelRatios[8];
