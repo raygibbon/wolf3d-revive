@@ -1,3 +1,17 @@
+Wolf3D Redux development
+=======================
+
+This working tree preserves the original id Software source and history while
+preparing a faithful C11 / CART / SDL3 source port for Linux and Windows.
+Milestone 1 currently builds a dependency probe, **not a playable engine**.
+
+* `Build and validation <docs/BUILD.md>`_
+* `Source inventory and incremental plan <docs/PORTING.md>`_
+* `Git safeguards <docs/GIT-SAFETY.md>`_
+* `Source licensing and game-data separation <docs/LICENSING.md>`_
+
+The historical upstream README follows unchanged.
+
 Wolfenstein 3D
 ==============
 

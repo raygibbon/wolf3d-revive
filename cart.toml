@@ -1,0 +1,44 @@
+# Milestone 1 dependency probe only; the DOS engine is not compiled yet.
+[project]
+name = "wolf3d-redux"
+version = "0.1.0"
+src = "src"
+out = "build"
+
+[linux]
+compiler = "gcc"
+standard = "c11"
+cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
+defines = ["W3R_BUILD_PROBE=1"]
+include_dirs = ["src"]
+lib_dirs = []
+libs = []
+
+# GCC/MinGW is explicit because cflags use GCC syntax. MSVC needs its own flags.
+[windows]
+compiler = "gcc"
+standard = "c11"
+cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
+defines = ["W3R_BUILD_PROBE=1"]
+include_dirs = ["src"]
+lib_dirs = []
+libs = []
+
+[graphics]
+backend = "sdl-renderer"
+
+[deps.sdl3]
+enabled = true
+path = "vendor/SDL"
+linkage = "shared"
+
+# Optional reuse of the existing sibling CART development dependency.
+# Default builds use your own SDL3 SDK at vendor/SDL; this profile downloads nothing.
+[profile.cart-sdl.deps.sdl3]
+path = "../cart/vendor/SDL"
+linkage = "static"
+
+# SDL's local static build reports -pthread -lm in sdl3.pc.
+# CART supplies -lm; this supplies the POSIX threading dependency.
+[profile.cart-sdl.linux]
+libs = ["pthread"]

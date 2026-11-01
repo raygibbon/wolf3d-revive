@@ -1,0 +1,19 @@
+# Keep commercial data and personal saves outside version control.
+/data/
+/game-data/
+*.[Ww][Ll][16]
+*.[Ss][Oo][Dd]
+*.[Ss][Dd][123Mm]
+*.[Ww][Ll][Ff]
+/build/
+/dist/
+/vendor/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.so.*
+*.a
+*.lib
+__pycache__/

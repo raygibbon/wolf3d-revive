@@ -1,0 +1,27 @@
+# Source licensing and provenance
+
+The original release's limited-use notice remains untouched in
+`WOLFSRC/README/LICENSE.DOC` and the historical `README.rst`. Preserve its
+copyright notices and the original snapshot in Git history.
+
+The historical GPL relicensing basis is John Carmack's account in id Software's
+[official iDoom source-release README](https://github.com/id-Software/DOOM-IOS2/blob/master/readme_iDoom.txt).
+It states that the original Wolfenstein source was initially noncommercial
+and later released under the GPL. This project uses that later grant as its
+basis for the active engine port; new C source in `src/` is GPL-2.0-only.
+`COPYING` contains the GNU GPL version 2. This does not replace the historical
+notice or purport to relicense archived DOS binaries, tools or artwork.
+
+The technical reference projects publish GPL-2.0 engine code. Their
+[third-party inventory](https://github.com/bobapplemac/wolf3d-lib/blob/main/THIRD_PARTY.md)
+identifies Nuked-OPL3 as LGPL-2.1-or-later and the optional C DBOPL port as
+GPL-2.0-or-later. No code, OPL implementation, or assets were copied from
+either reference. A later audio milestone must review the chosen revision's
+license and attribution before importing anything. SDL3 uses the zlib license;
+retain its notices if distributing it.
+
+Commercial `.WL6` files, SIGNON artwork, music, sounds, trademarks and other
+game content are separate from the engine source license. Supply your own
+Steam data outside this repository; never stage or distribute it. Existing
+historical objects such as `OBJ/SIGNON.OBJ` remain archived, and are not linked
+into the probe. No data files were downloaded or searched for on the PC.

@@ -1,0 +1,27 @@
+#!/bin/sh
+# Repository-local guard. Git supplies the remote name and resolved push URL.
+set -eu
+
+reject_original()
+{
+    normalized=$(printf '%s' "$1" | tr '[:upper:]\\' '[:lower:]/')
+    case "$normalized" in
+        *id-software/wolf3d*|*id-software:wolf3d*)
+            printf '%s\n' 'Push rejected: the original id-Software/wolf3d repository is fetch-only.' >&2
+            exit 1
+            ;;
+    esac
+}
+
+reject_original "${1-}"
+reject_original "${2-}"
+# Also check every configured push destination (including Git URL rewrites).
+if destinations=$(git remote get-url --push --all "${1-}" 2>/dev/null); then
+    old_ifs=$IFS
+    IFS='
+'
+    for destination in $destinations; do
+        reject_original "$destination"
+    done
+    IFS=$old_ifs
+fi
