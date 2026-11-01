@@ -1,4 +1,4 @@
-# Milestone 1 dependency probe only; the DOS engine is not compiled yet.
+# Original-engine title graphics slice; gameplay is not compiled yet.
 [project]
 name = "wolf3d-redux"
 version = "0.1.0"
@@ -9,7 +9,7 @@ out = "build"
 compiler = "gcc"
 standard = "c11"
 cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
-defines = ["W3R_BUILD_PROBE=1"]
+defines = []
 include_dirs = ["src"]
 lib_dirs = []
 libs = []
@@ -19,7 +19,7 @@ libs = []
 compiler = "gcc"
 standard = "c11"
 cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
-defines = ["W3R_BUILD_PROBE=1"]
+defines = []
 include_dirs = ["src"]
 lib_dirs = []
 libs = []

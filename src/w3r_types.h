@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* Portable type baseline. Original DOS headers are not changed in milestone 1. */
+/* Portable type baseline. Original DOS headers remain untouched. */
 #ifndef W3R_TYPES_H
 #define W3R_TYPES_H
 

@@ -22,6 +22,14 @@ retain its notices if distributing it.
 
 Commercial `.WL6` files, SIGNON artwork, music, sounds, trademarks and other
 game content are separate from the engine source license. Supply your own
-Steam data outside this repository; never stage or distribute it. Existing
-historical objects such as `OBJ/SIGNON.OBJ` remain archived, and are not linked
-into the probe. No data files were downloaded or searched for on the PC.
+Steam data outside this repository; never stage or distribute it. Milestone 2
+reads the user's local Steam data in place. No commercial archive was copied
+into the source tree or downloaded. Local rendered captures remain ignored.
+
+`src/engine/gamepal.inc` reproduces the original 768-byte, six-bit VGA palette
+from the already tracked `WOLFSRC/OBJ/GAMEPAL.OBJ` LEDATA record; it is not
+extracted from Steam artwork. Tests independently parse that original OMF
+record and check the generated constants. `GFXV_WL6.h` is the original generated
+graphics-index header, copied with its DOS EOF marker removed. The original
+objects and source files remain untouched. No SIGNON artwork or third-party
+port implementation is incorporated in the active title path.

@@ -1,8 +1,10 @@
 # Source inventory and staged modernisation
 
-Milestone 1, 2026-11-01: the original `WOLFSRC/` tree is untouched. The new
-`src/main.c` only proves C11 types, SDL3 linkage and a monotonic clock. It does
-not render game graphics, load data, accept `--data`, or start gameplay.
+This inventory was recorded during milestone 1, 2026-11-01. The original
+`WOLFSRC/` tree remains untouched. Milestone 2 now ports the original title
+graphics path with memory, cache/decompression and SDL video support; see
+[implementation and results](MILESTONE2.md). Remaining items below are the
+incremental engine plan, not claims of completed gameplay.
 
 ## Source-file inventory
 
@@ -84,7 +86,8 @@ supplies monotonic counters and sleep; tests inject virtual time. Audio owns
 SDL PCM buffering; an OPL adapter accepts timestamped register writes and
 generates samples. Silence must still advance sequencing. No audio clocks
 should derive from presentation frequency. No platform API is implemented
-beyond the dependency probe in this stage.
+beyond the title graphics slice in milestone 2. Audio, timing and gameplay
+interfaces remain future work; see the implemented boundary in `src/platform/`.
 
 ## Reference findings
 
@@ -107,13 +110,15 @@ the application PCM rate. Follow that separation when restoring `ID_SD`.
 
 1. **Prepared here:** Git safeguards, inventory, C11 type baseline, CART/SDL3
    dependency probe. Original game is not yet compilable.
-2. **Next portable-core slice:** establish explicit WL6 definitions, port
-   `US_RndT` and fixed-point helpers with oracle vectors, then bounded CA/PM
-   decoding of synthetic streams (including malformed inputs). Add data path
-   selection when file loading is wired. Progress toward a compilable core
+2. **Portable-core slices:** milestone 2 ports the 149-chunk WL6 title path,
+   memory manager, bounded graphics decompression and indexed video. Next port
+   `US_RndT` and fixed-point helpers with oracle vectors, then CA map-plane
+   and PM VSWAP decoding against synthetic malformed streams and owned data.
+   Data path selection is implemented for the title. Progress toward a playable core
    subsystem by subsystem; avoid a mass header rewrite.
-3. **Video:** portable VL/VH primitives and original palette/graphics, then
-   window presentation, resize/fullscreen, palette and pixel hash tests.
+3. **Video:** title presentation, original palette, resize, nearest scaling and
+   buffer tests are implemented. Next extend VL/VH to UI primitives, fonts,
+   ordinary pictures and fades. Fullscreen remains later work.
 4. **Input/gameplay:** integrate IN/timing and restore player, doors, weapons,
    enemies and demos; compare deterministic traces and original tic batching.
 5. **Audio:** SDL PCM, original digitized samples and sequences, then reviewed

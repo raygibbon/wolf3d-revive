@@ -17,3 +17,6 @@
 *.a
 *.lib
 __pycache__/
+# Local diagnostic captures can contain commercial game artwork.
+*.bmp
+*.ppm
