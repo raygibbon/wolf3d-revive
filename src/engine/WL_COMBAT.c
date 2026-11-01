@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* WL_AGENT.C inventory, attackinfo, T_Attack and status-bar drawing. Audio
-   calls are omitted until the sound manager is ported. No gameplay assets. */
+/* WL_AGENT.C inventory, attackinfo, T_Attack and status-bar drawing. No gameplay assets. */
 #include "WL_DEF.h"
 #include "ID_CA.h"
 #include "ID_IN.h"
@@ -22,7 +21,7 @@ void GiveAmmo(int ammo)
     if (!gamestate.ammo && !gamestate.attackframe) gamestate.weapon=gamestate.chosenweapon;
     gamestate.ammo+=ammo;if (gamestate.ammo>99) gamestate.ammo=99;
 }
-static void GiveExtraMan(void) { if (gamestate.lives<9) ++gamestate.lives; }
+static void GiveExtraMan(void) { GameSound(BONUS1UPSND,NULL); if (gamestate.lives<9) ++gamestate.lives; }
 void GivePoints(int points)
 {
     gamestate.score+=points;
@@ -46,19 +45,19 @@ void TakeDamage(int points,objtype *attacker)
 void GetBonus(statobj_t *ob)
 {
     switch(ob->itemnumber) {
-    case bo_firstaid: if (gamestate.health==100) return;HealSelf(25);break;
-    case bo_key1: case bo_key2: case bo_key3: case bo_key4: gamestate.keys|=1<<(ob->itemnumber-bo_key1);break;
-    case bo_cross: GivePoints(100);++gamestate.treasurecount;break;
-    case bo_chalice: GivePoints(500);++gamestate.treasurecount;break;
-    case bo_bible: GivePoints(1000);++gamestate.treasurecount;break;
-    case bo_crown: GivePoints(5000);++gamestate.treasurecount;break;
-    case bo_clip: case bo_clip2: if (gamestate.ammo==99) return;GiveAmmo(ob->itemnumber==bo_clip?8:4);break;
-    case bo_machinegun: GiveWeapon(wp_machinegun);break;
-    case bo_chaingun: GiveWeapon(wp_chaingun);gotgatgun=true;facecount=0;break;
+    case bo_firstaid: if (gamestate.health==100) return;HealSelf(25);GameSound(HEALTH2SND,NULL);break;
+    case bo_key1: case bo_key2: case bo_key3: case bo_key4: GameSound(GETKEYSND,NULL);gamestate.keys|=1<<(ob->itemnumber-bo_key1);break;
+    case bo_cross: GivePoints(100);++gamestate.treasurecount;GameSound(BONUS1SND,NULL);break;
+    case bo_chalice: GivePoints(500);++gamestate.treasurecount;GameSound(BONUS2SND,NULL);break;
+    case bo_bible: GivePoints(1000);++gamestate.treasurecount;GameSound(BONUS3SND,NULL);break;
+    case bo_crown: GivePoints(5000);++gamestate.treasurecount;GameSound(BONUS4SND,NULL);break;
+    case bo_clip: case bo_clip2: if (gamestate.ammo==99) return;GiveAmmo(ob->itemnumber==bo_clip?8:4);GameSound(GETAMMOSND,NULL);break;
+    case bo_machinegun: GiveWeapon(wp_machinegun);GameSound(GETMACHINESND,NULL);break;
+    case bo_chaingun: GiveWeapon(wp_chaingun);gotgatgun=true;facecount=0;GameSound(GETGATLINGSND,NULL);break;
     case bo_fullheal: HealSelf(99);GiveAmmo(25);GiveExtraMan();++gamestate.treasurecount;break;
-    case bo_food: if (gamestate.health==100) return;HealSelf(10);break;
-    case bo_alpo: if (gamestate.health==100) return;HealSelf(4);break;
-    case bo_gibs: if (gamestate.health>10) return;HealSelf(1);break;
+    case bo_food: if (gamestate.health==100) return;HealSelf(10);GameSound(HEALTH1SND,NULL);break;
+    case bo_alpo: if (gamestate.health==100) return;HealSelf(4);GameSound(HEALTH1SND,NULL);break;
+    case bo_gibs: if (gamestate.health>10) return;HealSelf(1);GameSound(SLURPIESND,NULL);break;
     default: return;
     }
     StartBonusFlash();
@@ -99,6 +98,7 @@ void	KnifeAttack (objtype *ob)
 {
 	objtype *check,*closest;
 	int32_t	dist;
+    GameSound(ATKKNIFESND,NULL);
 
 	dist = 0x7fffffff;
 	closest = NULL;
@@ -126,6 +126,7 @@ void	GunAttack (objtype *ob)
 	int		damage;
 	int		dx,dy,dist;
 	int32_t	viewdist;
+	GameSound(gamestate.weapon==wp_pistol?ATKPISTOLSND:gamestate.weapon==wp_machinegun?ATKMACHINEGUNSND:ATKGATLINGSND,NULL);
 	madenoise = true;
 	viewdist = 0x7fffffffl;
 	closest = NULL;

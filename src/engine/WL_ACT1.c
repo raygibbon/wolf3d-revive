@@ -4,6 +4,13 @@
    locked doors. ConnectAreas rebuilds connectivity in the one-tic game loop. */
 #include "WL_DEF.h"
 #include <string.h>
+static void DoorSound(soundnames sound,const doorobj_t *d)
+{
+    int area=areaMap[d->x][d->y];
+    if(area<0 || area>=37 || !areabyplayer[area]) return;
+    objtype position={0};position.x=(int32_t)d->x*TILEGLOBAL+32768;position.y=(int32_t)d->y*TILEGLOBAL+32768;
+    GameSound(sound,&position);
+}
 bool DoorSolid(unsigned door) { return door>=doornum || doorobjlist[door].action!=dr_open; }
 void OpenDoor(unsigned door)
 {
@@ -34,13 +41,13 @@ void CloseDoor(unsigned door)
     doorobj_t *d=&doorobjlist[door];
     /* Original actorat marker stays solid throughout opening/closing. */
     if (DoorSolid(door) || PlayerBlocks(d)) return;
-    d->action=dr_closing;
+    DoorSound(CLOSEDOORSND,d);d->action=dr_closing;
 }
 void OperateDoor(unsigned door)
 {
     if (door>=doornum) return;
     doorobj_t *d=&doorobjlist[door];
-    if (d->lock>=1 && d->lock<=4 && !(gamestate.keys & (1 << (d->lock-1)))) return;
+    if (d->lock>=1 && d->lock<=4 && !(gamestate.keys & (1 << (d->lock-1)))) { GameSound(NOWAYSND,NULL);return; }
     if (d->action==dr_closed || d->action==dr_closing) OpenDoor(door);
     else CloseDoor(door);
 }
@@ -52,6 +59,7 @@ void MoveDoors(void)
             if (d->ticcount<300) ++d->ticcount;
             if (d->ticcount>=300) CloseDoor(i);
         } else if (d->action==dr_opening) {
+            if(!d->position) DoorSound(OPENDOORSND,d);
             unsigned position=(unsigned)d->position+1024;
             if (position>=65535) { position=65535;d->ticcount=0;d->action=dr_open; }
             d->position=(uint16_t)position;
@@ -75,9 +83,11 @@ void Cmd_Use(void)
     int dir=player.angle<45 || player.angle>315 ? east : player.angle<135 ? north : player.angle<225 ? west : south;
     if (pushable[x][y]) { PushWall(x,y,dir);return; }
     if (tile==21 && (player.angle<45 || player.angle>315 || (player.angle>=135 && player.angle<225))) {
+        GameSound(LEVELDONESND,NULL);
         ++tilemap[x][y]; /* Original elevator switch texture. */
         playstate=CA_Map()->planes[0][player.tiley*64+player.tilex]==107 ? ex_secretlevel : ex_completed;
     } else if (tile&128) OperateDoor(tile&127);
+    else GameSound(DONOTHINGSND,NULL);
 }
 
 /* WL_ACT1.C PushWall/MovePWalls. Runtime marker/area arrays replace writes
@@ -101,7 +111,9 @@ void PushWall(int x,int y,int dir)
     if (pwallstate || x<=0 || y<=0 || x>=63 || y>=63 ||
         dir<0 || dir>=8 || (dir&1) || !pushable[x][y]) return;
     unsigned tile=tilemap[x][y];
-    if (!tile || tile>=64 || PushBlocked(x+pushdx[dir],y+pushdy[dir])) return;
+    if (!tile || tile>=64) return;
+    if(PushBlocked(x+pushdx[dir],y+pushdy[dir])) { GameSound(NOWAYSND,NULL);return; }
+    GameSound(PUSHWALLSND,NULL);
     tilemap[x+pushdx[dir]][y+pushdy[dir]]=(w3r_byte)tile;
     ++gamestate.secretcount;pwallx=x;pwally=y;pwalldir=dir;
     pwallstate=1;pwallpos=0;tilemap[x][y]|=0xc0;pushable[x][y]=false;

@@ -4,6 +4,7 @@
    Normal enemies use the original difficulty bands and hit-point tables;
    Hans, Gretel and ghosts retain their specialised original spawn rules. */
 #include "WL_DEF.h"
+#include "ID_SD.h"
 #include "ID_CA.h"
 #include "ID_US_1.h"
 #include <stdlib.h>
@@ -19,7 +20,69 @@ extern statetype s_grdstand,s_grdpath1,s_grddie4,s_ofcstand,s_ofcpath1,s_ssstand
 extern statetype s_bossstand,s_gretelstand,s_blinkychase1,s_clydechase1,s_pinkychase1,s_inkychase1;
 static void (*soundhook)(soundnames,const objtype *);
 void SetGameSoundHook(void (*hook)(soundnames,const objtype *)) { soundhook=hook; }
-void GameSound(soundnames sound,const objtype *actor) { if (soundhook) soundhook(sound,actor); }
+static int32_t soundx,soundy;
+static bool soundpositioned;
+/* WL_GAME.C SetSoundLoc. Original tables and camera focal offset. */
+static const unsigned char lefttable[15][30] = {
+{ 8, 8, 8, 8, 8, 8, 8, 8, 5, 3, 1, 0, 0, 0, 0, 0, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 6, 4, 2, 0, 0, 0, 0, 0, 4, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 6, 4, 2, 1, 0, 0, 0, 1, 4, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 3, 2, 1, 0, 1, 2, 4, 5, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 6, 5, 3, 3, 2, 2, 3, 4, 5, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 5, 4, 4, 4, 4, 5, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 6, 5, 5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}
+};
+static const unsigned char righttable[15][30] = {
+{ 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 6, 0, 0, 0, 0, 0, 1, 3, 5, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 6, 4, 0, 0, 0, 0, 0, 2, 4, 6, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 6, 6, 4, 1, 0, 0, 0, 1, 2, 4, 6, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 6, 5, 4, 2, 1, 0, 1, 2, 3, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 5, 4, 3, 2, 2, 3, 3, 5, 6, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 5, 4, 4, 4, 4, 5, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 5, 5, 5, 6, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8},
+{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}
+};
+void GameSoundPosition(int32_t gx,int32_t gy,unsigned *left,unsigned *right)
+{
+    if(player.angle<0 || player.angle>=360) { *left=*right=0;return; }
+    uint32_t vs=sintable[player.angle],vc=sintable[player.angle+90];
+    int32_t vx=player.x-FixedByFrac(FOCALLENGTH,vc),vy=player.y+FixedByFrac(FOCALLENGTH,vs);
+    gx-=vx;gy-=vy;
+    int x=WL_FloorShift((int64_t)FixedByFrac(gx,vc)-FixedByFrac(gy,vs),16);
+    int y=WL_FloorShift((int64_t)FixedByFrac(gy,vc)+FixedByFrac(gx,vs),16);
+    if(x<0) x=-x;
+    if(x>=15) x=14;
+    if(y>=15) y=14;
+    if(y< -15) y=-15;
+    *left=lefttable[x][y+15];*right=righttable[x][y+15];
+}
+void UpdateSoundLoc(void)
+{
+    if(soundpositioned) { unsigned left,right;GameSoundPosition(soundx,soundy,&left,&right);SD_SetPosition(left,right); }
+}
+void GameSound(soundnames sound,const objtype *actor)
+{
+    unsigned left=0,right=0;
+    if(actor) GameSoundPosition(actor->x,actor->y,&left,&right);
+    if(SD_PlaySound(sound,left,right) && SD_IsDigitizedSound(sound)) { soundpositioned=actor!=NULL;
+        if(actor) { soundx=actor->x;soundy=actor->y; } }
+    if (soundhook) soundhook(sound,actor);
+}
 void InitObjects(void)
 {
     objcount=statcount=0;player.next=NULL;player.state=NULL;madenoise=false;
@@ -242,8 +305,8 @@ static bool SpawnSpecial(int x,int y,unsigned tile)
     objtype *ob=&objlist[objcount-1];
     ob->flags=FL_AMBUSH|(ghost ? 0U : FL_SHOOTABLE);ob->dir=dir;
     ob->speed=ghost ? SPDDOG : SPDPATROL;ob->hitpoints=hp;
-    /* SpawnSchabbs/Gift/Fat/Hitler use five tics when digitized audio is off. */
-    s_schabbdie2.tictime=s_giftdie2.tictime=s_fatdie2.tictime=s_hitlerdie2.tictime=5;
+    /* Original logical DigiMode selects timing, never mute or device status. */
+    s_schabbdie2.tictime=s_giftdie2.tictime=s_fatdie2.tictime=s_hitlerdie2.tictime=SD_DigitizedMode()?140:5;
     return true;
 }
 bool ScanInfoPlane(void)

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #include "engine/WL_DEF.h"
 #include "engine/ID_CA.h"
+#include "engine/ID_SD.h"
 #include "engine/ID_IN.h"
 #include "engine/ID_US_1.h"
 #include "engine/ID_VL.h"
@@ -51,6 +52,20 @@ static void TestSpawns(void)
         CHECK(s_schabbdie2.tictime==5 && s_hitlerdie2.tictime==5);
         GameStop();
     }
+}
+static void TestAudioBossMode(void)
+{
+    for(unsigned mode=0;mode<2;++mode) {
+        SD_SetDigitizedMode(mode!=0);SD_SetEnabled(false,false);
+        Start(0,2); /* No SDL device is open, including in digitized mode. */
+        int delay=mode?140:5;
+        CHECK(s_schabbdie2.tictime==delay && s_giftdie2.tictime==delay &&
+              s_fatdie2.tictime==delay && s_hitlerdie2.tictime==delay);
+        SD_SetEnabled(true,true);CHECK(s_schabbdie2.tictime==delay);
+        SD_Shutdown();CHECK(s_schabbdie2.tictime==delay);
+        GameStop();
+    }
+    SD_SetDigitizedMode(false); /* Restore legacy test fixture's logical mode. */
 }
 static objtype *Projectile(int kind,statetype *state)
 {
@@ -272,7 +287,7 @@ static void TestRestartAndArticles(void)
 int main(int argc,char **argv)
 {
     CHECK(argc==2);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));
-    SetGameSoundHook(Sound);TestSpawns();TestProjectileRules();TestBurstsAndMorph();TestPoolAndKiller();
+    SetGameSoundHook(Sound);TestSpawns();TestAudioBossMode();TestProjectileRules();TestBurstsAndMorph();TestPoolAndKiller();
     TestCamera(0,1);TestCamera(2,2);TestCamera(3,3);TestCamera(4,5);TestBJ(0);TestBJ(4);
     TestReusedSpriteOrder();TestCameraTiming();TestVictoryStats();TestCinematicControls();TestRestartAndArticles();SetGameSoundHook(NULL);GameStop();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
     puts("Remaining bosses, projectiles, morph, allocation, death cameras, BJ, all episode endings and restart passed.");return 0;

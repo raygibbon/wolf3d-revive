@@ -4,7 +4,8 @@ CART builds original menus and normal-level gameplay: sprites, enemies,
 weapons, pickups, HUD, life restarts, episode/difficulty selection, pushwalls,
 elevator exits, intermissions and progression. All original bosses,
 projectiles and six finale paths are implemented; all 60 maps load/render/
-simulate at all four difficulties. Audio and save/load remain unported. See
+simulate at all four difficulties. Native AdLib music and digitised/AdLib effects
+play through SDL3; save/load remains unported. See [audio support and limits](MILESTONE6B.md) and
 [milestone 6A](MILESTONE6A.md) for verified scope and playthrough limitations.
 
 ## Local Linux build
@@ -21,7 +22,10 @@ Press any key during the title/credits/scores to open the menu. Use Up/Down
 and Enter/Space; V, B and Q select View Scores, Back to Demo and Quit. Escape
 opens quit confirmation in the menu (Y exits, N/Escape cancels). Closing the
 window exits directly. New Game opens the episode and difficulty pages; arrows select, Enter/Space
-confirm and Escape goes back. Unported main-menu rows stay disabled. A failed
+confirm and Escape goes back. Sound opens functional Music/Effects enable
+switches and independent volumes: Up/Down select, Enter/Space toggles a switch,
+Left/Right changes volume in 5% steps. Settings last for this session. Other
+unported main-menu rows stay disabled. A failed
 level load reports the reason and returns to the menu after acknowledgement.
 
 In the level: Up/Down move, Left/Right turn, Alt+Left/Right strafe, Shift runs,
@@ -32,6 +36,18 @@ press a key to continue. Escape ends the game and returns to the menu; it does
 not save or resume. Victory statistics acknowledge with a key; ending articles
 use arrows, Enter or Page Up/Down for pages and Escape to close, followed by
 scores and return to menu. `--level` starts E1M1 at medium difficulty directly.
+
+`--no-audio` skips sound loading/device output. Otherwise music and sounds read
+AUDIOHED/AUDIOT/VSWAP directly; nothing is converted or written to disk. Audio
+startup/device errors report a reason and allow silent gameplay. The logical
+original digitised mode (including its 140-tic boss death delays) is identical
+with audio muted or disabled. No PC speaker mode is offered.
+
+An ALSA-only SDL SDK can use `SDL_AUDIO_ALSA_DEFAULT_PLAYBACK_DEVICE=pulse` on
+a PulseAudio/PipeWire desktop. The backend tries this endpoint automatically
+if ALSA's default fails and no explicit device hint exists. This does not change
+ALSA configuration. A full SDL SDK with native PulseAudio/PipeWire support
+uses its own default routing.
 
 The discovered Steam directory above is used read-only. Supply a different absolute path if your installation
 is elsewhere; `cart run` changes the working directory to the output folder.
@@ -76,9 +92,11 @@ SDKs may require additional platform libraries in `libs`.
 
 The Windows target explicitly selects GCC/MinGW so the warning flags match.
 Use a Windows SDL SDK/import library, not the Linux `cart-sdl` profile. Put the
-matching SDL3 DLL beside the executable or on PATH. Every new C module passes
-MinGW compile-only checking; Windows linking, runtime and native resize behavior
-remain unverified. No CMake build system was introduced.
+matching SDL3 DLL beside the executable or on PATH. All 35 C modules pass strict MinGW C11 compilation. A manual cross-link with
+the official SDL3 3.4.18 MinGW SDK and a five-frame E1M1 smoke test under Wine
+with dummy video/audio passed. This is not native Windows verification;
+physical Windows playback, device changes and resize behaviour still need
+Windows testing. See [MILESTONE6B.md](MILESTONE6B.md). No CMake build system was introduced.
 
 No CART source changes were required in milestones 2–6. The Linux/Windows
 link lists now include the math library used by the original table builder.
@@ -124,7 +142,7 @@ gcc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
   src/main.c src/engine/*.c src/platform/*.c \
   ../cart/vendor/SDL/build/libSDL3.a -pthread -lm \
   -o build/checks/wolf3d-revive-sanitize
-SANITIZE=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-revive-sanitize" \
+SANITIZE=1 UBSAN_OPTIONS=halt_on_error=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-revive-sanitize" \
   WOLF3D_DATA="$HOME/.steam/steam/steamapps/common/Wolfenstein 3D/base" \
   python3 -m unittest discover -s tests -v
 ```
@@ -132,8 +150,10 @@ SANITIZE=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-revive-sanitize" \
 `SANITIZE=1` also instruments the C unit/video tests. The reused SDL static
 archive is not instrumented. The gameplay simulation and palette flashes use
 fixed 70 Hz tics. The campaign suite exercises selection, exits, statistics,
-secret routing, pushwalls and later-floor restarts. Audio and save/load are
-not implemented or exercised.
+secret routing, pushwalls and later-floor restarts. Audio regressions add bounded archive/sample decoding, deterministic IMF and
+shared OPL scheduling, all original music loop durations, volume/priority/position,
+RNG independence, both boss delay modes and repeated SDL dummy lifecycle. Finale
+SDL tests also initialise sound. Save/load remains unimplemented.
 
 From CART, regression checks can use the current executable by absolute path:
 

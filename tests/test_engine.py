@@ -483,13 +483,15 @@ class EngineTests(unittest.TestCase):
         if not library.is_file():
             self.skipTest("SDL_SDK must point to a built static SDL3 checkout")
         from game_fixtures import finale_files
+        from audio_fixtures import audio_files
         finale_files(self.data)
+        audio_files(self.data)
         program = self.output / "finale-sdl-tests"
         sources = [str(p) for p in sorted((ROOT / "src").rglob("*.c")) if p.name != "main.c"]
         subprocess.run(self.compiler + ["-I" + str(ROOT / "src"), "-I" + str(sdk / "include"),
                        str(ROOT / "tests/finale_sdl_tests.c"), *sources, str(library), "-pthread", "-lm",
                        "-o", str(program)], check=True)
-        env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_RENDER_DRIVER="software")
+        env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_RENDER_DRIVER="software", SDL_AUDIODRIVER="dummy")
         subprocess.run([str(program), str(self.data)], env=env, check=True)
         if os.environ.get("WOLF3D_DATA"):
             subprocess.run([str(program), os.environ["WOLF3D_DATA"], "owned"], env=env, check=True)

@@ -12,13 +12,17 @@ basis for the active engine port; new C source in `src/` is GPL-2.0-only.
 `COPYING` contains the GNU GPL version 2. This does not replace the historical
 notice or purport to relicense archived DOS binaries, tools or artwork.
 
-The technical reference projects publish GPL-2.0 engine code. Their
-[third-party inventory](https://github.com/bobapplemac/wolf3d-lib/blob/main/THIRD_PARTY.md)
-identifies Nuked-OPL3 as LGPL-2.1-or-later and the optional C DBOPL port as
-GPL-2.0-or-later. No code, OPL implementation, or assets were copied from
-either reference. A later audio milestone must review the chosen revision's
-license and attribution before importing anything. SDL3 uses the zlib license;
-retain its notices if distributing it.
+Milestone 6B imports Mitsutaka Okazaki's
+[emu8950](https://github.com/digital-sound-antiques/emu8950) directly from
+commit `f82a22e80b68820f263084aa8506b12eb1c9b4dd`, under its
+[MIT licence](../third_party/emu8950/LICENSE). Preserve that licence and its
+copyright notices when distributing source or binaries. The active port stays
+GPL-2.0-only; these imported files retain their MIT terms. Exact provenance
+and two local safety patches are listed in
+[README.wolf3d.md](../third_party/emu8950/README.wolf3d.md).
+No code was copied from a third-party Wolfenstein port. Nuked-OPL3 was reviewed
+but not imported. SDL3 uses the zlib licence; retain its notices when distributing
+it. See [MILESTONE6B.md](MILESTONE6B.md) for dependency selection and limitations.
 
 Commercial `.WL6` files, SIGNON artwork, music, sounds, trademarks and other
 game content are separate from the engine source license. Supply your own

@@ -7,10 +7,15 @@ Milestone 6A implements original enemies and bosses, boss projectiles,
 weapons, pickups, secrets, progression and all six episode endings. All 60
 owned maps load/render/simulate at four difficulties; controlled SDL weapon
 fights verify all six finale paths. Full navigated episode playthroughs and
-DOS equivalence are not claimed. Audio, saving/loading, configuration and
-Enhanced Mode remain later work.
+DOS equivalence are not claimed. Milestone 6B adds live AdLib music, original
+voices/effects and native SDL3 audio directly from WL6 archives, plus working
+music/effects volume and mute controls. No converted soundtrack or audio cache
+is created. Animated intermission counting audio, detailed DOS listening
+comparisons, saving/loading, persistent configuration and Enhanced Mode remain
+later work.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 6B native audio, licensing and fidelity <docs/MILESTONE6B.md>`_
 * `Milestone 6A actor progress and remaining campaign work <docs/MILESTONE6A.md>`_
 * `Milestone 6 progress and remaining work <docs/MILESTONE6.md>`_
 * `Milestone 5 combat slice <docs/MILESTONE5.md>`_

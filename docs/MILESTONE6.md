@@ -8,8 +8,9 @@ paths are implemented. Owned-data validation now loads/renders/simulates
 SDL weapon fights exercise every finale, Mecha Hitler's transformation,
 cinematics, original statistics/articles and return through scores to menu.
 See [MILESTONE6A.md](MILESTONE6A.md) for source references, test results,
-differences and limitations. Full navigated playthroughs, audio and saves
-remain outstanding. The remainder records the earlier Milestone 6 pass and
+differences and limitations. [Milestone 6B](MILESTONE6B.md) adds native SDL3
+music and effects; see that report for audio verification and remaining limits.
+Full navigated playthroughs and saves remain outstanding. The remainder records the earlier Milestone 6 pass and
 its original 51-map baseline, not the current actor/finale support.
 
 2026-11-02. This is an incremental, working gameplay/progression slice, **not

@@ -6,6 +6,8 @@
 #include "engine/ID_CA.h"
 #include "engine/ID_IN.h"
 #include "platform/sdl_video.h"
+#include "platform/sdl_audio.h"
+#include "engine/ID_SD.h"
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +17,7 @@ static uint64_t ticks;
 static unsigned ep;
 static void Step(void)
 {
-    CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));CHECK(VW_UpdateScreen());
+    CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));Audio_Pump();CHECK(VW_UpdateScreen());
     CHECK(DemoLoopState()!=UI_ERROR);
 }
 static void Steps(unsigned count) { while (count--) Step(); }
@@ -85,7 +87,7 @@ static void CollectKeyAndExit(void)
 static void Episode(bool owned)
 {
     CHECK(DemoLoopStartGame(ticks));Steps(11);
-    CHECK(GameStartSelected(ticks,ep,2));ShutdownGameLevel();gamestate.mapon=8;CHECK(SetupGameLevel());
+    CHECK(GameStartSelected(ticks,ep,2));ShutdownGameLevel();gamestate.mapon=8;CHECK(SetupGameLevel());SD_StartMusic(SD_LevelMusic(ep,8));
     const int bosses[]={bossobj,schabbobj,mechahitlerobj,giftobj,gretelobj,fatobj};
     objtype *boss=Find(bosses[ep]);CHECK(boss);Arrange(boss);Capture("boss-start");
     GiveWeapon(wp_chaingun);gamestate.ammo=99;int initial=boss->hitpoints;Key(SDL_SCANCODE_LCTRL,true);
@@ -125,8 +127,10 @@ static void Episode(bool owned)
 int main(int argc,char **argv)
 {
     CHECK(argc==2 || argc==3);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_Startup());
+    SD_SetDigitizedMode(true);CHECK(Audio_Startup());
     CHECK(DemoLoopStartup(0,true));Steps(11);
     if (argc==3) for (ep=0;ep<6;++ep) Episode(true);
     else { ep=1;Episode(false); }
-    GameStop();VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());return 0;
+    sd_status audio;SD_GetStatus(&audio);CHECK(audio.frames>0 && audio.writes>0);
+    GameStop();Audio_Shutdown();VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());return 0;
 }

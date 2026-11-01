@@ -99,7 +99,8 @@ SDL PCM buffering; an OPL adapter accepts timestamped register writes and
 generates samples. Silence must still advance sequencing. No audio clocks
 should derive from presentation frequency. No platform API is implemented
 beyond the original UI slice in milestone 3. Monotonic timing and keyboard
-input are now implemented; audio and gameplay interfaces remain future work.
+input, gameplay and native shared-OPL/SDL3 audio are now implemented; see
+[MILESTONE6B.md](MILESTONE6B.md) for the actual audio boundary and limitations.
 
 ## Reference findings
 

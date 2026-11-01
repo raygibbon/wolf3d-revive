@@ -3,6 +3,7 @@
    Same MINDIST square, axis-slide order and movement/angle constants. */
 #include "WL_DEF.h"
 #include "ID_CA.h"
+#include "ID_SD.h"
 static int anglefrac;
 void ResetMovement(void) { anglefrac=0; }
 bool TryMove(const objtype *ob)
@@ -30,6 +31,8 @@ void ClipMove(objtype *ob,int32_t dx,int32_t dy)
     int64_t nx=(int64_t)x+dx,ny=(int64_t)y+dy;
     if (nx<0 || ny<0 || nx>=64*65536 || ny>=64*65536) return;
     ob->x=(int32_t)nx; ob->y=(int32_t)ny; if (TryMove(ob)) return;
+    sd_status audio;SD_GetStatus(&audio);
+    if(audio.sound<0) GameSound(HITWALLSND,NULL);
     ob->y=y; if (TryMove(ob)) return;
     ob->x=x; ob->y=(int32_t)ny; if (TryMove(ob)) return;
     ob->x=x; ob->y=y;

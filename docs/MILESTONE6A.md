@@ -10,6 +10,9 @@ This is not a claim of six fully navigated episode playthroughs, DOS demo
 compatibility or pixel-perfect equivalence. The controlled tests reposition
 the player and refresh health/ammunition; their exact limits are below.
 Audio playback, save/load and Enhanced Mode remain outside this milestone.
+Subsequent [Milestone 6B](MILESTONE6B.md) implements native music/effects and
+restores the original logical sound-mode boss delays; its report supersedes
+this milestone's audio-off timing limitation.
 
 ## Baseline and source provenance
 

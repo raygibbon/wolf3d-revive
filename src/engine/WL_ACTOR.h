@@ -80,6 +80,8 @@ void A_DeathScream(objtype *ob);
 /* Optional synchronous sound sink. NULL actor means a non-positional sound.
    The sink must not mutate simulation or retain the actor pointer. */
 void SetGameSoundHook(void (*hook)(soundnames,const objtype *));
+void UpdateSoundLoc(void);
+void GameSoundPosition(int32_t gx,int32_t gy,unsigned *left,unsigned *right);
 void GameSound(soundnames sound,const objtype *actor);
 void PlaceItemType(stat_t item,int x,int y);
 void GetBonus(statobj_t *obj);

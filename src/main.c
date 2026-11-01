@@ -3,6 +3,8 @@
 #include "engine/ID_CA.h"
 #include "engine/ID_VL.h"
 #include "platform/sdl_video.h"
+#include "platform/sdl_audio.h"
+#include "engine/ID_SD.h"
 #include "engine/WL_MAIN.h"
 #include "engine/WL_MENU.h"
 #include "engine/WL_DEF.h"
@@ -13,8 +15,8 @@
 
 static void Usage(const char *name)
 {
-    printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui|--check-level] [--menu|--level] [--frames N] [--capture local.bmp]\n"
-           "Original WL6 menus and normal-level gameplay. New Game selects episode and difficulty.\n"
+    printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui|--check-level] [--menu|--level] [--no-audio] [--frames N] [--capture local.bmp]\n"
+           "Original WL6 campaign with native AdLib music and digitized audio. New Game selects episode and difficulty.\n"
            "--check-assets/--check-ui/--check-level validate without a window.\n"
            "--level starts E1M1 directly; arrows move/turn, Alt strafes, Shift runs.\n"
            "Ctrl fires; 1-4 select weapons; Space uses doors, pushwalls and elevators; Escape returns to menu. --frames limits a smoke test.\n",
@@ -24,10 +26,12 @@ static void Usage(const char *name)
 int main(int argc, char *argv[])
 {
     const char *directory = NULL, *capture = NULL;
+    bool no_audio=false;
     bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
     for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--no-audio") == 0) { no_audio=true;continue; }
         if (strcmp(argv[i], "--help") == 0) { Usage(argv[0]); return 0; }
         if (strcmp(argv[i], "--check-level") == 0) { check_level = true; continue; }
         if (strcmp(argv[i], "--level") == 0) { level = true; continue; }
@@ -65,6 +69,7 @@ int main(int argc, char *argv[])
         puts("Original fonts, menu pictures, credits and high scores validated.");
         status = 0; goto done;
     }
+    SD_SetDigitizedMode(true); /* Logical mode also applies with --no-audio. */
     bool ready=GameProbe();
     if (check_level) {
         if (!ready) { fprintf(stderr,"Cannot load E1M1: %s\n",CA_Error()); goto done; }
@@ -75,6 +80,8 @@ int main(int argc, char *argv[])
     if (ready) MainItems.curpos=newgame;
     else { fprintf(stderr,"New Game unavailable: %s\n",CA_Error()); if (level) goto done; }
     if (!VL_Startup()) { fprintf(stderr, "SDL3 video: %s\n", VL_Error()); goto video_done; }
+    if (!no_audio && !Audio_Startup()) fprintf(stderr,"Audio unavailable: %s; continuing silently.\n",Audio_Error());
+    MainMenu[soundmenu].active=1;
     uint64_t ticks = VL_GetTicks70();
     if (!DemoLoopStartup(ticks,menu)) { fprintf(stderr,"Cannot load original UI: %s\n",CA_Error()); goto video_done; }
     if (level && !DemoLoopStartGame(ticks)) { fprintf(stderr,"E1M1: %s\n",CA_Error()); goto video_done; }
@@ -87,12 +94,14 @@ int main(int argc, char *argv[])
     }
     for (unsigned long frame = 0; !VL_PollQuit() && DemoLoopState() != UI_DONE; ++frame) {
         if (!DemoLoop(VL_GetTicks70())) { fprintf(stderr,"Original UI: %s\n",CA_Error()); goto video_done; }
+        Audio_Pump();
         if (!VW_UpdateScreen()) { fprintf(stderr, "SDL3 presentation: %s\n", VL_Error()); goto video_done; }
         if (frames && frame + 1 >= frames) break;
         VL_Sleep(4); /* Input stays responsive; deadlines use 70 Hz monotonic ticks. */
     }
     status = 0;
 video_done:
+    Audio_Shutdown();
     VL_Shutdown();
 done:
     GameStop();

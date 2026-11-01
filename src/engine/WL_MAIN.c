@@ -8,6 +8,7 @@
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include "WL_DEF.h"
+#include "ID_SD.h"
 #include <string.h>
 static ui_state state, next_state;
 static bool leaving;
@@ -37,6 +38,10 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     IN_ClearKeysDown();
     if (screen == UI_DONE) return true;
     if (screen == UI_GAME && !GameStartSelected(ticks+10,episode,difficulty)) return GameError() && VL_FadeIn(gamepal,10,ticks);
+    if (screen == UI_TITLE) SD_StartMusic(7);
+    if (screen == UI_MENU) SD_StartMusic(14);
+    if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
+    if (screen == UI_SOUND && !DrawSoundSettings()) return false;
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
@@ -93,6 +98,7 @@ bool DemoLoop(uint64_t ticks)
     if (state == UI_MENU) {
         int action = HandleMenu(ticks);
         if (action == -3) return false;
+        if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
         if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == viewscores) return Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) return Transition(UI_TITLE,ticks,10);
@@ -102,6 +108,10 @@ bool DemoLoop(uint64_t ticks)
             if (!Message("Dost thou wish to\nleave with such hasty\nabandon?")) return false;
             cursor_x = PrintX; cursor_y = PrintY; blink = false; blink_next = ticks + 10;
         }
+    } else if (state == UI_SOUND) {
+        int action=HandleSoundSettings();
+        if(action==-3) return false;
+        if(action==-1) return Transition(UI_MENU,ticks,10);
     } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
         bool choosing_episode=state==UI_EPISODE;
         int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);

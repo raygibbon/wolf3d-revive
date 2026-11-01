@@ -4,6 +4,7 @@
 #include "WL_DEF.h"
 #include "ID_IN.h"
 #include "ID_CA.h"
+#include "ID_SD.h"
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include <math.h>
@@ -42,10 +43,11 @@ bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty)
     GameStop();
     US_InitRndT((unsigned)(ticks&255U));
     if (!NewGame(difficulty,episode) || !SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop(); return false; }
+    SD_StartMusic(SD_LevelMusic(episode,0));
     deathphase=deathwait=0;finished=intermission=false;
     lasttimecount=ticks;running=true; IN_ClearKeysDown(); return true;
 }
-void GameStop(void) { victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
+void GameStop(void) { SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 static bool Down(unsigned scan) { return Keyboard[scan] || IN_PressPending(scan); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and
@@ -53,6 +55,7 @@ static bool Down(unsigned scan) { return Keyboard[scan] || IN_PressPending(scan)
 static bool Died(uint64_t ticks)
 {
     if (!deathphase) {
+        SD_StartMusic(-1);GameSound(PLAYERDEATHSND,NULL);
         if (killerobj) {
             double angle=atan2((double)player.y-killerobj->y,(double)killerobj->x-player.x);
             if (angle<0) angle+=6.28318530717958647692;
@@ -87,6 +90,7 @@ static bool Died(uint64_t ticks)
         US_InitRndT((unsigned)(ticks&255U));
         if (!SetupGameLevel()) return false;
         gamestate.lives=lives;gamestate.nextextra=nextextra;
+        SD_StartMusic(SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon));
         deathphase=0;IN_ClearKeysDown();
         if (!DrawPlayScreen() || !ThreeDRefresh()) return false;
     }
@@ -106,6 +110,7 @@ bool GameStep(uint64_t ticks)
         gamestate.oldscore=gamestate.score;gamestate.mapon=(int)(next%10);
         ShutdownGameLevel();
         if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) return false;
+        SD_StartMusic(SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon));
         intermission=false;IN_ClearKeysDown();return true;
     }
     if (victorypage) {
@@ -131,6 +136,7 @@ bool GameStep(uint64_t ticks)
         MoveDoors();MovePWalls();
         if (IN_ConsumePress(sc_Space) && !gamestate.victoryflag) Cmd_Use();
         if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
+            SD_StartMusic(24);
             FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
         }
         if (playstate!=ex_playing) {
@@ -138,6 +144,7 @@ bool GameStep(uint64_t ticks)
             gamestate.keys=0;FinishPaletteShifts();
             levelratio_t stats=LevelStats();
             if (gamestate.mapon<8) LevelRatios[gamestate.mapon]=stats;
+            SD_StartMusic(16);
             GivePoints(stats.bonus);intermission=true;IN_ClearKeysDown();
             return DrawLevelCompleted(&stats);
         }
@@ -155,6 +162,7 @@ bool GameStep(uint64_t ticks)
             DoActor(ob);if (DeathCameraActive()) break;
         }
         if (ActorAllocationFailed()) return false;
+        UpdateSoundLoc();
         madenoise=false;
         IN_ClearPressed();
         /* A_StartDeathCam's original blocking hold begins before the outer

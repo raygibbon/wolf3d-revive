@@ -7,6 +7,7 @@
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include "ID_IN.h"
+#include "ID_SD.h"
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
@@ -56,6 +57,7 @@ static void MoveGun(int direction)
     do { MainItems.curpos = (MainItems.curpos + direction + MENU_COUNT) % MENU_COUNT; }
     while (!MainMenu[MainItems.curpos].active);
     shape = C_CURSOR1PIC;
+    (void)SD_PlaySound(MOVEGUN1SND,0,0);
 }
 int HandleMenu(uint64_t ticks)
 {
@@ -95,8 +97,8 @@ int HandleMenu(uint64_t ticks)
     if (redraw && !DrawMainMenu()) return -3;
     bool escape=IN_ConsumePress(sc_Escape);
     bool enter=IN_ConsumePress(sc_Enter), space=IN_ConsumePress(sc_Space);
-    if (escape) return -1;
-    if (enter || space) return MainItems.curpos;
+    if (escape) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
+    if (enter || space) { (void)SD_PlaySound(SHOOTSND,0,0);return MainItems.curpos; }
     return -2;
 }
 bool Message(const char *text)
@@ -160,10 +162,53 @@ int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice)
     if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks>=move_next)) {
         *choice=(*choice+((up || (!down && Keyboard[sc_UpArrow])) ? count-1 : 1))%count;
         move_next=ticks+20;
+        (void)SD_PlaySound(MOVEGUN1SND,0,0);
         if (!DrawNewSelection(episode,*choice)) return -3;
     }
     bool escape=IN_ConsumePress(sc_Escape),enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
-    if (escape) return -1;
-    if (enter || space) return 1;
+    if (escape) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
+    if (enter || space) { (void)SD_PlaySound(SHOOTSND,0,0);return 1; }
+    return 0;
+}
+
+/* Minimal functional settings within the existing control-panel renderer. */
+static unsigned sound_choice;
+bool DrawSoundSettings(void)
+{
+    unsigned music,effects;bool mon,eon;SD_GetSettings(&music,&effects,&mon,&eon);
+    ClearMScreen();DrawWindow(36,32,248,132,BKGDCOLOR);
+    fontnumber=1;fontcolor=TEXTCOLOR;PrintX=112;PrintY=12;
+    if(!US_Print("Sound")) return false;
+    char text[4][64];
+    (void)snprintf(text[0],sizeof(text[0]),"Music: %s",mon?"On":"Off");
+    (void)snprintf(text[1],sizeof(text[1]),"Effects: %s",eon?"On":"Off");
+    (void)snprintf(text[2],sizeof(text[2]),"Music volume: %u%%",music);
+    (void)snprintf(text[3],sizeof(text[3]),"Effects volume: %u%%",effects);
+    for(unsigned i=0;i<4;++i) {
+        fontcolor=i==sound_choice?HIGHLIGHT:TEXTCOLOR;PrintX=62;PrintY=48+(int)i*24;
+        if(!US_Print(text[i])) return false;
+    }
+    fontcolor=TEXTCOLOR;PrintX=40;PrintY=176;
+    return US_Print("Arrows adjust; Esc returns");
+}
+int HandleSoundSettings(void)
+{
+    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
+    bool enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
+    if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
+    if(up || down) sound_choice=(sound_choice+(up?3U:1U))%4;
+    if(left || right || enter || space) {
+        unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);
+        if(sound_choice==0) mon=!mon;
+        else if(sound_choice==1) eon=!eon;
+        else {
+            unsigned *v=sound_choice==2?&m:&e;
+            if(left) *v=*v>=5?*v-5:0;
+            else *v=*v<=95?*v+5:100;
+        }
+        SD_SetVolumes(m,e);SD_SetEnabled(mon,eon);
+    }
+    if((up || down || left || right || enter || space) && !DrawSoundSettings()) return -3;
     return 0;
 }
