@@ -1,13 +1,17 @@
-Wolf3D Redux development
+Wolf3D Revive development
 =======================
 
 This working tree preserves the original id Software source and history while
 preparing a faithful C11 / CART / SDL3 source port for Linux and Windows.
-Milestone 4 adds original E1M1 map/texture loading, wall raycasting, keyboard
-movement and normal doors to the existing original menus and attract screens.
-Actors, combat, pickups, progression and audio remain unported.
+Milestone 5 adds original enemies, combat, pickups and the HUD. The first
+Milestone 6 pass adds episode/difficulty selection, normal-level progression,
+secret pushwalls, elevator exits and intermission scoring. Boss/ghost/victory
+encounters, audio, saving/loading and configuration remain outstanding; this
+is not yet a complete original-game port.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 6 progress and remaining work <docs/MILESTONE6.md>`_
+* `Milestone 5 combat slice <docs/MILESTONE5.md>`_
 * `Milestone 4 results and controls <docs/MILESTONE4.md>`_
 * `Milestone 3 results and controls <docs/MILESTONE3.md>`_
 * `Milestone 2 results and scope <docs/MILESTONE2.md>`_

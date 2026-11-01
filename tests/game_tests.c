@@ -142,21 +142,34 @@ static void TestDoors(void)
     CHECK(SetupGameLevel());
     doorobj_t *d=&doorobjlist[0];
     player.x=(int32_t)(d->x*65536)-MINDIST-100;
-    player.y=(int32_t)(d->y*65536)+32768;player.tilex=d->x-1;player.tiley=d->y;player.angle=0;
+    player.y=(int32_t)(d->y*65536)+32768;player.tilex=(int)d->x-1;player.tiley=(int)d->y;player.angle=0;
     d->lock=0;d->vertical=true;
     Cmd_Use();CHECK(d->action==dr_opening && DoorSolid(0));
     for(unsigned i=0;i<63;++i) MoveDoors();
     CHECK(d->position==64512 && DoorSolid(0));MoveDoors();
     CHECK(d->position==65535 && !DoorSolid(0));
     int32_t x=player.x;ClipMove(&player,1000,0);CHECK(player.x==x+1000);
-    player.tilex=d->x;player.x=(int32_t)(d->x*65536)+32768;
+    player.tilex=(int)d->x;player.x=(int32_t)(d->x*65536)+32768;
     for(unsigned i=0;i<301;++i) MoveDoors();
     CHECK(d->action==dr_open);
-    player.tilex=d->x-2;player.x=(int32_t)(d->x*65536)-2*65536;
+    player.tilex=(int)d->x-2;player.x=(int32_t)(d->x*65536)-2*65536;
     MoveDoors();CHECK(d->action==dr_closing && DoorSolid(0));
     for(unsigned i=0;i<64;++i) MoveDoors();
     CHECK(d->position==0 && d->action==dr_closed);
     d->lock=1;OperateDoor(0);CHECK(d->action==dr_closed);
+    /* All four corners, both orientations, and entry during closing. */
+    int32_t left=(int32_t)d->x*65536,top=(int32_t)d->y*65536;
+    for(unsigned vertical=0;vertical<2;++vertical) for(unsigned corner=0;corner<4;++corner) {
+        d->vertical=vertical!=0;d->action=dr_open;d->position=65535;
+        player.x=(corner&1) ? left+65536+MINDIST-1 : left-MINDIST;
+        player.y=(corner&2) ? top+65536+MINDIST-1 : top-MINDIST;
+        player.tilex=player.x/65536;player.tiley=player.y/65536;
+        CloseDoor(0);CHECK(d->action==dr_open);
+        d->action=dr_closing;d->position=60000;MoveDoors();
+        CHECK(d->action==dr_opening && d->position==60000);
+    }
+    player.x=left-MINDIST-1;player.y=top-MINDIST-1;
+    d->action=dr_open;CloseDoor(0);CHECK(d->action==dr_closing);
     ShutdownGameLevel();
 }
 static void TestSimulation(void)
@@ -183,8 +196,8 @@ static void TestSimulation(void)
 }
 static void TestOwnedWalk(void)
 {
-    CHECK(GameStart(0));unsigned start=player.tilex,door=0;
-    for(unsigned x=start+1;x<63;++x) if(tilemap[x][player.tiley]&128) { door=x;break; }
+    CHECK(GameStart(0));int start=player.tilex,door=0;
+    for(int x=start+1;x<63;++x) if(tilemap[x][player.tiley]&128) { door=x;break; }
     CHECK(door);bool used=false;IN_KeyEvent(sc_UpArrow,true);
     for(uint64_t t=1;t<500 && player.tilex<door+2;++t) {
         if(!used && player.tilex+1==door) { Key(sc_Space);used=true; }
@@ -197,9 +210,11 @@ static void TestMenuGame(void)
 {
     CHECK(GameProbe()); MainMenu[newgame].active=1; MainItems.curpos=newgame;
     CHECK(DemoLoopStartup(0,true) && DemoLoop(10)); Key(sc_Enter);
-    CHECK(DemoLoop(11) && DemoLoop(31) && DemoLoopState()==UI_GAME);
-    Key(sc_UpArrow); CHECK(DemoLoop(32));
-    Key(sc_Escape); CHECK(DemoLoop(33) && DemoLoop(53) && DemoLoopState()==UI_MENU);
+    CHECK(DemoLoop(11) && DemoLoop(31) && DemoLoopState()==UI_EPISODE);
+    Key(sc_Enter);CHECK(DemoLoop(32) && DemoLoop(52) && DemoLoopState()==UI_DIFFICULTY);
+    Key(sc_Enter);CHECK(DemoLoop(53) && DemoLoop(73) && DemoLoopState()==UI_GAME);
+    Key(sc_UpArrow); CHECK(DemoLoop(74));
+    Key(sc_Escape); CHECK(DemoLoop(75) && DemoLoop(95) && DemoLoopState()==UI_MENU);
     CHECK(!CA_Map() && ChunksInFile==0);
     MainMenu[newgame].active=0;MainItems.curpos=viewscores;
 }

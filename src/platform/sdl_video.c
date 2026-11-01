@@ -33,7 +33,7 @@ bool VL_Startup(void)
     VL_Shutdown();
     SDL_SetMainReady();
     if (!SDL_Init(SDL_INIT_VIDEO)) goto failed;
-    window = SDL_CreateWindow("Wolf3D Redux", 960, 720, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow("Wolf3D Revive", 960, 720, SDL_WINDOW_RESIZABLE);
     if (!window) goto failed;
     renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer) goto failed;

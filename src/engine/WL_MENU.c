@@ -9,6 +9,7 @@
 #include "ID_IN.h"
 #include <ctype.h>
 #include <string.h>
+#include <stdio.h>
 CP_iteminfo MainItems = {76, 55, MENU_COUNT, viewscores, 24};
 CP_itemtype MainMenu[MENU_COUNT] = {
     {0,"New Game"}, {0,"Sound"}, {0,"Control"}, {0,"Load Game"}, {0,"Save Game"},
@@ -121,4 +122,48 @@ bool Message(const char *text)
     DrawOutline(WindowX-5,PrintY-5,width+10,height+10,0,HIGHLIGHT);
     fontcolor = 0;
     return US_Print(text);
+}
+
+/* WL_MENU.C DrawNewEpisode/DrawNewGame. Both use the same input queue as
+   the control panel; a selection clears edges before entering the next page. */
+bool DrawNewSelection(bool episode,unsigned choice)
+{
+    static const char *episodes[]={"Escape from Wolfenstein","Operation: Eisenfaust","Die, Fuhrer, Die!","A Dark Secret","Trail of the Madman","Confrontation"};
+    static const char *skills[]={"Can I play, Daddy?","Don't hurt me.","Bring 'em on!","I am Death incarnate!"};
+    ClearMScreen();
+    if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
+    fontnumber=1;fontcolor=TEXTCOLOR;
+    if (episode) {
+        DrawWindow(6,19,308,162,BKGDCOLOR);
+        PrintX=72;PrintY=2;if (!US_Print("Which episode to play?")) return false;
+        for (unsigned i=0;i<6;++i) {
+            if (!VWB_DrawPic(42,23+(int)i*26,C_EPISODE1PIC+(int)i)) return false;
+            fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
+            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,episodes[i]);
+            PrintX=98;PrintY=23+(int)i*26;if (!US_Print(label)) return false;
+        }
+        return VWB_DrawPic(10,24+(int)choice*26,C_CURSOR1PIC);
+    }
+    PrintX=70;PrintY=68;if (!US_Print("How tough are you?")) return false;
+    DrawWindow(45,90,225,67,BKGDCOLOR);
+    for (unsigned i=0;i<4;++i) {
+        fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
+        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(skills[i])) return false;
+    }
+    return VWB_DrawPic(50,98+(int)choice*13,C_CURSOR1PIC) &&
+        VWB_DrawPic(235,107,C_BABYMODEPIC+(int)choice);
+}
+int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice)
+{
+    unsigned count=episode ? 6U : 4U;
+    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks>=move_next)) {
+        *choice=(*choice+((up || (!down && Keyboard[sc_UpArrow])) ? count-1 : 1))%count;
+        move_next=ticks+20;
+        if (!DrawNewSelection(episode,*choice)) return -3;
+    }
+    bool escape=IN_ConsumePress(sc_Escape),enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
+    if (escape) return -1;
+    if (enter || space) return 1;
+    return 0;
 }

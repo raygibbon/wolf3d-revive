@@ -40,8 +40,8 @@ continue working.
 Diagnostics (same required `--data` argument):
 
 ```sh
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-level
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --level
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --check-level
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --level
 ```
 
 `--check-level` validates and renders the initial world without SDL window

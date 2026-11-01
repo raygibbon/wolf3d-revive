@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WOLFSRC/WL_ACT1.C OpenDoor/CloseDoor/OperateDoor/MoveDoors, one tic at a
-   time. Actor occupancy, area connectivity and positional audio await actors.
-   Key inventory is not ported, so the original locked-door rejection remains. */
+   time. Full player/actor bounds protect closing doors; key inventory gates
+   locked doors. ConnectAreas rebuilds connectivity in the one-tic game loop. */
 #include "WL_DEF.h"
+#include <string.h>
 bool DoorSolid(unsigned door) { return door>=doornum || doorobjlist[door].action!=dr_open; }
 void OpenDoor(unsigned door)
 {
@@ -13,11 +14,18 @@ void OpenDoor(unsigned door)
 }
 static bool PlayerBlocks(const doorobj_t *d)
 {
-    if (player.tilex==d->x && player.tiley==d->y) return true;
-    if (d->vertical && player.tiley==d->y)
-        return (unsigned)((player.x+MINDIST)/65536)==d->x || (unsigned)((player.x-MINDIST)/65536)==d->x;
-    if (!d->vertical && player.tilex==d->x)
-        return (unsigned)((player.y+MINDIST)/65536)==d->y || (unsigned)((player.y-MINDIST)/65536)==d->y;
+    int64_t left=(int64_t)d->x*TILEGLOBAL,top=(int64_t)d->y*TILEGLOBAL;
+    /* TryMove treats the whole door cell as solid while closing. Use the
+       same inclusive square here, including all four doorway corners. */
+    if ((int64_t)player.x+MINDIST>=left && (int64_t)player.x-MINDIST<left+TILEGLOBAL &&
+        (int64_t)player.y+MINDIST>=top && (int64_t)player.y-MINDIST<top+TILEGLOBAL) return true;
+    for (unsigned i=0;i<objcount;++i) {
+        const objtype *ob=&objlist[i];
+        if (!(ob->flags&FL_SHOOTABLE)) continue;
+        if ((ob->tilex==(int)d->x && ob->tiley==(int)d->y) ||
+            ((int64_t)ob->x+MINDIST>=left && (int64_t)ob->x-MINDIST<left+TILEGLOBAL &&
+             (int64_t)ob->y+MINDIST>=top && (int64_t)ob->y-MINDIST<top+TILEGLOBAL)) return true;
+    }
     return false;
 }
 void CloseDoor(unsigned door)
@@ -32,7 +40,7 @@ void OperateDoor(unsigned door)
 {
     if (door>=doornum) return;
     doorobj_t *d=&doorobjlist[door];
-    if (d->lock>=1 && d->lock<=4) return;
+    if (d->lock>=1 && d->lock<=4 && !(gamestate.keys & (1 << (d->lock-1)))) return;
     if (d->action==dr_closed || d->action==dr_closing) OpenDoor(door);
     else CloseDoor(door);
 }
@@ -48,14 +56,13 @@ void MoveDoors(void)
             if (position>=65535) { position=65535;d->ticcount=0;d->action=dr_open; }
             d->position=(uint16_t)position;
         } else if (d->action==dr_closing) {
-            if (player.tilex==d->x && player.tiley==d->y) { OpenDoor(i);continue; }
+            if (PlayerBlocks(d)) { OpenDoor(i);continue; }
             if (d->position<=1024) { d->position=0;d->action=dr_closed; }
             else d->position=(uint16_t)(d->position-1024);
         }
     }
 }
-/* WL_AGENT.C Cmd_Use cardinal facing and adjacent-tile lookup. Only doors
-   are enabled: no pretend pushwall, elevator, pickup or progression action. */
+/* WL_AGENT.C Cmd_Use cardinal facing, doors, pushwalls and elevators. */
 void Cmd_Use(void)
 {
     int x=(int)player.tilex,y=(int)player.tiley;
@@ -65,5 +72,57 @@ void Cmd_Use(void)
     else ++y;
     if (x<0 || y<0 || x>=64 || y>=64) return;
     unsigned tile=tilemap[x][y];
-    if (tile&128) OperateDoor(tile&127);
+    int dir=player.angle<45 || player.angle>315 ? east : player.angle<135 ? north : player.angle<225 ? west : south;
+    if (pushable[x][y]) { PushWall(x,y,dir);return; }
+    if (tile==21 && (player.angle<45 || player.angle>315 || (player.angle>=135 && player.angle<225))) {
+        ++tilemap[x][y]; /* Original elevator switch texture. */
+        playstate=CA_Map()->planes[0][player.tiley*64+player.tilex]==107 ? ex_secretlevel : ex_completed;
+    } else if (tile&128) OperateDoor(tile&127);
+}
+
+/* WL_ACT1.C PushWall/MovePWalls. Runtime marker/area arrays replace writes
+   into cached map planes, so the disk map remains an immutable restart source. */
+unsigned pwallstate,pwallpos;
+int pwallx,pwally,pwalldir;
+bool pushable[64][64];
+static const int pushdx[8]={1,0,0,0,-1,0,0,0};
+static const int pushdy[8]={0,0,-1,0,0,0,1,0};
+void ResetPushwalls(void)
+{
+    pwallstate=pwallpos=0;pwallx=pwally=pwalldir=0;
+    memset(pushable,0,sizeof(pushable));
+}
+static bool PushBlocked(int x,int y)
+{
+    return x<0 || y<0 || x>=64 || y>=64 || (tilemap[x][y] && tilemap[x][y]!=64) || staticblock[x][y] || actorat[x][y];
+}
+void PushWall(int x,int y,int dir)
+{
+    if (pwallstate || x<=0 || y<=0 || x>=63 || y>=63 ||
+        dir<0 || dir>=8 || (dir&1) || !pushable[x][y]) return;
+    unsigned tile=tilemap[x][y];
+    if (!tile || tile>=64 || PushBlocked(x+pushdx[dir],y+pushdy[dir])) return;
+    tilemap[x+pushdx[dir]][y+pushdy[dir]]=(w3r_byte)tile;
+    ++gamestate.secretcount;pwallx=x;pwally=y;pwalldir=dir;
+    pwallstate=1;pwallpos=0;tilemap[x][y]|=0xc0;pushable[x][y]=false;
+}
+void MovePWalls(void)
+{
+    if (!pwallstate) return;
+    unsigned oldblock=pwallstate/128;
+    ++pwallstate;
+    if (pwallstate/128!=oldblock) {
+        unsigned tile=tilemap[pwallx][pwally]&63;
+        tilemap[pwallx][pwally]=0;
+        areaMap[pwallx][pwally]=areaMap[player.tilex][player.tiley];
+        /* Stop after two tile crossings. Original >256 relied on multi-tic
+           steps overshooting 256; >= also handles exact one-tic boundaries. */
+        if (pwallstate>=256) { pwallstate=0;return; }
+        pwallx+=pushdx[pwalldir];pwally+=pushdy[pwalldir];
+        int nx=pwallx+pushdx[pwalldir],ny=pwally+pushdy[pwalldir];
+        if (PushBlocked(nx,ny)) { pwallstate=0;return; }
+        tilemap[nx][ny]=(w3r_byte)tile;
+        tilemap[pwallx][pwally]=(w3r_byte)(tile|0xc0);
+    }
+    pwallpos=(pwallstate/2)&63U;
 }

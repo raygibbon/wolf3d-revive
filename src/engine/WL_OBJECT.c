@@ -1,0 +1,228 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* WL_GAME.C ScanInfoPlane; WL_ACT1.C SpawnStatic/PlaceItemType;
+   WL_STATE.C SpawnNewObj/TryWalk, using bounded arrays instead of DOS tags.
+   Normal enemies use the original difficulty bands and hit-point tables. */
+#include "WL_DEF.h"
+#include "ID_CA.h"
+#include "ID_US_1.h"
+#include <stdlib.h>
+#include <string.h>
+objtype objlist[MAXACTORS],*actorat[64][64];
+statobj_t statobjlist[MAXSTATS];
+unsigned objcount,statcount;
+bool staticblock[64][64],spotvis[64][64],areabyplayer[37],madenoise;
+int areaMap[64][64],thrustspeed;
+gametype gamestate={.health=100,.ammo=8,.lives=3,.nextextra=40000,.weapon=wp_pistol,.bestweapon=wp_pistol,.chosenweapon=wp_pistol,.difficulty=2};
+extern statetype s_grdstand,s_grdpath1,s_grddie4,s_ofcstand,s_ofcpath1,s_ssstand,s_sspath1,s_mutstand,s_mutpath1,s_dogpath1;
+void InitObjects(void)
+{
+    objcount=statcount=0;player.next=NULL;madenoise=false;
+    memset(objlist,0,sizeof(objlist));memset(actorat,0,sizeof(actorat));
+    memset(staticblock,0,sizeof(staticblock));memset(spotvis,0,sizeof(spotvis));
+    memset(areabyplayer,0,sizeof(areabyplayer));
+}
+void NewState(objtype *ob,statetype *state) { ob->state=state;ob->ticcount=state->tictime; }
+static const int dirx[9]={1,1,0,-1,-1,-1,0,1,0};
+static const int diry[9]={0,-1,-1,-1,0,1,1,1,0};
+static bool CheckTile(int x,int y,bool diagonal,int *door)
+{
+    if (x<=0 || y<=0 || x>=63 || y>=63 || staticblock[x][y]) return false;
+    if (actorat[x][y] && (actorat[x][y]->flags&FL_SHOOTABLE)) return false;
+    unsigned tile=tilemap[x][y];
+    if (!tile || tile==64) return true;
+    if (!(tile&128) || (tile&64)) return false;
+    if (!DoorSolid(tile&63)) return true;
+    if (diagonal) return false;
+    *door=(int)(tile&63);return true;
+}
+bool TryWalk(objtype *ob)
+{
+    if (ob->dir<0 || ob->dir>=nodir) return false;
+    int dx=dirx[ob->dir],dy=diry[ob->dir],x=ob->tilex+dx,y=ob->tiley+dy,door=-1;
+    bool diag=dx && dy;
+    if (!CheckTile(x,y,diag || ob->obclass==dogobj,&door)) return false;
+    if (diag && (!CheckTile(ob->tilex+dx,ob->tiley,true,&door) ||
+                 !CheckTile(ob->tilex,ob->tiley+dy,true,&door))) return false;
+    ob->tilex=x;ob->tiley=y;
+    if (door>=0) { OpenDoor((unsigned)door);ob->distance=-door-1;return true; }
+    ob->areanumber=areaMap[x][y];ob->distance=TILEGLOBAL;return true;
+}
+/* Original area graph semantics: a door connects its two areas as soon as
+   its first opening tic advances, and disconnects only after it closes. Rebuilding
+   the small graph avoids stale counters during level restarts. */
+void ConnectAreas(void)
+{
+    memset(areabyplayer,0,sizeof(areabyplayer));
+    int area=areaMap[player.tilex][player.tiley];
+    areabyplayer[area]=true;
+    for (unsigned pass=0;pass<37;++pass) {
+        bool changed=false;
+        for (unsigned i=0;i<doornum;++i) {
+            const doorobj_t *d=&doorobjlist[i];
+            if (d->action==dr_closed || (d->action==dr_opening && !d->position)) continue;
+            int a=areaMap[d->x-(d->vertical?1U:0U)][d->y-(d->vertical?0U:1U)];
+            int b=areaMap[d->x+(d->vertical?1U:0U)][d->y+(d->vertical?0U:1U)];
+            if (areabyplayer[a]!=areabyplayer[b]) { areabyplayer[a]=areabyplayer[b]=true;changed=true; }
+        }
+        if (!changed) break;
+    }
+}
+
+static const struct { int picnum;stat_t type; } statinfo[] = {
+{SPR_STAT_0,dressing},
+{SPR_STAT_1,block},
+{SPR_STAT_2,block},
+{SPR_STAT_3,block},
+{SPR_STAT_4,dressing},
+{SPR_STAT_5,block},
+{SPR_STAT_6,bo_alpo},
+{SPR_STAT_7,block},
+{SPR_STAT_8,block},
+{SPR_STAT_9,dressing},
+{SPR_STAT_10,block},
+{SPR_STAT_11,block},
+{SPR_STAT_12,block},
+{SPR_STAT_13,block},
+{SPR_STAT_14,dressing},
+{SPR_STAT_15,dressing},
+{SPR_STAT_16,block},
+{SPR_STAT_17,block},
+{SPR_STAT_18,block},
+{SPR_STAT_19,dressing},
+{SPR_STAT_20,bo_key1},
+{SPR_STAT_21,bo_key2},
+{SPR_STAT_22,block},
+{SPR_STAT_23,dressing},
+{SPR_STAT_24,bo_food},
+{SPR_STAT_25,bo_firstaid},
+{SPR_STAT_26,bo_clip},
+{SPR_STAT_27,bo_machinegun},
+{SPR_STAT_28,bo_chaingun},
+{SPR_STAT_29,bo_cross},
+{SPR_STAT_30,bo_chalice},
+{SPR_STAT_31,bo_bible},
+{SPR_STAT_32,bo_crown},
+{SPR_STAT_33,bo_fullheal},
+{SPR_STAT_34,bo_gibs},
+{SPR_STAT_35,block},
+{SPR_STAT_36,block},
+{SPR_STAT_37,block},
+{SPR_STAT_38,bo_gibs},
+{SPR_STAT_39,block},
+{SPR_STAT_40,block},
+{SPR_STAT_41,dressing},
+{SPR_STAT_42,dressing},
+{SPR_STAT_43,dressing},
+{SPR_STAT_44,dressing},
+{SPR_STAT_45,block},
+{SPR_STAT_46,block},
+{SPR_STAT_47,dressing},
+{SPR_STAT_26,bo_clip2},
+{-1,dressing}
+};
+
+static bool SpawnStatic(int x,int y,unsigned type)
+{
+    if (type>=48 || statcount>=MAXSTATS) return CA_Fail("Too many/invalid static objects");
+    if (statinfo[type].type==block && actorat[x][y] && (actorat[x][y]->flags&FL_SHOOTABLE))
+        return CA_Fail("Blocking object on actor destination");
+    statobj_t *ob=&statobjlist[statcount++];
+    ob->tilex=x;ob->tiley=y;ob->shapenum=statinfo[type].picnum;ob->itemnumber=statinfo[type].type;
+    ob->bonus=ob->itemnumber>=bo_gibs;
+    if (ob->itemnumber==block) staticblock[x][y]=true;
+    if ((ob->itemnumber>=bo_cross && ob->itemnumber<=bo_crown) || ob->itemnumber==bo_fullheal) ++gamestate.treasuretotal;
+    return true;
+}
+void PlaceItemType(stat_t item,int x,int y)
+{
+    if (x<=0 || y<=0 || x>=63 || y>=63) return;
+    unsigned type=0;
+    while (statinfo[type].picnum!=-1 && statinfo[type].type!=item) ++type;
+    if (statinfo[type].picnum==-1) return;
+    unsigned slot=0;
+    while (slot<statcount && statobjlist[slot].shapenum!=-1) ++slot;
+    if (slot>=MAXSTATS) return;
+    if (slot==statcount) ++statcount;
+    statobjlist[slot]=(statobj_t){x,y,statinfo[type].picnum,item,true};
+}
+static bool SpawnNewObj(int x,int y,statetype *state,int kind,int direction,bool patrol,bool dead)
+{
+    if (objcount>=MAXACTORS || x<=0 || y<=0 || x>=63 || y>=63 || (tilemap[x][y] && tilemap[x][y]!=64)) return CA_Fail("Invalid/too many actors");
+    objtype *ob=&objlist[objcount++];
+    if (objcount==1) player.next=ob;else objlist[objcount-2].next=ob;
+    ob->state=state;ob->ticcount=state->tictime ? US_RndT()%state->tictime : 0;
+    ob->x=x*TILEGLOBAL+32768;ob->y=y*TILEGLOBAL+32768;ob->tilex=x;ob->tiley=y;
+    ob->dir=direction*2;ob->areanumber=areaMap[x][y];ob->obclass=dead ? inertobj : kind;
+    if (!dead) {
+        ob->flags=FL_SHOOTABLE;
+        if (!patrol && CA_Map()->planes[0][y*64+x]==106) ob->flags|=FL_AMBUSH;
+        ob->speed=kind==dogobj ? SPDDOG : SPDPATROL;
+        ob->hitpoints=kind==guardobj ? 25 : kind==officerobj ? 50 : kind==ssobj ? 100 : kind==dogobj ? 1 : gamestate.difficulty==0 ? 45 : gamestate.difficulty==3 ? 65 : 55;
+        ++gamestate.killtotal;
+    }
+    if (patrol) {
+        /* SpawnPatrol reserves the initial forward tile unconditionally,
+           even a closed door (owned E4M6 on hard). Keep that original move. */
+        ob->active=true;ob->distance=TILEGLOBAL;
+        ob->tilex+=dirx[ob->dir];ob->tiley+=diry[ob->dir];
+        if (ob->tilex<=0 || ob->tiley<=0 || ob->tilex>=63 || ob->tiley>=63)
+            return CA_Fail("Invalid actor patrol destination");
+    }
+    /* Original scan order can overwrite a reserved destination (E5M4).
+       Both actors remain in the object list; the last mark owns actorat. */
+    actorat[ob->tilex][ob->tiley]=ob;return true;
+}
+bool ScanInfoPlane(void)
+{
+    const maptype *map=CA_Map();
+    for (int y=0;y<64;++y) for (int x=0;x<64;++x) {
+        unsigned raw=map->planes[0][y*64+x];
+        if (raw==106) {
+            /* Original SpawnStand neighbour priority: E, N, S, then W. */
+            const int ox[4]={1,0,0,-1},oy[4]={0,-1,1,0};raw=107;
+            for (unsigned i=0;i<4;++i) {
+                int nx=x+ox[i],ny=y+oy[i];
+                if (nx>=0 && ny>=0 && nx<64 && ny<64 && map->planes[0][ny*64+nx]>=107) raw=map->planes[0][ny*64+nx];
+            }
+        }
+        areaMap[x][y]=raw>=107 ? (int)raw-107 : 0;
+    }
+    for (unsigned i=0;i<doornum;++i) {
+        const doorobj_t *d=&doorobjlist[i];
+        areaMap[d->x][d->y]=areaMap[d->x-(d->vertical?1U:0U)][d->y-(d->vertical?0U:1U)];
+    }
+    for (int y=0;y<64;++y) for (int x=0;x<64;++x) {
+        unsigned tile=map->planes[1][y*64+x];
+        if (tile>=23 && tile<=70 && !SpawnStatic(x,y,tile-23)) return false;
+        if (tile==124) { if (!SpawnNewObj(x,y,&s_grddie4,inertobj,0,false,true)) return false;continue; }
+        if (tile==98) {
+            if (!tilemap[x][y] || tilemap[x][y]>=64) return CA_Fail("Invalid pushwall marker");
+            pushable[x][y]=true;++gamestate.secrettotal;continue;
+        }
+        /* Do not silently erase encounters whose original actors are unported. */
+        if (tile==214 || tile==197 || tile==215 || tile==179 || tile==196 ||
+            tile==160 || tile==178 || (tile>=224 && tile<=227) || tile==99)
+            return CA_Fail("Unported boss/ghost/victory actor %u in E%dM%d",tile,gamestate.episode+1,gamestate.mapon+1);
+        /* WL_GAME.C ScanInfoPlane: two 36-code normal-enemy bands;
+           mutants have their own two 18-code bands. Exclude boss codes. */
+        if (tile>=180 && tile<=213) { if (gamestate.difficulty<3) continue;tile-=36; }
+        if (tile>=144 && tile<=177) { if (gamestate.difficulty<2) continue;tile-=36; }
+        if (tile>=252 && tile<=259) { if (gamestate.difficulty<3) continue;tile-=18; }
+        if (tile>=234 && tile<=241) { if (gamestate.difficulty<2) continue;tile-=18; }
+        statetype *state=NULL;int kind=guardobj,dir=0;bool patrol=false;
+        if (tile>=108 && tile<=115) { dir=(int)(tile-108)%4;patrol=tile>=112;state=patrol?&s_grdpath1:&s_grdstand; }
+        else if (tile>=116 && tile<=123) { kind=officerobj;dir=(int)(tile-116)%4;patrol=tile>=120;state=patrol?&s_ofcpath1:&s_ofcstand; }
+        else if (tile>=126 && tile<=133) { kind=ssobj;dir=(int)(tile-126)%4;patrol=tile>=130;state=patrol?&s_sspath1:&s_ssstand; }
+        else if (tile>=138 && tile<=141) { kind=dogobj;dir=(int)tile-138;patrol=true;state=&s_dogpath1; }
+        else if (tile>=216 && tile<=223) { kind=mutantobj;dir=(int)(tile-216)%4;patrol=tile>=220;state=patrol?&s_mutpath1:&s_mutstand; }
+        /* Original SpawnStand has no dog case; these unused codes are unsafe. */
+        else if (tile>=134 && tile<=137) return CA_Fail("Unsupported stationary dog spawn %u",tile);
+        if (state && !SpawnNewObj(x,y,state,kind,dir,patrol,false)) return false;
+    }
+    ConnectAreas();return true;
+}
+void A_DeathScream(objtype *ob)
+{
+    /* No audio yet. Guard sound selection still consumes the original RNG. */
+    if (ob->obclass==guardobj) (void)US_RndT();
+}

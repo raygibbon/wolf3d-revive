@@ -113,9 +113,13 @@ class EngineTests(unittest.TestCase):
                                     *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "ui-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/game_tests.c"),
                                     *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "game-tests")], check=True)
+        subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/combat_tests.c"),
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "combat-tests")], check=True)
+        subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/campaign_tests.c"),
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "campaign-tests")], check=True)
         cls.engine = cls.output / "engine-tests"
         cls.compiler = cc + flags
-        cls.binary = Path(os.environ.get("WOLF3D_BINARY", ROOT / "build/cart-sdl/linux/wolf3d-redux"))
+        cls.binary = Path(os.environ.get("WOLF3D_BINARY", ROOT / "build/cart-sdl/linux/wolf3d-revive"))
         if not cls.binary.is_file():
             raise RuntimeError("Build the app with CART first (or set WOLF3D_BINARY)")
 
@@ -163,6 +167,24 @@ class EngineTests(unittest.TestCase):
         (self.data / "VgAdIcT.wl6").write_bytes(raw)
         self.assertIn("ambiguous",self.app().stderr)
 
+    def test_campaign_progression(self):
+        from game_fixtures import campaign_files
+        campaign_files(self.data)
+        subprocess.run([str(self.output / "campaign-tests"), str(self.data)], check=True)
+
+    def test_unported_encounters_rejected(self):
+        from game_fixtures import game_files, map_files
+        game_files(self.data)
+        for code in (160, 178, 179, 196, 197, 214, 215, 224, 225, 226, 227, 99):
+            with self.subTest(code=code):
+                map_files(self.data, lambda p: p[1].__setitem__(15*64+15, code))
+                self.assertIn("Unported boss/ghost/victory", self.level_check().stderr)
+
+    def test_original_combat(self):
+        from game_fixtures import combat_files
+        combat_files(self.data)
+        subprocess.run([str(self.output / "combat-tests"), str(self.data)], check=True)
+
     def test_game_synthetic(self):
         from game_fixtures import game_files
         game_files(self.data)
@@ -174,6 +196,28 @@ class EngineTests(unittest.TestCase):
         result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],text=True,capture_output=True)
         self.assertEqual(result.returncode,1,result.stdout+result.stderr)
         return result
+
+    def test_invalid_objects(self):
+        from game_fixtures import game_files,map_files
+        game_files(self.data)
+        def crowded(planes,code,count):
+            for i in range(count): planes[1][(10+i//50)*64+1+i%50]=code
+        mutations=[lambda p: p[1].__setitem__(1*64+6,108),
+                   lambda p: p[1].__setitem__(4*64+62,112),
+                   lambda p: crowded(p,108,151),lambda p: crowded(p,24,401)]
+        for index,mutate in enumerate(mutations):
+            with self.subTest(case=index): map_files(self.data,mutate);self.level_check()
+
+    def test_offscreen_sprite_validation(self):
+        from game_fixtures import game_files
+        game_files(self.data)
+        path=self.data/"VSWAP.WL6";saved=path.read_bytes()
+        count,first,last=struct.unpack_from("<HHH",saved)
+        page=last-1;offset=struct.unpack_from("<I",saved,6+page*4)[0]
+        bad=bytearray(saved);struct.pack_into("<H",bad,offset,64)
+        path.write_bytes(bad);self.level_check()
+        bad=bytearray(saved);struct.pack_into("<I",bad,6+page*4,0);struct.pack_into("<H",bad,6+count*4+page*2,0)
+        path.write_bytes(bad);self.level_check()
 
     def test_game_mixed_case(self):
         from game_fixtures import game_files
@@ -190,10 +234,33 @@ class EngineTests(unittest.TestCase):
                    lambda p: p[1].__setitem__(3*64+3,19),
                    lambda p: p[0].__setitem__(2*64+2,1),
                    lambda p: p[0].__setitem__(1*64+1,64),
-                   lambda p: p[0].__setitem__(1*64+1,65535),
-                   lambda p: p[0].__setitem__(1*64+6,107)]
+                   lambda p: p[0].__setitem__(1*64+1,65535)]
         for i,mutate in enumerate(mutations):
             with self.subTest(case=i):map_files(self.data,mutate);self.level_check()
+
+    def test_overlapping_patrol_reservations(self):
+        from game_fixtures import game_files, map_files
+        game_files(self.data)
+        def overlap(p):
+            p[1][10*64+10]=108
+            p[1][10*64+11]=114
+        map_files(self.data,overlap)
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_static_inside_wall_is_original_map_data(self):
+        from game_fixtures import game_files, map_files
+        game_files(self.data)
+        map_files(self.data, lambda p: p[1].__setitem__(1*64+6,69))
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_floor_beside_door_jamb(self):
+        from game_fixtures import game_files, map_files
+        game_files(self.data)
+        map_files(self.data, lambda p: p[0].__setitem__(1*64+6,107))
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
 
     def test_unavailable_level_keeps_menu(self):
         fixtures(self.data,ui=True)
@@ -340,6 +407,24 @@ class EngineTests(unittest.TestCase):
         env = dict(os.environ, SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
         subprocess.run([str(program),str(self.data)],env=env,check=True)
 
+    def test_campaign_sdl_events(self):
+        sdk=Path(os.environ.get("SDL_SDK",ROOT.parent/"cart/vendor/SDL"))
+        library=sdk/"build/libSDL3.a"
+        if not library.is_file():
+            self.skipTest("SDL_SDK must point to a built static SDL3 checkout")
+        from game_fixtures import campaign_files
+        campaign_files(self.data)
+        program=self.output/"campaign-sdl-tests"
+        sources=[str(p) for p in sorted((ROOT/"src").rglob("*.c")) if p.name!="main.c"]
+        subprocess.run(self.compiler+["-I"+str(ROOT/"src"),"-I"+str(sdk/"include"),
+                       str(ROOT/"tests/campaign_sdl_tests.c"),*sources,str(library),"-pthread","-lm",
+                       "-o",str(program)],check=True)
+        env=dict(os.environ,SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
+        subprocess.run([str(program),str(self.data)],env=env,check=True)
+        path=self.data/"MAPHEAD.WL6"
+        head=bytearray(path.read_bytes());struct.pack_into("<I",head,6,0xffffffff);path.write_bytes(head)
+        subprocess.run([str(program),str(self.data),"--missing-next"],env=env,check=True)
+
     def test_game_sdl_events(self):
         sdk=Path(os.environ.get("SDL_SDK",ROOT.parent/"cart/vendor/SDL"))
         library=sdk/"build/libSDL3.a"
@@ -379,6 +464,8 @@ class EngineTests(unittest.TestCase):
         subprocess.run([str(self.output / "ui-tests"),str(directory),"owned"],check=True)
         dump=self.data/"owned-map-texture.bin"
         subprocess.run([str(self.output / "game-tests"),str(directory),"owned",str(dump)],check=True)
+        subprocess.run([str(self.output / "campaign-tests"),str(directory),"owned"],check=True)
+        subprocess.run([str(self.output / "combat-tests"),str(directory),"owned"],check=True)
         from game_fixtures import original_map_oracle
         self.assertEqual(dump.read_bytes(),original_map_oracle(directory))
 

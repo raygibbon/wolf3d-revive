@@ -8,24 +8,41 @@
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include "WL_DEF.h"
+#include <string.h>
 static ui_state state, next_state;
 static bool leaving;
 static uint64_t deadline, transition_end, blink_next;
 static int cursor_x, cursor_y;
 static bool blink;
+static unsigned episode,difficulty=2;
 static bool Attract(void) { return state <= UI_HIGHSCORES; }
 ui_state DemoLoopState(void) { return state; }
 
+static bool GameError(void)
+{
+    char text[384]="Cannot continue this game:\n",error[256];
+    (void)strncpy(error,CA_Error(),sizeof(error)-1);error[sizeof(error)-1]=0;
+    size_t at=strlen(text);unsigned column=0;
+    for (const char *p=error;*p && at<sizeof(text)-32;++p) {
+        if (column>=34 && *p==' ') { text[at++]='\n';column=0; }
+        else { text[at++]=*p;++column; }
+    }
+    (void)strcpy(text+at,"\nPress a key for menu.");
+    GameStop();state=UI_ERROR;leaving=false;IN_ClearKeysDown();
+    ClearMScreen();return Message(text);
+}
 static bool ChangeScreen(ui_state screen, uint64_t ticks)
 {
     state = screen; leaving = false;
     IN_ClearKeysDown();
     if (screen == UI_DONE) return true;
-    if (screen == UI_GAME && !GameStart(ticks+10)) return false;
+    if (screen == UI_GAME && !GameStartSelected(ticks+10,episode,difficulty)) return GameError() && VL_FadeIn(gamepal,10,ticks);
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
+    if (screen == UI_EPISODE && !DrawNewSelection(true,episode)) return false;
+    if (screen == UI_DIFFICULTY && !DrawNewSelection(false,difficulty)) return false;
     unsigned steps = Attract() ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
     deadline = ticks + steps + (screen == UI_TITLE ? 15U*70U : 10U*70U);
@@ -38,7 +55,7 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
     return VL_FadeOut(Attract() ? 0 : 43,0,0,steps,ticks);
 }
-bool DemoLoopStartGame(uint64_t ticks) { return ChangeScreen(UI_GAME,ticks); }
+bool DemoLoopStartGame(uint64_t ticks) { episode=0;difficulty=2;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
 {
     GameStop();
@@ -69,12 +86,14 @@ bool DemoLoop(uint64_t ticks)
     if (VL_Fading() || Attract()) return true;
     if (state == UI_GAME) {
         if (IN_ConsumePress(sc_Escape)) { GameStop(); return Transition(UI_MENU,ticks,10); }
-        return GameStep(ticks);
+        if (!GameStep(ticks)) return GameError();
+        if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
+        return true;
     }
     if (state == UI_MENU) {
         int action = HandleMenu(ticks);
         if (action == -3) return false;
-        if (action == newgame) return Transition(UI_GAME,ticks,10);
+        if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == viewscores) return Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) return Transition(UI_TITLE,ticks,10);
         if (action == quit || action == -1) {
@@ -83,6 +102,14 @@ bool DemoLoop(uint64_t ticks)
             if (!Message("Dost thou wish to\nleave with such hasty\nabandon?")) return false;
             cursor_x = PrintX; cursor_y = PrintY; blink = false; blink_next = ticks + 10;
         }
+    } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
+        bool choosing_episode=state==UI_EPISODE;
+        int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
+        if (action==-3) return false;
+        if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
+        if (action==1) return Transition(choosing_episode ? UI_DIFFICULTY : UI_GAME,ticks,10);
+    } else if (state == UI_ERROR && IN_AnyPressed()) {
+        return Transition(UI_MENU,ticks,10);
     } else if (state == UI_SCORES && IN_AnyPressed()) {
         return Transition(UI_MENU,ticks,10);
     } else if (state == UI_CONFIRM) {

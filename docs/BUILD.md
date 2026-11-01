@@ -1,8 +1,10 @@
-# Build and run Wolf3D Redux
+# Build and run Wolf3D Revive
 
-CART builds the original UI/attract slice and E1M1 wall-and-movement slice.
-Normal doors work; actors, combat, pickups, progression and audio are not yet
-ported. See MILESTONE4.md for the precise source-port scope.
+CART builds original menus and normal-level gameplay: sprites, enemies,
+weapons, pickups, HUD, life restarts, episode/difficulty selection, pushwalls,
+elevator exits, intermissions and progression. Boss/ghost/victory encounters,
+audio and save/load remain unported. See [milestone 6](MILESTONE6.md) for the
+precise scope and the nine maps that are explicitly rejected.
 
 ## Local Linux build
 
@@ -17,14 +19,16 @@ From the repository root, reuse the existing SDL3 SDK in the sibling CART checko
 Press any key during the title/credits/scores to open the menu. Use Up/Down
 and Enter/Space; V, B and Q select View Scores, Back to Demo and Quit. Escape
 opens quit confirmation in the menu (Y exits, N/Escape cancels). Closing the
-window exits directly. New Game loads E1M1 directly once its map, textures and
-initial frame validate; unported rows stay disabled. No episode/difficulty
-selection screens are simulated.
+window exits directly. New Game opens the episode and difficulty pages; arrows select, Enter/Space
+confirm and Escape goes back. Unported main-menu rows stay disabled. A failed
+level load reports the reason and returns to the menu after acknowledgement.
 
 In the level: Up/Down move, Left/Right turn, Alt+Left/Right strafe, Shift runs,
-and Space operates normal doors. Escape ends the current walk session and
-returns to the menu; it is not a save or resume feature. Key-locked doors stay
-locked because the inventory/pickup system is not ported.
+Space operates doors, secret pushwalls and elevator switches. Ctrl fires, and
+1–4 select owned weapons (knife, pistol, machine gun, chaingun). Keys unlock
+their matching doors. Intermissions show the final original ratios/time bonus;
+press a key to continue. Escape ends the game and returns to the menu; it does
+not save or resume. `--level` still starts E1M1 at medium difficulty directly.
 
 The discovered Steam directory above is used read-only. Supply a different absolute path if your installation
 is elsewhere; `cart run` changes the working directory to the output folder.
@@ -39,13 +43,13 @@ The local SDL SDK reports development version 3.5.0, revision `08b9c5539`.
 To decode/check without a display, or perform a finite graphical smoke test:
 
 ```sh
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-assets
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-ui
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-level
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --level
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --menu
-./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --frames 3
-./build/cart-sdl/linux/wolf3d-redux --help
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --check-assets
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --check-ui
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --check-level
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --level
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --menu
+./build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --frames 3
+./build/cart-sdl/linux/wolf3d-revive --help
 ```
 
 `--capture build/checks/title.bmp` additionally saves a local SDL readback
@@ -73,7 +77,7 @@ matching SDL3 DLL beside the executable or on PATH. Every new C module passes
 MinGW compile-only checking; Windows linking, runtime and native resize behavior
 remain unverified. No CMake build system was introduced.
 
-No CART source changes were required in milestones 2–4. The Linux/Windows
+No CART source changes were required in milestones 2–6. The Linux/Windows
 link lists now include the math library used by the original table builder.
 CART recursively builds the lowercase
 `.c` files under `src`, supporting C11, defines/includes and library lists.
@@ -93,10 +97,11 @@ python3 -m unittest discover -s tests -v
 ```
 
 This compiles memory, Huffman, graphics/UI, input, timing, map/VSWAP, raycasting
-and movement tests with GCC C11 and strict warnings as errors. SDL readback
+movement, sprites, RNG, enemy AI, combat, pickups, HUD, death, campaign,
+intermission and pushwall tests with GCC C11 and strict warnings as errors. SDL readback
 and event-to-menu/game tests use the static SDK at `../cart/vendor/SDL` (override with `SDL_SDK`). The SDL tests use the dummy
 video/software renderer, requiring no desktop. Without that static SDK, those
-three tests report skips. Synthetic archives are generated in temporary
+four tests report skips. Synthetic archives are generated in temporary
 directories and removed; no asset fixtures come from commercial files.
 
 For an independent pixel-by-pixel oracle comparison using your owned files:
@@ -115,21 +120,23 @@ gcc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
   -Isrc -I../cart/vendor/SDL/include \
   src/main.c src/engine/*.c src/platform/*.c \
   ../cart/vendor/SDL/build/libSDL3.a -pthread -lm \
-  -o build/checks/wolf3d-redux-sanitize
-SANITIZE=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-redux-sanitize" \
+  -o build/checks/wolf3d-revive-sanitize
+SANITIZE=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-revive-sanitize" \
   WOLF3D_DATA="$HOME/.steam/steam/steamapps/common/Wolfenstein 3D/base" \
   python3 -m unittest discover -s tests -v
 ```
 
 `SANITIZE=1` also instruments the C unit/video tests. The reused SDL static
-archive is not instrumented. The active movement/door simulation uses 70 Hz tics. Tests do not exercise
-unported actor/combat/audio modules.
+archive is not instrumented. The gameplay simulation and palette flashes use
+fixed 70 Hz tics. The campaign suite exercises selection, exits, statistics,
+secret routing, pushwalls and later-floor restarts. Audio and save/load are
+not implemented or exercised.
 
 From CART, regression checks can use the current executable by absolute path:
 
 ```sh
-CART=/absolute/path/to/wolf3d-redux/build/tools/cart sh tests/test_sdl3.sh
-CART=/absolute/path/to/wolf3d-redux/build/tools/cart sh tests/test_desktop_dirs.sh
+CART=/absolute/path/to/wolf3d-revive/build/tools/cart sh tests/test_sdl3.sh
+CART=/absolute/path/to/wolf3d-revive/build/tools/cart sh tests/test_desktop_dirs.sh
 ```
 
-See [milestone 4 results and scope](MILESTONE4.md) for validation and remaining work.
+See [milestone 6 results and scope](MILESTONE6.md) for validation and remaining work.

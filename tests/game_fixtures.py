@@ -37,15 +37,15 @@ def map_files(directory, transform=None):
     (directory/'GAMEMAPS.WL6').write_bytes(graph)
     return planes
 
-def vswap_file(directory):
-    pages=[bytes((page*17+x*3+y)%256 for x in range(64) for y in range(64)) for page in range(8)]
+def vswap_file(directory, walls=8):
+    pages=[bytes((page*17+x*3+y)%256 for x in range(64) for y in range(64)) for page in range(walls)]
     # Signed pixel-pool bias: -18+row(32..63) addresses bytes 14..45.
     sprite=struct.pack('<HHH',31,31,6)+struct.pack('<HHHH',128,(-18)&65535,64,0)+bytes(range(100,132))
-    pages.extend((sprite,b'\x00'))
+    pages.extend([sprite]*436+[b'\x00'])
     offset=6+len(pages)*6
     offsets=[]
     for page in pages:offsets.append(offset);offset+=len(page)
-    out=struct.pack('<HHH',len(pages),8,9)
+    out=struct.pack('<HHH',len(pages),walls,walls+436)
     out+=b''.join(struct.pack('<I',x) for x in offsets)
     out+=b''.join(struct.pack('<H',len(p)) for p in pages)
     (directory/'VSWAP.WL6').write_bytes(out+b''.join(pages))
@@ -66,6 +66,14 @@ def game_files(directory):
         chunks[index]=bytearray(graph[offset:end])
     dims=bytearray(bytes(int(f'{v:08b}'[::-1],2) for v in chunks[0][4:]))
     struct.pack_into('<HH',dims,(86-3)*4,320,40)
+    for chunk in (*range(19,23),*range(30,36),*range(43,85),*range(91,135)):
+        width,height=(48,24) if 91<=chunk<=94 else (8,16) if chunk<=108 else (24,32)
+        if chunk in (95,96,97):width,height=8,16
+        if chunk<43: width,height=(48,24)
+        elif chunk<85: width,height=(16,16) if chunk not in (43,84) else (96,144)
+        if chunk in (44,82,83):width,height=8,16
+        struct.pack_into('<HH',dims,(chunk-3)*4,width,height)
+        chunks[chunk]=struct.pack('<I',width*height)+encode(bytes([chunk])*(width*height))
     chunks[0]=struct.pack('<I',len(dims))+encode(dims)
     chunks[86]=struct.pack('<I',12800)+encode(bytes([86])*12800)
     out=bytearray();offsets=[0xffffff]*150
@@ -114,3 +122,29 @@ def original_map_oracle(directory):
     assert length==4096
     result.extend(swap[offset:offset+length])
     return result
+
+
+def combat_files(directory):
+    game_files(directory)
+    def objects(planes):
+        for x,y,code in ((5,2,110),(9,5,140),(15,15,144),(17,17,180),
+                         (3,6,124),(3,4,24),(3,5,27),(3,3,47),(4,3,49),
+                         (4,4,52),(4,5,53),(4,6,54),(4,7,43),(26,1,94)):
+            planes[1][y*64+x]=code
+    map_files(directory,objects)
+
+
+def campaign_files(directory):
+    game_files(directory)
+    def setup(p):
+        p[0][30*64+30]=1;p[1][30*64+30]=98
+        p[0][2*64+4]=21
+        p[0][2*64+2]=p[0][2*64+3]=108 # normal elevator, not secret
+        for x,y,code in ((10,10,108),(12,10,144),(14,10,180),
+                         (16,10,216),(18,10,234),(20,10,252)):
+            p[1][y*64+x]=code
+    map_files(directory,setup)
+    head=bytearray((directory/'MAPHEAD.WL6').read_bytes())
+    for n in range(60): struct.pack_into('<I',head,2+4*n,8)
+    (directory/'MAPHEAD.WL6').write_bytes(head)
+    vswap_file(directory,64)

@@ -6,7 +6,12 @@ graphics path with memory, cache/decompression and SDL video support; see
 [milestone 2 results](MILESTONE2.md). Milestone 3 adds the original menus,
 fonts, input and supported attract flow; see [current results](MILESTONE3.md).
 Milestone 4 now implements E1M1 maps/VSWAP, wall tracing, movement and normal
-doors; see [current gameplay-slice results](MILESTONE4.md). Remaining items
+doors; see [milestone 4](MILESTONE4.md). Milestone 5 adds sprites, original
+normal-enemy state machines, combat, pickups, HUD and death/life restarts;
+see [milestone 5 results](MILESTONE5.md). The first Milestone 6 pass adds
+normal-level progression, episode/difficulty selection, secret pushwalls and
+intermission scoring; see [current scope and remaining work](MILESTONE6.md).
+Remaining items
 below are the incremental engine plan, not claims of completed gameplay.
 
 ## Source-file inventory

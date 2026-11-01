@@ -43,6 +43,7 @@ bool PM_Startup(void)
 bad:
     PM_Shutdown(); return CA_Fail("Malformed/truncated VSWAP directory or page bounds");
 }
+bool PM_PagePresent(unsigned page) { return PageFile && page<ChunksInFile && offsets[page] && lengths[page]; }
 const w3r_byte *PM_GetPage(unsigned page,size_t *length)
 {
     if (!PageFile || page>=ChunksInFile || !offsets[page] || !lengths[page]) { (void)CA_Fail("Invalid/sparse VSWAP page %u",page); return NULL; }

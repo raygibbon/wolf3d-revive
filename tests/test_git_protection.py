@@ -36,12 +36,12 @@ class PushProtection(unittest.TestCase):
                 self.assertNotEqual(self.hook("arbitrary", url).returncode, 0)
 
     def test_owned_origin_allowed(self):
-        url = "https://github.com/raygibbon/wolf3d-redux.git"
+        url = "https://github.com/raygibbon/wolf3d-revive.git"
         self.git("remote", "add", "origin", url)
         self.assertEqual(self.hook("origin", url).returncode, 0)
 
     def test_all_configured_push_urls_checked(self):
-        url = "https://github.com/raygibbon/wolf3d-redux.git"
+        url = "https://github.com/raygibbon/wolf3d-revive.git"
         self.git("remote", "add", "alias", url)
         self.git("remote", "set-url", "--add", "--push", "alias", url)
         self.git("remote", "set-url", "--add", "--push", "alias",

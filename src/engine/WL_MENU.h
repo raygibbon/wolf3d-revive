@@ -23,6 +23,8 @@ bool DrawMainMenu(void);
 bool SetupControlPanel(uint64_t ticks);
 /* -2: no action; -1: Escape, otherwise original menu item index. */
 int HandleMenu(uint64_t ticks);
+bool DrawNewSelection(bool episode,unsigned choice);
+int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice);
 bool Message(const char *text);
 bool DrawHighScores(void);
 #endif

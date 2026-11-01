@@ -1,6 +1,6 @@
-# Original-engine UI plus E1M1 wall rendering, movement and normal doors.
+# Original-engine UI and E1M1 sprites, actors, movement and combat.
 [project]
-name = "wolf3d-redux"
+name = "wolf3d-revive"
 version = "0.1.0"
 src = "src"
 out = "build"

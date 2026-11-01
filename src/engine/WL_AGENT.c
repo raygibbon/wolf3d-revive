@@ -9,9 +9,16 @@ bool TryMove(const objtype *ob)
     int xl=WL_FloorShift((int64_t)ob->x-MINDIST,16),xh=WL_FloorShift((int64_t)ob->x+MINDIST,16);
     int yl=WL_FloorShift((int64_t)ob->y-MINDIST,16),yh=WL_FloorShift((int64_t)ob->y+MINDIST,16);
     if (xl<0 || yl<0 || xh>=64 || yh>=64) return false;
-    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (tilemap[x][y]) {
+    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (tilemap[x][y] && tilemap[x][y]!=64) {
         unsigned tile=tilemap[x][y];
         if (!(tile&128) || DoorSolid(tile&127)) return false;
+    }
+    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (staticblock[x][y]) return false;
+    for (unsigned i=0;i<objcount;++i) {
+        const objtype *other=&objlist[i];
+        if (!(other->flags&FL_SHOOTABLE)) continue;
+        int64_t dx=(int64_t)ob->x-other->x,dy=(int64_t)ob->y-other->y;
+        if (dx>=-MINACTORDIST && dx<=MINACTORDIST && dy>=-MINACTORDIST && dy<=MINACTORDIST) return false;
     }
     return true;
 }
@@ -28,11 +35,12 @@ void ClipMove(objtype *ob,int32_t dx,int32_t dy)
 }
 void Thrust(int angle,int32_t speed)
 {
+    thrustspeed+=speed;
     if (speed>=MINDIST*2) speed=MINDIST*2-1;
     int32_t dx=FixedByFrac(speed,sintable[angle+90]);
     int32_t dy=-FixedByFrac(speed,sintable[angle]);
     ClipMove(&player,dx,dy);
-    player.tilex=(unsigned)player.x/65536; player.tiley=(unsigned)player.y/65536;
+    player.tilex=player.x/65536; player.tiley=player.y/65536;
 }
 void ControlMovement(int controlx,int controly,bool strafe)
 {

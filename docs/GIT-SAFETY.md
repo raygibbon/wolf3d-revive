@@ -2,14 +2,14 @@
 
 Inspected on 2026-11-01 before source changes: clean `master` at `0516778`,
 tracking `origin/master`. `origin` already pointed to
-`https://github.com/raygibbon/wolf3d-redux.git`. No existing remote URL,
+`https://github.com/raygibbon/wolf3d-revive.git`. No existing remote URL,
 branch, commit or hook was replaced. CART's working tree was also clean.
 
 Local configuration now has:
 
 | Setting | Value |
 | --- | --- |
-| origin fetch/push | `https://github.com/raygibbon/wolf3d-redux.git` |
+| origin fetch/push | `https://github.com/raygibbon/wolf3d-revive.git` |
 | upstream fetch | `https://github.com/id-Software/wolf3d.git` |
 | upstream push | `https://invalid.invalid/upstream-push-disabled` |
 | remote.pushDefault | `origin` |

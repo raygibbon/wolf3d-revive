@@ -14,10 +14,10 @@
 static void Usage(const char *name)
 {
     printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui|--check-level] [--menu|--level] [--frames N] [--capture local.bmp]\n"
-           "Original WL6 title/credits/scores/menu. Press a key to open the menu.\n"
+           "Original WL6 menus and normal-level gameplay. New Game selects episode and difficulty.\n"
            "--check-assets/--check-ui/--check-level validate without a window.\n"
            "--level starts E1M1 directly; arrows move/turn, Alt strafes, Shift runs.\n"
-           "Space uses normal doors; Escape returns to menu. --frames limits a smoke test.\n",
+           "Ctrl fires; 1-4 select weapons; Space uses doors, pushwalls and elevators; Escape returns to menu. --frames limits a smoke test.\n",
            name);
 }
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     bool ready=GameProbe();
     if (check_level) {
         if (!ready) { fprintf(stderr,"Cannot load E1M1: %s\n",CA_Error()); goto done; }
-        puts("E1M1 maps, wall textures, spawn and original wall renderer validated.");
+        puts("E1M1 maps, textures, sprites, objects, actors, HUD and original renderer validated.");
         status=0; goto done;
     }
     MainMenu[newgame].active=ready ? 1 : 0;
