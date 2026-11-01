@@ -4,6 +4,7 @@
 #include <string.h>
 bool Keyboard[128];
 static bool pressed[128];
+static unsigned ascii_scans[128], ascii_read, ascii_write;
 uint8_t LastScan;
 char LastASCII;
 char IN_ScanASCII(unsigned scan)
@@ -17,12 +18,17 @@ char IN_ScanASCII(unsigned scan)
     if (scan == sc_Space) return ' ';
     return 0;
 }
-void IN_ClearPressed(void) { memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; }
+void IN_ClearPressed(void) { memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0; }
 void IN_ClearKeysDown(void) { memset(Keyboard, 0, sizeof(Keyboard)); IN_ClearPressed(); }
 void IN_KeyEvent(unsigned scan, bool down)
 {
     if (!scan || scan >= 128) return;
-    if (down && !Keyboard[scan]) { pressed[scan] = true; LastScan = (uint8_t)scan; char ascii = IN_ScanASCII(scan); if (ascii) LastASCII = ascii; }
+    if (down && !Keyboard[scan]) { pressed[scan] = true; LastScan = (uint8_t)scan; char ascii = IN_ScanASCII(scan); if (ascii) {
+        LastASCII = ascii;
+        unsigned next = (ascii_write+1)%128;
+        if (next == ascii_read) ascii_read = (ascii_read+1)%128;
+        ascii_scans[ascii_write] = scan; ascii_write = next;
+    } }
     Keyboard[scan] = down;
 }
 bool IN_ConsumePress(unsigned scan)
@@ -35,3 +41,13 @@ bool IN_AnyPressed(void)
     for (unsigned i = 1; i < 128; ++i) if (pressed[i]) return true;
     return false;
 }
+
+char IN_NextASCII(void)
+{
+    if (ascii_read == ascii_write) return 0;
+    unsigned scan = ascii_scans[ascii_read]; ascii_read = (ascii_read+1)%128;
+    char ascii = IN_ScanASCII(scan);
+    if (ascii != ' ') pressed[scan] = false;
+    return ascii;
+}
+bool IN_PressPending(unsigned scan) { return scan<128 && pressed[scan]; }

@@ -1,8 +1,8 @@
-# Build and run the original UI
+# Build and run Wolf3D Redux
 
-CART is the primary build system. The original MM/CA/VL graphics path now
-supports the WL_MENU control panel, fonts and attract screens. Gameplay and
-audio are not ported yet.
+CART builds the original UI/attract slice and E1M1 wall-and-movement slice.
+Normal doors work; actors, combat, pickups, progression and audio are not yet
+ported. See MILESTONE4.md for the precise source-port scope.
 
 ## Local Linux build
 
@@ -17,8 +17,16 @@ From the repository root, reuse the existing SDL3 SDK in the sibling CART checko
 Press any key during the title/credits/scores to open the menu. Use Up/Down
 and Enter/Space; V, B and Q select View Scores, Back to Demo and Quit. Escape
 opens quit confirmation in the menu (Y exits, N/Escape cancels). Closing the
-window exits directly. Unported rows use the original disabled color. The discovered Steam directory
-above is used read-only. Supply a different absolute path if your installation
+window exits directly. New Game loads E1M1 directly once its map, textures and
+initial frame validate; unported rows stay disabled. No episode/difficulty
+selection screens are simulated.
+
+In the level: Up/Down move, Left/Right turn, Alt+Left/Right strafe, Shift runs,
+and Space operates normal doors. Escape ends the current walk session and
+returns to the menu; it is not a save or resume feature. Key-locked doors stay
+locked because the inventory/pickup system is not ported.
+
+The discovered Steam directory above is used read-only. Supply a different absolute path if your installation
 is elsewhere; `cart run` changes the working directory to the output folder.
 No path is hardcoded into the executable and no game data is staged by CART.
 
@@ -33,13 +41,15 @@ To decode/check without a display, or perform a finite graphical smoke test:
 ```sh
 ./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-assets
 ./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-ui
+./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-level
+./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --level
 ./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --menu
 ./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --frames 3
 ./build/cart-sdl/linux/wolf3d-redux --help
 ```
 
 `--capture build/checks/title.bmp` additionally saves a local SDL readback
-of the initial title (or menu with `--menu`) at full palette brightness, before
+of the initial title, menu (`--menu`) or level (`--level`) at full brightness, before
 its fade-in (create the parent directory first). SDL readback contains
 the image viewport, excluding letterbox bars. Captures contain game artwork;
 keep them private and out of Git. `build/`, `*.bmp` and `*.ppm` are ignored.
@@ -63,7 +73,9 @@ matching SDL3 DLL beside the executable or on PATH. Every new C module passes
 MinGW compile-only checking; Windows linking, runtime and native resize behavior
 remain unverified. No CMake build system was introduced.
 
-No CART source changes were required in milestones 2 or 3. It recursively builds the lowercase
+No CART source changes were required in milestones 2–4. The Linux/Windows
+link lists now include the math library used by the original table builder.
+CART recursively builds the lowercase
 `.c` files under `src`, supporting C11, defines/includes and library lists.
 It has no general linker-flags key, pkg-config integration, automatic SDK
 build/download, DLL staging or rpath setup. `doctor` does not accept profiles.
@@ -80,12 +92,11 @@ existing Git-protection tests:
 python3 -m unittest discover -s tests -v
 ```
 
-This compiles C memory/Huffman/framebuffer/cache and UI/font/input/fade/timing
-tests with GCC C11 and strict warnings as errors. SDL readback and complete
-event-to-menu tests use the static SDK
-at `../cart/vendor/SDL` (override with `SDL_SDK`). The SDL tests use the dummy
+This compiles memory, Huffman, graphics/UI, input, timing, map/VSWAP, raycasting
+and movement tests with GCC C11 and strict warnings as errors. SDL readback
+and event-to-menu/game tests use the static SDK at `../cart/vendor/SDL` (override with `SDL_SDK`). The SDL tests use the dummy
 video/software renderer, requiring no desktop. Without that static SDK, those
-two tests report skips. Synthetic archives are generated in temporary
+three tests report skips. Synthetic archives are generated in temporary
 directories and removed; no asset fixtures come from commercial files.
 
 For an independent pixel-by-pixel oracle comparison using your owned files:
@@ -111,8 +122,8 @@ SANITIZE=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-redux-sanitize" \
 ```
 
 `SANITIZE=1` also instruments the C unit/video tests. The reused SDL static
-archive is not instrumented. Neither these tests nor the window implement
-simulation or exercise unported DOS modules.
+archive is not instrumented. The active movement/door simulation uses 70 Hz tics. Tests do not exercise
+unported actor/combat/audio modules.
 
 From CART, regression checks can use the current executable by absolute path:
 
@@ -121,4 +132,4 @@ CART=/absolute/path/to/wolf3d-redux/build/tools/cart sh tests/test_sdl3.sh
 CART=/absolute/path/to/wolf3d-redux/build/tools/cart sh tests/test_desktop_dirs.sh
 ```
 
-See [milestone 3 results and scope](MILESTONE3.md) for validation and remaining work.
+See [milestone 4 results and scope](MILESTONE4.md) for validation and remaining work.

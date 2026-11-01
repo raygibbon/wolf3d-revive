@@ -4,6 +4,8 @@
    All disk integers are read explicitly; no far pointers or node fixups. */
 #include "ID_CA.h"
 #include "ID_VL.h"
+#include "ID_MAP.h"
+#include "ID_PM.h"
 #include "platform/data_file.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -19,7 +21,8 @@ pictabletype pictable[NUMPICS];
 static huffnode grhuffman[255];
 static uint32_t grstarts[NUMCHUNKS + 1];
 static FILE *grhandle;
-static char error[512];
+static char error[512], data_directory[4096];
+const char *CA_DataDirectory(void) { return data_directory; }
 
 const char *CA_Error(void) { return error; }
 bool CA_Fail(const char *format, ...)
@@ -115,6 +118,7 @@ static bool CA_Read(FILE *file, void *dest, size_t length)
 
 void CA_Shutdown(void)
 {
+    CA_UncacheMap(); PM_Shutdown(); data_directory[0]=0;
     if (grhandle) { (void)fclose(grhandle); grhandle = NULL; }
     for (int i = 0; i < NUMCHUNKS; ++i) {
         if (grsegs[i]) (void)MM_FreePtr(&grsegs[i]);
@@ -176,7 +180,8 @@ bool CA_Startup(const char *data_dir)
     CA_Shutdown();
     error[0] = '\0';
     if (!data_dir || !*data_dir) return CA_Fail("Empty data directory; supply --data /path/to/WL6");
-    /* These five archives are not decoded until gameplay/audio milestones. */
+    if (strlen(data_dir)>=sizeof(data_directory)) return CA_Fail("Data directory too long");
+    /* Graphics startup checks presence; level and audio parsers have separate lifecycles. */
     for (size_t i = 0; i < sizeof(required) / sizeof(required[0]); ++i) {
         size_t size;
         w3r_byte probe;
@@ -187,6 +192,7 @@ bool CA_Startup(const char *data_dir)
         if (!ok) return false;
     }
     if (!CAL_SetupGrFile(data_dir)) { CA_Shutdown(); return false; }
+    strcpy(data_directory,data_dir);
     return true;
 }
 

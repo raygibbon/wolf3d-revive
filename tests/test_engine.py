@@ -108,9 +108,11 @@ class EngineTests(unittest.TestCase):
         cc = shlex.split(os.environ.get("CC", "gcc"))
         core = [str(p) for p in sorted((ROOT / "src/engine").glob("*.c"))]
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/engine_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-o", str(cls.output / "engine-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "engine-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/ui_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-o", str(cls.output / "ui-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "ui-tests")], check=True)
+        subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/game_tests.c"),
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "game-tests")], check=True)
         cls.engine = cls.output / "engine-tests"
         cls.compiler = cc + flags
         cls.binary = Path(os.environ.get("WOLF3D_BINARY", ROOT / "build/cart-sdl/linux/wolf3d-redux"))
@@ -160,6 +162,88 @@ class EngineTests(unittest.TestCase):
         (self.data / "vGaDiCt.WL6").write_bytes(raw)
         (self.data / "VgAdIcT.wl6").write_bytes(raw)
         self.assertIn("ambiguous",self.app().stderr)
+
+    def test_game_synthetic(self):
+        from game_fixtures import game_files
+        game_files(self.data)
+        subprocess.run([str(self.output / "game-tests"),str(self.data)],check=True)
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def level_check(self):
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],text=True,capture_output=True)
+        self.assertEqual(result.returncode,1,result.stdout+result.stderr)
+        return result
+
+    def test_game_mixed_case(self):
+        from game_fixtures import game_files
+        game_files(self.data)
+        for p in self.data.iterdir():
+            p.rename(p.with_name("".join(c.lower() if i%2 else c.upper() for i,c in enumerate(p.name))))
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--check-level"],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_invalid_spawns_and_walls(self):
+        from game_fixtures import game_files,map_files
+        game_files(self.data)
+        mutations=[lambda p: p[1].__setitem__(2*64+2,0),
+                   lambda p: p[1].__setitem__(3*64+3,19),
+                   lambda p: p[0].__setitem__(2*64+2,1),
+                   lambda p: p[0].__setitem__(1*64+1,64),
+                   lambda p: p[0].__setitem__(1*64+1,65535),
+                   lambda p: p[0].__setitem__(1*64+6,107)]
+        for i,mutate in enumerate(mutations):
+            with self.subTest(case=i):map_files(self.data,mutate);self.level_check()
+
+    def test_unavailable_level_keeps_menu(self):
+        fixtures(self.data,ui=True)
+        env=dict(os.environ,SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
+        result=subprocess.run([str(self.binary),"--data",str(self.data),"--menu","--frames","2"],env=env,text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("New Game unavailable",result.stderr)
+
+    def test_malformed_map_archive(self):
+        from game_fixtures import game_files
+        game_files(self.data)
+        path=self.data/"GAMEMAPS.WL6"; saved=path.read_bytes()
+        variants=[]
+        for at,value in ((8,0xffffffff),(8+18,63),(8+20,63),(8+12,1)):
+            bad=bytearray(saved)
+            struct.pack_into("<I" if at==8 else "<H",bad,at,value);variants.append(bad)
+        start=struct.unpack_from("<I",saved,8)[0]
+        for offset,value in ((start,0),(start,3),(start,65534),(start+2,0)):
+            bad=bytearray(saved);struct.pack_into("<H",bad,offset,value);variants.append(bad)
+        variants.extend((saved[:1],saved[:-1]))
+        # Plane overlaps and an invalid first Carmack back-reference.
+        bad=bytearray(saved);bad[12:16]=bad[8:12];variants.append(bad)
+        start=struct.unpack_from("<I",saved,8)[0]
+        bad=bytearray(saved);bad[start+2:start+5]=bytes((1,0xa7,0));variants.append(bad)
+        for index,bad in enumerate(variants):
+            with self.subTest(case=index):path.write_bytes(bad);self.level_check()
+        path.write_bytes(saved)
+        head=self.data/"MAPHEAD.WL6";data=head.read_bytes()
+        for raw in (data[:1],data[:10],data[:2]+struct.pack("<I",0xffffffff)+data[6:]):
+            head.write_bytes(raw);self.level_check()
+
+    def test_invalid_map_semantics(self):
+        from game_fixtures import game_files,map_files
+        game_files(self.data)
+        # Decode-preserving literal mutations at the first plane's first RLEW value.
+        path=self.data/"GAMEMAPS.WL6";saved=path.read_bytes()
+        start=struct.unpack_from("<I",saved,8)[0]
+        # First plane begins expanded length, RLEW length, then tag/count/value.
+        bad=bytearray(saved);struct.pack_into("<H",bad,start+8,107)
+        path.write_bytes(bad);self.assertIn("perimeter",self.level_check().stderr)
+
+    def test_malformed_vswap(self):
+        from game_fixtures import game_files
+        game_files(self.data)
+        path=self.data/"VSWAP.WL6";saved=path.read_bytes()
+        variants=[saved[:1],saved[:6],saved[:-1]]
+        for at,fmt,value in ((0,"<H",5000),(2,"<H",9),(4,"<H",11),(6,"<I",1),(10,"<I",0xffffffff),(46,"<H",4095)):
+            bad=bytearray(saved);struct.pack_into(fmt,bad,at,value);variants.append(bad)
+        for index,bad in enumerate(variants):
+            with self.subTest(case=index):path.write_bytes(bad);self.level_check()
 
     def test_lowercase_files(self):
         for p in self.data.iterdir(): p.rename(p.with_name(p.name.lower()))
@@ -256,6 +340,19 @@ class EngineTests(unittest.TestCase):
         env = dict(os.environ, SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
         subprocess.run([str(program),str(self.data)],env=env,check=True)
 
+    def test_game_sdl_events(self):
+        sdk=Path(os.environ.get("SDL_SDK",ROOT.parent/"cart/vendor/SDL"))
+        library=sdk/"build/libSDL3.a"
+        if not library.is_file():self.skipTest("SDL_SDK must point to a built SDL3 checkout")
+        from game_fixtures import game_files
+        game_files(self.data)
+        program=self.output/"game-sdl-tests"
+        sources=[str(p) for p in sorted((ROOT/"src").rglob("*.c")) if p.name!="main.c"]
+        subprocess.run(self.compiler+["-I"+str(ROOT/"src"),"-I"+str(sdk/"include"),
+                       str(ROOT/"tests/game_sdl_tests.c"),*sources,str(library),"-pthread","-lm","-o",str(program)],check=True)
+        env=dict(os.environ,SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
+        subprocess.run([str(program),str(self.data)],env=env,check=True)
+
     @unittest.skipUnless(os.environ.get("WOLF3D_DATA"), "Set WOLF3D_DATA for owned-data oracle validation")
     def test_owned_steam_data(self):
         directory = Path(os.environ["WOLF3D_DATA"])
@@ -280,6 +377,10 @@ class EngineTests(unittest.TestCase):
         for plane in range(4): pixels[plane::4] = planar[plane * 16000:(plane + 1) * 16000]
         self.compare_assets(directory, pixels)
         subprocess.run([str(self.output / "ui-tests"),str(directory),"owned"],check=True)
+        dump=self.data/"owned-map-texture.bin"
+        subprocess.run([str(self.output / "game-tests"),str(directory),"owned",str(dump)],check=True)
+        from game_fixtures import original_map_oracle
+        self.assertEqual(dump.read_bytes(),original_map_oracle(directory))
 
 
 if __name__ == "__main__":

@@ -16,4 +16,6 @@ void IN_KeyEvent(unsigned scan, bool down);
 bool IN_ConsumePress(unsigned scan);
 bool IN_AnyPressed(void);
 char IN_ScanASCII(unsigned scan);
+char IN_NextASCII(void);
+bool IN_PressPending(unsigned scan);
 #endif

@@ -7,6 +7,7 @@
 #include "ID_IN.h"
 #include "ID_VH.h"
 #include "ID_US_1.h"
+#include "WL_DEF.h"
 static ui_state state, next_state;
 static bool leaving;
 static uint64_t deadline, transition_end, blink_next;
@@ -20,6 +21,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     state = screen; leaving = false;
     IN_ClearKeysDown();
     if (screen == UI_DONE) return true;
+    if (screen == UI_GAME && !GameStart(ticks+10)) return false;
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
@@ -36,8 +38,10 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
     return VL_FadeOut(Attract() ? 0 : 43,0,0,steps,ticks);
 }
+bool DemoLoopStartGame(uint64_t ticks) { return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
 {
+    GameStop();
     /* Validate the complete UI slice before starting the event loop. */
     if (!VW_ValidateFont(0) || !VW_ValidateFont(1) || !DrawHighScores() ||
         !SetupControlPanel(ticks) || !CA_CacheScreen(CREDITSPIC) || !CA_CacheScreen(TITLEPIC)) return false;
@@ -63,9 +67,14 @@ bool DemoLoop(uint64_t ticks)
         break;
     }
     if (VL_Fading() || Attract()) return true;
+    if (state == UI_GAME) {
+        if (IN_ConsumePress(sc_Escape)) { GameStop(); return Transition(UI_MENU,ticks,10); }
+        return GameStep(ticks);
+    }
     if (state == UI_MENU) {
         int action = HandleMenu(ticks);
         if (action == -3) return false;
+        if (action == newgame) return Transition(UI_GAME,ticks,10);
         if (action == viewscores) return Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) return Transition(UI_TITLE,ticks,10);
         if (action == quit || action == -1) {

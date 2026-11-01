@@ -10,7 +10,7 @@
 #include <ctype.h>
 #include <string.h>
 CP_iteminfo MainItems = {76, 55, MENU_COUNT, viewscores, 24};
-const CP_itemtype MainMenu[MENU_COUNT] = {
+CP_itemtype MainMenu[MENU_COUNT] = {
     {0,"New Game"}, {0,"Sound"}, {0,"Control"}, {0,"Load Game"}, {0,"Save Game"},
     {0,"Change View"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
 };
@@ -71,8 +71,9 @@ int HandleMenu(uint64_t ticks)
         redraw = true;
     }
     if (!Keyboard[sc_UpArrow] && !Keyboard[sc_DownArrow]) move_next = ticks;
-    if (LastASCII) {
-        int key = toupper((unsigned char)LastASCII);
+    char ascii;
+    while ((ascii=IN_NextASCII()) != 0) {
+        int key = toupper((unsigned char)ascii);
         for (int offset = 1; offset <= MENU_COUNT; ++offset) {
             int item = (MainItems.curpos + offset) % MENU_COUNT;
             if (MainMenu[item].active && MainMenu[item].string[0] == key) {
@@ -91,8 +92,10 @@ int HandleMenu(uint64_t ticks)
         redraw = true;
     }
     if (redraw && !DrawMainMenu()) return -3;
-    if (IN_ConsumePress(sc_Escape)) return -1;
-    if (IN_ConsumePress(sc_Enter) || IN_ConsumePress(sc_Space)) return MainItems.curpos;
+    bool escape=IN_ConsumePress(sc_Escape);
+    bool enter=IN_ConsumePress(sc_Enter), space=IN_ConsumePress(sc_Space);
+    if (escape) return -1;
+    if (enter || space) return MainItems.curpos;
     return -2;
 }
 bool Message(const char *text)

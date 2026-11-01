@@ -15,7 +15,7 @@ enum { newgame, soundmenu, control, loadgame, savegame, changeview, viewscores, 
 typedef struct { int x, y, amount, curpos, indent; } CP_iteminfo;
 typedef struct { int active; const char *string; } CP_itemtype;
 extern CP_iteminfo MainItems;
-extern const CP_itemtype MainMenu[MENU_COUNT];
+extern CP_itemtype MainMenu[MENU_COUNT];
 void ClearMScreen(void);
 void DrawStripes(int y);
 void DrawWindow(int x, int y, int w, int h, unsigned char color);

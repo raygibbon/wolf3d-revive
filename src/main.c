@@ -5,6 +5,7 @@
 #include "platform/sdl_video.h"
 #include "engine/WL_MAIN.h"
 #include "engine/WL_MENU.h"
+#include "engine/WL_DEF.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,20 +13,24 @@
 
 static void Usage(const char *name)
 {
-    printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui] [--menu] [--frames N] [--capture local.bmp]\n"
+    printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui|--check-level] [--menu|--level] [--frames N] [--capture local.bmp]\n"
            "Original WL6 title/credits/scores/menu. Press a key to open the menu.\n"
-           "--check-assets decodes without opening a window. --frames limits a smoke test.\n",
+           "--check-assets/--check-ui/--check-level validate without a window.\n"
+           "--level starts E1M1 directly; arrows move/turn, Alt strafes, Shift runs.\n"
+           "Space uses normal doors; Escape returns to menu. --frames limits a smoke test.\n",
            name);
 }
 
 int main(int argc, char *argv[])
 {
     const char *directory = NULL, *capture = NULL;
-    bool check_only = false, check_ui = false, menu = false;
+    bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--help") == 0) { Usage(argv[0]); return 0; }
+        if (strcmp(argv[i], "--check-level") == 0) { check_level = true; continue; }
+        if (strcmp(argv[i], "--level") == 0) { level = true; continue; }
         if (strcmp(argv[i], "--menu") == 0) { menu = true; continue; }
         if (strcmp(argv[i], "--check-ui") == 0) { check_ui = true; continue; }
         if (strcmp(argv[i], "--check-assets") == 0) { check_only = true; continue; }
@@ -43,7 +48,7 @@ int main(int argc, char *argv[])
         Usage(argv[0]);
         return 1;
     }
-    if (!directory || (check_only && check_ui) || ((check_only || check_ui) && capture)) {
+    if (!directory || ((unsigned)check_only+(unsigned)check_ui+(unsigned)check_level>1) || (menu && level) || ((check_only || check_ui || check_level) && capture)) {
         fputs("Supply --data; choose one check mode; --capture requires a window.\n", stderr);
         Usage(argv[0]);
         return 1;
@@ -60,9 +65,19 @@ int main(int argc, char *argv[])
         puts("Original fonts, menu pictures, credits and high scores validated.");
         status = 0; goto done;
     }
+    bool ready=GameProbe();
+    if (check_level) {
+        if (!ready) { fprintf(stderr,"Cannot load E1M1: %s\n",CA_Error()); goto done; }
+        puts("E1M1 maps, wall textures, spawn and original wall renderer validated.");
+        status=0; goto done;
+    }
+    MainMenu[newgame].active=ready ? 1 : 0;
+    if (ready) MainItems.curpos=newgame;
+    else { fprintf(stderr,"New Game unavailable: %s\n",CA_Error()); if (level) goto done; }
     if (!VL_Startup()) { fprintf(stderr, "SDL3 video: %s\n", VL_Error()); goto video_done; }
     uint64_t ticks = VL_GetTicks70();
     if (!DemoLoopStartup(ticks,menu)) { fprintf(stderr,"Cannot load original UI: %s\n",CA_Error()); goto video_done; }
+    if (level && !DemoLoopStartGame(ticks)) { fprintf(stderr,"E1M1: %s\n",CA_Error()); goto video_done; }
     if (capture) {
         w3r_byte saved[768]; memcpy(saved,palette,sizeof(saved));
         (void)VL_SetPalette(gamepal,sizeof(gamepal));
@@ -80,6 +95,7 @@ int main(int argc, char *argv[])
 video_done:
     VL_Shutdown();
 done:
+    GameStop();
     CA_Shutdown();
     MM_Shutdown();
     return status;

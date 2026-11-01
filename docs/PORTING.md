@@ -5,8 +5,9 @@ This inventory was recorded during milestone 1, 2026-11-01. The original
 graphics path with memory, cache/decompression and SDL video support; see
 [milestone 2 results](MILESTONE2.md). Milestone 3 adds the original menus,
 fonts, input and supported attract flow; see [current results](MILESTONE3.md).
-Remaining items below are the
-incremental engine plan, not claims of completed gameplay.
+Milestone 4 now implements E1M1 maps/VSWAP, wall tracing, movement and normal
+doors; see [current gameplay-slice results](MILESTONE4.md). Remaining items
+below are the incremental engine plan, not claims of completed gameplay.
 
 ## Source-file inventory
 

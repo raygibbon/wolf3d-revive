@@ -1,4 +1,4 @@
-# Original-engine menus and attract mode; gameplay is not compiled yet.
+# Original-engine UI plus E1M1 wall rendering, movement and normal doors.
 [project]
 name = "wolf3d-redux"
 version = "0.1.0"
@@ -12,7 +12,7 @@ cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
 defines = []
 include_dirs = ["src"]
 lib_dirs = []
-libs = []
+libs = ["m"]
 
 # GCC/MinGW is explicit because cflags use GCC syntax. MSVC needs its own flags.
 [windows]
@@ -22,7 +22,7 @@ cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
 defines = []
 include_dirs = ["src"]
 lib_dirs = []
-libs = []
+libs = ["m"]
 
 [graphics]
 backend = "sdl-renderer"
