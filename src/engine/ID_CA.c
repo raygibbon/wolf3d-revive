@@ -4,7 +4,7 @@
    All disk integers are read explicitly; no far pointers or node fixups. */
 #include "ID_CA.h"
 #include "ID_VL.h"
-#include <ctype.h>
+#include "platform/data_file.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,7 +22,7 @@ static FILE *grhandle;
 static char error[512];
 
 const char *CA_Error(void) { return error; }
-static bool CA_Fail(const char *format, ...)
+bool CA_Fail(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -93,21 +93,8 @@ bool CAL_HuffExpand(const w3r_byte *source, size_t source_length,
 
 static FILE *CA_Open(const char *directory, const char *name)
 {
-    char path[4096], lower[32];
-    FILE *file;
-    int count = snprintf(path, sizeof(path), "%s/%s", directory, name);
-    if (count < 0 || (size_t)count >= sizeof(path)) {
-        (void)CA_Fail("Game-data path is too long");
-        return NULL;
-    }
-    file = fopen(path, "rb");
-    if (file) return file;
-    /* Original Steam spelling plus all-lowercase copies on case-sensitive hosts. */
-    if (strlen(name) >= sizeof(lower)) return NULL;
-    for (size_t i = 0; i <= strlen(name); ++i) lower[i] = (char)tolower((unsigned char)name[i]);
-    (void)snprintf(path, sizeof(path), "%s/%s", directory, lower);
-    file = fopen(path, "rb");
-    if (!file) (void)CA_Fail("Cannot open %s in '%s' (use --data with the WL6 data directory)", name, directory);
+    FILE *file = CA_OpenDataFile(directory, name);
+    if (!file) (void)CA_Fail("Cannot open %s in '%s' (missing, ambiguous or unreadable; use --data)", name, directory);
     return file;
 }
 

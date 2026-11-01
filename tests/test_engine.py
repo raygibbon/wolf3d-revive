@@ -27,7 +27,7 @@ def encode(raw):
     return bytes(int(f"{v:08b}"[::-1], 2) for v in raw)
 
 
-def fixtures(directory, lowercase=False):
+def fixtures(directory, lowercase=False, ui=False):
     pic = struct.pack("<HH", 320, 200) * 132
     pixels = bytes((x * 13 + y * 7) % 256 for y in range(200) for x in range(320))
     planar = bytes(pixels[y * 320 + x] for plane in range(4)
@@ -35,6 +35,34 @@ def fixtures(directory, lowercase=False):
     chunks = [struct.pack("<I", len(raw)) + encode(raw) for raw in (pic, planar)]
     offsets = [0xffffff] * 150
     offsets[0], offsets[87], offsets[149] = 0, len(chunks[0]), sum(map(len, chunks))
+    if ui:
+        sizes = {10: (152,48), 11: (24,16), 12: (24,16), 18: (104,16),
+                 38: (32,8), 39: (32,8), 40: (32,8), 87: (320,200),
+                 89: (320,200), 90: (224,56)}
+        dims = bytearray(struct.pack("<HH",8,8)*132)
+        raw = {87: planar}
+        for chunk,(w,h) in sizes.items():
+            struct.pack_into("<HH",dims,(chunk-3)*4,w,h)
+            if chunk != 87: raw[chunk] = bytes([chunk])*(w*h)
+        for number,height in ((1,10),(2,13)):
+            font = bytearray(770)
+            struct.pack_into("<H",font,0,height)
+            for ch in range(1,256):
+                width = 3+ch%3
+                struct.pack_into("<H",font,2+ch*2,len(font))
+                font[514+ch] = width
+                font.extend(bytes(1 if ch != 32 and (x+y+ch)%3 else 0
+                                  for y in range(height) for x in range(width)))
+            raw[number] = font
+        raw[0] = dims
+        offsets = [0xffffff]*150
+        chunks = []
+        cursor = 0
+        for chunk,content in sorted(raw.items()):
+            offsets[chunk] = cursor
+            compressed = struct.pack("<I",len(content))+encode(content)
+            chunks.append(compressed); cursor += len(compressed)
+        offsets[149] = cursor
     data = {"VGADICT.WL6": dictionary(),
             "VGAHEAD.WL6": b"".join(x.to_bytes(3, "little") for x in offsets),
             "VGAGRAPH.WL6": b"".join(chunks)}
@@ -80,7 +108,9 @@ class EngineTests(unittest.TestCase):
         cc = shlex.split(os.environ.get("CC", "gcc"))
         core = [str(p) for p in sorted((ROOT / "src/engine").glob("*.c"))]
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/engine_tests.c"),
-                                    *core, "-o", str(cls.output / "engine-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-o", str(cls.output / "engine-tests")], check=True)
+        subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/ui_tests.c"),
+                                    *core, str(ROOT / "src/platform/data_file.c"), "-o", str(cls.output / "ui-tests")], check=True)
         cls.engine = cls.output / "engine-tests"
         cls.compiler = cc + flags
         cls.binary = Path(os.environ.get("WOLF3D_BINARY", ROOT / "build/cart-sdl/linux/wolf3d-redux"))
@@ -112,6 +142,24 @@ class EngineTests(unittest.TestCase):
     def test_synthetic_archive_cache_and_pixels(self):
         self.app(True)
         self.compare_assets(self.data, self.pixels)
+
+    def test_original_ui_synthetic(self):
+        fixtures(self.data,ui=True)
+        subprocess.run([str(self.output / "ui-tests"),str(self.data)],check=True)
+        result = subprocess.run([str(self.binary),"--data",str(self.data),"--check-ui"],capture_output=True,text=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_mixed_case_files(self):
+        for p in self.data.iterdir():
+            p.rename(p.with_name("".join(c.lower() if i%2 else c.upper() for i,c in enumerate(p.name))))
+        self.app(True)
+
+    def test_ambiguous_case_files(self):
+        p = self.data / "VGADICT.WL6"
+        raw = p.read_bytes(); p.unlink()
+        (self.data / "vGaDiCt.WL6").write_bytes(raw)
+        (self.data / "VgAdIcT.wl6").write_bytes(raw)
+        self.assertIn("ambiguous",self.app().stderr)
 
     def test_lowercase_files(self):
         for p in self.data.iterdir(): p.rename(p.with_name(p.name.lower()))
@@ -188,10 +236,25 @@ class EngineTests(unittest.TestCase):
         program = self.output / "video-tests"
         subprocess.run(self.compiler + ["-I" + str(ROOT / "src"), "-I" + str(sdk / "include"),
                        str(ROOT / "tests/video_tests.c"), str(ROOT / "src/engine/ID_VL.c"),
-                       str(ROOT / "src/platform/sdl_video.c"), str(library), "-pthread", "-lm",
+                       str(ROOT / "src/platform/sdl_video.c"), str(ROOT / "src/platform/sdl_input.c"),
+                       str(ROOT / "src/engine/ID_IN.c"), str(library), "-pthread", "-lm",
                        "-o", str(program)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_RENDER_DRIVER="software")
         subprocess.run([str(program), str(self.data / "readback.bmp")], env=env, check=True)
+
+    def test_frontend_sdl_events(self):
+        sdk = Path(os.environ.get("SDL_SDK", ROOT.parent / "cart/vendor/SDL"))
+        library = sdk / "build/libSDL3.a"
+        if not library.is_file():
+            self.skipTest("SDL_SDK must point to a built static SDL3 checkout")
+        fixtures(self.data,ui=True)
+        program = self.output / "frontend-tests"
+        sources = [str(p) for p in sorted((ROOT / "src").rglob("*.c")) if p.name != "main.c"]
+        subprocess.run(self.compiler + ["-I" + str(ROOT / "src"),"-I" + str(sdk / "include"),
+                       str(ROOT / "tests/frontend_sdl_tests.c"),*sources,str(library),"-pthread","-lm",
+                       "-o",str(program)],check=True)
+        env = dict(os.environ, SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
+        subprocess.run([str(program),str(self.data)],env=env,check=True)
 
     @unittest.skipUnless(os.environ.get("WOLF3D_DATA"), "Set WOLF3D_DATA for owned-data oracle validation")
     def test_owned_steam_data(self):
@@ -216,6 +279,7 @@ class EngineTests(unittest.TestCase):
         pixels = bytearray(64000)
         for plane in range(4): pixels[plane::4] = planar[plane * 16000:(plane + 1) * 16000]
         self.compare_assets(directory, pixels)
+        subprocess.run([str(self.output / "ui-tests"),str(directory),"owned"],check=True)
 
 
 if __name__ == "__main__":

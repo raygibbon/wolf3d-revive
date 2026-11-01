@@ -3,7 +3,9 @@
 This inventory was recorded during milestone 1, 2026-11-01. The original
 `WOLFSRC/` tree remains untouched. Milestone 2 now ports the original title
 graphics path with memory, cache/decompression and SDL video support; see
-[implementation and results](MILESTONE2.md). Remaining items below are the
+[milestone 2 results](MILESTONE2.md). Milestone 3 adds the original menus,
+fonts, input and supported attract flow; see [current results](MILESTONE3.md).
+Remaining items below are the
 incremental engine plan, not claims of completed gameplay.
 
 ## Source-file inventory
@@ -86,8 +88,8 @@ supplies monotonic counters and sleep; tests inject virtual time. Audio owns
 SDL PCM buffering; an OPL adapter accepts timestamped register writes and
 generates samples. Silence must still advance sequencing. No audio clocks
 should derive from presentation frequency. No platform API is implemented
-beyond the title graphics slice in milestone 2. Audio, timing and gameplay
-interfaces remain future work; see the implemented boundary in `src/platform/`.
+beyond the original UI slice in milestone 3. Monotonic timing and keyboard
+input are now implemented; audio and gameplay interfaces remain future work.
 
 ## Reference findings
 
@@ -117,8 +119,8 @@ the application PCM rate. Follow that separation when restoring `ID_SD`.
    Data path selection is implemented for the title. Progress toward a playable core
    subsystem by subsystem; avoid a mass header rewrite.
 3. **Video:** title presentation, original palette, resize, nearest scaling and
-   buffer tests are implemented. Next extend VL/VH to UI primitives, fonts,
-   ordinary pictures and fades. Fullscreen remains later work.
+   buffer tests are implemented. Milestone 3 adds original UI primitives, fonts,
+   ordinary pictures, menus and fades. Fullscreen remains later work.
 4. **Input/gameplay:** integrate IN/timing and restore player, doors, weapons,
    enemies and demos; compare deterministic traces and original tic batching.
 5. **Audio:** SDL PCM, original digitized samples and sequences, then reviewed

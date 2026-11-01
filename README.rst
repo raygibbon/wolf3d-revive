@@ -3,10 +3,12 @@ Wolf3D Redux development
 
 This working tree preserves the original id Software source and history while
 preparing a faithful C11 / CART / SDL3 source port for Linux and Windows.
-Milestone 2 displays the **original WL6 title screen** using external game data
-in a resizable SDL3 window. Gameplay and audio are not ported yet.
+Milestone 3 displays the original WL6 title, credits, high scores and keyboard
+main menu, with original fonts and palette fades in a resizable SDL3 window.
+Gameplay and audio are not ported yet.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 3 results and controls <docs/MILESTONE3.md>`_
 * `Milestone 2 results and scope <docs/MILESTONE2.md>`_
 * `Source inventory and incremental plan <docs/PORTING.md>`_
 * `Git safeguards <docs/GIT-SAFETY.md>`_

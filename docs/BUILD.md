@@ -1,7 +1,8 @@
-# Build and run the original title
+# Build and run the original UI
 
-CART is the primary build system. This milestone ports the original MM/CA/VL
-slice needed by `CA_CacheScreen(TITLEPIC)`; it is not a playable game yet.
+CART is the primary build system. The original MM/CA/VL graphics path now
+supports the WL_MENU control panel, fonts and attract screens. Gameplay and
+audio are not ported yet.
 
 ## Local Linux build
 
@@ -13,7 +14,10 @@ From the repository root, reuse the existing SDL3 SDK in the sibling CART checko
   --data "$HOME/.steam/steam/steamapps/common/Wolfenstein 3D/base"
 ```
 
-Escape or closing the resizable window exits. The discovered Steam directory
+Press any key during the title/credits/scores to open the menu. Use Up/Down
+and Enter/Space; V, B and Q select View Scores, Back to Demo and Quit. Escape
+opens quit confirmation in the menu (Y exits, N/Escape cancels). Closing the
+window exits directly. Unported rows use the original disabled color. The discovered Steam directory
 above is used read-only. Supply a different absolute path if your installation
 is elsewhere; `cart run` changes the working directory to the output folder.
 No path is hardcoded into the executable and no game data is staged by CART.
@@ -28,12 +32,15 @@ To decode/check without a display, or perform a finite graphical smoke test:
 
 ```sh
 ./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-assets
+./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --check-ui
+./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --menu
 ./build/cart-sdl/linux/wolf3d-redux --data /absolute/path/to/WL6 --frames 3
 ./build/cart-sdl/linux/wolf3d-redux --help
 ```
 
 `--capture build/checks/title.bmp` additionally saves a local SDL readback
-before presentation (create the parent directory first). SDL readback contains
+of the initial title (or menu with `--menu`) at full palette brightness, before
+its fade-in (create the parent directory first). SDL readback contains
 the image viewport, excluding letterbox bars. Captures contain game artwork;
 keep them private and out of Git. `build/`, `*.bmp` and `*.ppm` are ignored.
 
@@ -56,7 +63,7 @@ matching SDL3 DLL beside the executable or on PATH. Every new C module passes
 MinGW compile-only checking; Windows linking, runtime and native resize behavior
 remain unverified. No CMake build system was introduced.
 
-CART remains unchanged in milestone 2. It recursively builds the lowercase
+No CART source changes were required in milestones 2 or 3. It recursively builds the lowercase
 `.c` files under `src`, supporting C11, defines/includes and library lists.
 It has no general linker-flags key, pkg-config integration, automatic SDK
 build/download, DLL staging or rpath setup. `doctor` does not accept profiles.
@@ -73,11 +80,12 @@ existing Git-protection tests:
 python3 -m unittest discover -s tests -v
 ```
 
-This compiles C memory/Huffman/framebuffer/cache tests with GCC C11 and strict
-warnings as errors. It also compiles an SDL readback test using the static SDK
-at `../cart/vendor/SDL` (override with `SDL_SDK`). The video test uses SDL's dummy
-video/software renderer, requiring no desktop. Without that static SDK, that
-one test reports a skip. Synthetic archives are generated in temporary
+This compiles C memory/Huffman/framebuffer/cache and UI/font/input/fade/timing
+tests with GCC C11 and strict warnings as errors. SDL readback and complete
+event-to-menu tests use the static SDK
+at `../cart/vendor/SDL` (override with `SDL_SDK`). The SDL tests use the dummy
+video/software renderer, requiring no desktop. Without that static SDK, those
+two tests report skips. Synthetic archives are generated in temporary
 directories and removed; no asset fixtures come from commercial files.
 
 For an independent pixel-by-pixel oracle comparison using your owned files:
@@ -94,8 +102,8 @@ mkdir -p build/checks
 gcc -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror \
   -fsanitize=address,undefined -fno-omit-frame-pointer -g \
   -Isrc -I../cart/vendor/SDL/include \
-  src/main.c src/engine/ID_MM.c src/engine/ID_CA.c src/engine/ID_VL.c \
-  src/platform/sdl_video.c ../cart/vendor/SDL/build/libSDL3.a -pthread -lm \
+  src/main.c src/engine/*.c src/platform/*.c \
+  ../cart/vendor/SDL/build/libSDL3.a -pthread -lm \
   -o build/checks/wolf3d-redux-sanitize
 SANITIZE=1 WOLF3D_BINARY="$PWD/build/checks/wolf3d-redux-sanitize" \
   WOLF3D_DATA="$HOME/.steam/steam/steamapps/common/Wolfenstein 3D/base" \
@@ -113,4 +121,4 @@ CART=/absolute/path/to/wolf3d-redux/build/tools/cart sh tests/test_sdl3.sh
 CART=/absolute/path/to/wolf3d-redux/build/tools/cart sh tests/test_desktop_dirs.sh
 ```
 
-See [milestone 2 results and scope](MILESTONE2.md) for validation and remaining work.
+See [milestone 3 results and scope](MILESTONE3.md) for validation and remaining work.

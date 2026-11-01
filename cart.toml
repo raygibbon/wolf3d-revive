@@ -1,4 +1,4 @@
-# Original-engine title graphics slice; gameplay is not compiled yet.
+# Original-engine menus and attract mode; gameplay is not compiled yet.
 [project]
 name = "wolf3d-redux"
 version = "0.1.0"

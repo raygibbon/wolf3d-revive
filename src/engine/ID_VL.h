@@ -14,4 +14,9 @@ bool VL_SetPalette(const w3r_byte *source, size_t length);
 bool VL_MemToScreen(const w3r_byte *source, size_t length,
                     int width, int height, int x, int y);
 bool VL_ConvertRGBA(w3r_byte *dest, size_t length);
+/* Incremental forms of the original palette fades, driven by 70 Hz tics. */
+bool VL_FadeIn(const w3r_byte target[768], unsigned steps, uint64_t ticks);
+bool VL_FadeOut(unsigned red, unsigned green, unsigned blue, unsigned steps, uint64_t ticks);
+void VL_FadeStep(uint64_t ticks);
+bool VL_Fading(void);
 #endif

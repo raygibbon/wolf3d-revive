@@ -49,3 +49,39 @@ bool VL_ConvertRGBA(w3r_byte *dest, size_t length)
     }
     return true;
 }
+
+/* ID_VL.C interpolation: orig + (target-orig)*i/steps, truncating toward zero. */
+static w3r_byte fade_from[768], fade_to[768];
+static uint64_t fade_start;
+static unsigned fade_steps;
+bool VL_Fading(void) { return fade_steps != 0; }
+bool VL_FadeIn(const w3r_byte target[768], unsigned steps, uint64_t ticks)
+{
+    if (!target || steps > 1000) return false;
+    for (size_t i = 0; i < 768; ++i) if (target[i] > 63) return false;
+    memcpy(fade_from, palette, 768); memcpy(fade_to, target, 768);
+    fade_start = ticks; fade_steps = steps;
+    if (!steps) (void)VL_SetPalette(target, 768);
+    return true;
+}
+bool VL_FadeOut(unsigned red, unsigned green, unsigned blue, unsigned steps, uint64_t ticks)
+{
+    w3r_byte target[768];
+    if (red > 63 || green > 63 || blue > 63) return false;
+    for (size_t i = 0; i < 768; i += 3) {
+        target[i] = (w3r_byte)red; target[i + 1] = (w3r_byte)green; target[i + 2] = (w3r_byte)blue;
+    }
+    return VL_FadeIn(target, steps, ticks);
+}
+void VL_FadeStep(uint64_t ticks)
+{
+    if (!fade_steps || ticks < fade_start) return;
+    uint64_t elapsed = ticks - fade_start;
+    if (elapsed >= fade_steps) {
+        (void)VL_SetPalette(fade_to, 768); fade_steps = 0; return;
+    }
+    for (size_t i = 0; i < 768; ++i) {
+        int original = fade_from[i], delta = (int)fade_to[i] - original;
+        palette[i] = (w3r_byte)(original + delta * (int)elapsed / (int)fade_steps);
+    }
+}

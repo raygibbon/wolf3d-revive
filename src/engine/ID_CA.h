@@ -22,4 +22,5 @@ void CA_Shutdown(void);
 bool CA_CacheGrChunk(int chunk);
 bool CA_CacheScreen(int chunk);
 const char *CA_Error(void);
+bool CA_Fail(const char *format, ...);
 #endif
