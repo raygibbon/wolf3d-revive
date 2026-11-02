@@ -103,6 +103,24 @@ static bool StepDemoLoop(uint64_t ticks)
     }
     if (VL_Fading() || Attract()) return true;
     if (state == UI_GAME) {
+        /* DOS US_ControlPanel shortcuts (WOLFSRC/WL_MENU.C).
+           F5 currently opens the native Display panel; the original
+           viewport-size panel is still pending its raycaster migration. */
+        if (IN_ConsumePress(0x3c) && GameCanSave() && *Save_Directory()) {
+            FinishPaletteShifts();return Transition(UI_SAVE,ticks,10);
+        }
+        if (IN_ConsumePress(0x3d) && *Save_Directory()) {
+            FinishPaletteShifts();return Transition(UI_LOAD,ticks,10);
+        }
+        if (IN_ConsumePress(0x3e)) {
+            FinishPaletteShifts();return Transition(UI_SOUND,ticks,10);
+        }
+        if (IN_ConsumePress(0x3f) && Display_Available()) {
+            FinishPaletteShifts();return Transition(UI_DISPLAY,ticks,10);
+        }
+        if (IN_ConsumePress(0x40)) {
+            FinishPaletteShifts();return Transition(UI_CONTROLS,ticks,10);
+        }
         if (GameCanSave() && (CT_Pressed(CT_MENU) || IN_ConsumePress(sc_Escape))) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
         if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
