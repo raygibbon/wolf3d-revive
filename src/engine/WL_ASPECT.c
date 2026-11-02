@@ -18,12 +18,11 @@ bool WL_AspectFit(unsigned cw,unsigned ch,unsigned aw,unsigned ah,wl_rectangle *
 }
 bool WL_HorizontalFov(double reference,unsigned aw,unsigned ah,double *out)
 {
-    if(!out || !aw || !ah || !isfinite(reference) ||
-       reference<=0.0 || reference>=179.0) return false;
+    if(!out || !aw || !ah || !(reference>0.0 && reference<179.0)) return false;
     const double pi=3.14159265358979323846;
     const double radians=reference*pi/180.0;
     const double ratio=((double)aw/(double)ah)/(4.0/3.0);
     double fov=2.0*atan(tan(radians/2.0)*ratio)*180.0/pi;
-    if(!isfinite(fov)) return false;
+    if(!(fov>0.0 && fov<180.0)) return false;
     *out=fov;return true;
 }

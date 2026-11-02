@@ -2,6 +2,10 @@
 #include "engine/WL_ASPECT.h"
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
+#include <float.h>
+#include <string.h>
+#include <stddef.h>
 int main(void)
 {
     wl_rectangle r={0};double f=0;
@@ -17,5 +21,12 @@ int main(void)
     assert(WL_HorizontalFov(60,16,9,&f)&&f>60);
     assert(WL_HorizontalFov(60,21,9,&f)&&f>70);
     assert(!WL_HorizontalFov(0,16,9,&f));
+    wl_rectangle old=r;
+    assert(!WL_AspectFit(1,1,UINT_MAX,1,&r));assert(!memcmp(&r,&old,sizeof(r)));
+    assert(WL_AspectFit(UINT_MAX,UINT_MAX,UINT_MAX,UINT_MAX,&r));assert(r.width==UINT_MAX && r.height==UINT_MAX);
+    assert(!WL_HorizontalFov(NAN,4,3,&f));assert(!WL_HorizontalFov(INFINITY,4,3,&f));
+    assert(!WL_HorizontalFov(DBL_TRUE_MIN,1,UINT_MAX,&f));
+    assert(!WL_HorizontalFov(60,0,9,&f));assert(!WL_HorizontalFov(60,4,3,NULL));
+    assert(WL_HorizontalFov(60,16,10,&f) && f>60);assert(WL_HorizontalFov(60,32,9,&f) && f>110 && f<120);
     return 0;
 }
