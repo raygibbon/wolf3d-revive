@@ -13,7 +13,6 @@
 #include "engine/WL_DISPLAY.h"
 #include "engine/WL_FRAME_CLOCK.h"
 #include <SDL3/SDL_timer.h>
-#include <SDL3/SDL_video.h>
 #include <SDL3/SDL_filesystem.h>
 #include <errno.h>
 #include <stdio.h>
@@ -28,19 +27,6 @@ static void Usage(const char *name)
            "--level starts E1M1 directly; arrows move/turn, Alt strafes, Shift runs.\n"
            "Ctrl fires; 1-4 select weapons; Space uses doors, pushwalls and elevators; Escape returns to menu. --frames limits a smoke test.\n",
            name);
-}
-
-/* Display-aware frame pacing. The simulation remains locked to 70 Hz. */
-static unsigned MonitorFrameRate(void)
-{
-    SDL_Window *window=SDL_GetKeyboardFocus();
-    if(!window) return 60;
-    SDL_DisplayID display=SDL_GetDisplayForWindow(window);
-    const SDL_DisplayMode *mode=SDL_GetCurrentDisplayMode(display);
-    if(!mode) mode=SDL_GetDesktopDisplayMode(display);
-    if(!mode || !(mode->refresh_rate>=30.0f && mode->refresh_rate<=1000.0f)) return 60;
-    unsigned fps=(unsigned)(mode->refresh_rate+0.5f);
-    return fps>240U?240U:fps;
 }
 
 int main(int argc, char *argv[])
@@ -136,7 +122,7 @@ int main(int argc, char *argv[])
         if(!scheduled || now>=next_frame) {
             if(!VW_UpdateScreen()) { fprintf(stderr,"SDL3 presentation: %s\n",VL_Error());goto video_done; }
             ++frame;if(frames && frame>=frames) break;
-            next_frame=WL_FrameDeadline(now,MonitorFrameRate());
+            next_frame=WL_FrameDeadline(now,VL_MonitorFrameRate());
         }
         if(!scheduled) VL_Sleep(4);
         else {
