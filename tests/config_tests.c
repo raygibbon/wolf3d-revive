@@ -38,7 +38,7 @@ static size_t Read(char out[8192])
 static void JSON(config_result result)
 {
     unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);display_settings d;CHECK(VL_DisplayPreferences(&d));
-    printf("{\"result\":%d,\"preset\":%d,\"music\":%u,\"effects\":%u,\"music_on\":%d,\"effects_on\":%d,\"view\":%u,\"fullscreen\":%d,\"integer\":%d,\"width\":%d,\"height\":%d,\"profiles\":[",result,(int)CT_Preset(),m,e,mon,eon,ViewSize(),d.fullscreen,d.integer,d.width,d.height);
+    printf("{\"result\":%d,\"preset\":%d,\"music\":%u,\"effects\":%u,\"music_on\":%d,\"effects_on\":%d,\"view\":%u,\"fullscreen\":%d,\"integer\":%d,\"width\":%d,\"height\":%d,\"high_resolution\":%d,\"render_auto\":%d,\"render_width\":%u,\"render_height\":%u,\"aspect\":%u,\"vsync\":%d,\"linear\":%d,\"profiles\":[",result,(int)CT_Preset(),m,e,mon,eon,ViewSize(),d.fullscreen,d.integer,d.width,d.height,d.high_resolution,d.render_auto,d.render_width,d.render_height,d.aspect,d.vsync,d.linear);
     for(unsigned i=0;i<2;++i) {
         ct_profile p;CT_GetProfile((ct_preset)i,&p);printf("%s{\"mouse\":%d,\"invert\":%d,\"sensitivity\":%u,\"bindings\":[",i?",":"",p.mouse,p.invert,p.sensitivity);
         for(unsigned a=0;a<CT_ACTIONS;++a) printf("%s[%u,%u]",a?",":"",p.binding[a][0],p.binding[a][1]);

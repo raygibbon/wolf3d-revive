@@ -19,6 +19,11 @@ bool GameIntermission(void) { return intermission; }
 static unsigned deathphase,deathwait;
 static int deathangle;
 static uint32_t fizzlernd;
+unsigned GameDeathPresentation(uint32_t *seed)
+{
+    if(seed) *seed=fizzlernd;
+    return running && gamestate.died?deathphase:0;
+}
 bool GameFinished(void) { return finished; }
 void DrawPlayBorder(void)
 {

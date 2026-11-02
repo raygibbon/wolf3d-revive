@@ -259,3 +259,30 @@ unreadable or future-version files are preserved; fix or rename them to restore
 normal-exit preference saving. Check-only commands do not touch configuration.
 The configuration tests use Python 3.11+ for the independent standard-library
 `tomllib` output check; the native application has no Python dependency.
+
+
+## Native visual settings (Milestone 7)
+
+Control → Display selects Original / High Resolution, fixed or Auto desktop
+resolution, Auto / 4:3 / 16:9 / 16:10 / 21:9 / 32:9 aspect, VSync, Integer / Fit
+and Nearest / Linear presentation filtering. Original remains the default.
+Alt+Enter and F11 retain their existing functions; F12 writes a BMP in the
+SDL preference directory. No image or game-data files belong in the repository.
+
+The existing CART command builds the native renderer with C11/SDL3 and libm:
+
+```sh
+./build/tools/cart build --profile cart-sdl
+WOLF3D_DATA="/path/to/owned/WL6" python3 -m unittest discover -s tests -v
+SANITIZE=1 UBSAN_OPTIONS=halt_on_error=1 WOLF3D_DATA="/path/to/owned/WL6" \
+  python3 -m unittest discover -s tests -v
+```
+
+`test_render.py` covers target boundaries, aspect helpers, native geometry,
+Original hashes, HUD composition, SDL switching, preference restoration,
+screenshots and audio render stalls. `test_demo_sync.py` additionally renders
+widescreen during all four DOS-reference recordings. Test harnesses compile
+with `-Werror` as well as strict C11 conversion/shadow/pedantic warnings.
+See [MILESTONE7_VISUAL.md](MILESTONE7_VISUAL.md) for schema, measurements,
+Windows/Wine checks and verification limits. Sanitizer application tests should
+set `WOLF3D_BINARY` to a separately built sanitized full executable.

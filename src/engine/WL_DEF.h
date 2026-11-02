@@ -82,6 +82,8 @@ bool StartEndText(void);
 bool StepEndText(bool *done);
 void ResetEndText(void);
 bool GameVictoryPresentation(void);
+/* Read-only death presentation: 0 pending/inactive, 1 turn, 2 fizzle, 3 hold. */
+unsigned GameDeathPresentation(uint32_t *seed);
 unsigned NextMap(unsigned episode,unsigned map,exit_t exit);
 typedef struct { unsigned kill,secret,treasure,seconds,par; int bonus; } levelratio_t;
 extern levelratio_t LevelRatios[8];

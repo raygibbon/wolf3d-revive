@@ -9,6 +9,8 @@
 #include <string.h>
 unsigned wallheight[MAXVIEWWIDTH];
 static bool drawing_paused;
+static uint64_t render_serial;
+uint64_t WL_RenderSerial(void) { return render_serial; }
 static int32_t viewx,viewy;
 static uint32_t viewsin,viewcos;
 static int32_t PartialStep(int32_t step,uint16_t partial)
@@ -30,7 +32,7 @@ static unsigned CalcHeight(int32_t x,int32_t y)
     int32_t scale=(VIEWWIDTH/2)*(FOCALLENGTH+MINDIST)/(65536/2);
     return (unsigned)((65536*scale/64)/(nx/256));
 }
-bool AsmRefresh(int angle,rayhit *hit)
+static bool CastRay(int angle,rayhit *hit,bool mark)
 {
     if (!hit || player.angle<0 || player.angle>=360) return CA_Fail("Invalid ray request");
     SetView(); angle%=3600; if (angle<0) angle+=3600;
@@ -102,7 +104,7 @@ bool AsmRefresh(int angle,rayhit *hit)
             hit->side=side;hit->grid=side==2 ? (int)tile : vertical ? xtile : ytile;hit->tile=(int)tile;
             return true;
         }
-        spotvis[tx][ty]=true;
+        if(mark) spotvis[tx][ty]=true;
         if (vertical) {
             xtile+=dx; yi+=ys;
             vertical=!(dy<0 ? WL_FloorShift(yi,16)<=ytile : WL_FloorShift(yi,16)>=ytile);
@@ -113,6 +115,8 @@ bool AsmRefresh(int angle,rayhit *hit)
     }
     return CA_Fail("Ray traversal exceeded map bounds");
 }
+bool AsmRefresh(int angle,rayhit *hit) { return CastRay(angle,hit,true); }
+bool WL_RenderRay(int angle,rayhit *hit) { return CastRay(angle,hit,false); }
 /* WL_DRAW.C vgaCeiling: episode/map-specific original ceiling palette. */
 static const w3r_byte vgaCeiling[60]={
     0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,
@@ -122,8 +126,10 @@ static const w3r_byte vgaCeiling[60]={
     0x7d,0x1d,0x2d,0x2d,0xdd,0xd7,0x1d,0x1d,0x1d,0x2d,
     0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd,
 };
+unsigned WL_CeilingColor(void) { return vgaCeiling[gamestate.episode*10+gamestate.mapon]; }
 bool ThreeDRefresh(void)
 {
+    ++render_serial; /* Presentation invalidation; never saved or simulated. */
     memset(spotvis,0,sizeof(spotvis));
     /* DOS marks only cells crossed by rays, not the starting player cell. */
     for (unsigned y=0;y<VIEWHEIGHT;++y)

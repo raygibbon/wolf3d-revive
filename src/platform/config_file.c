@@ -6,6 +6,7 @@
 #include "sdl_video.h"
 #include "engine/WL_CONTROLS.h"
 #include "engine/WL_DEF.h"
+#include "engine/WL_RENDER.h"
 #include "engine/ID_SD.h"
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -199,6 +200,26 @@ static void Apply(const record *records,unsigned count)
         unsigned scale=Number(Find(records,count,"display","window_scale"),3,1,5);
         d.width=(int)Number(Find(records,count,"display","window_width"),scale*320,1,16384);
         d.height=(int)Number(Find(records,count,"display","window_height"),scale*240,1,16384);d.scale=0;
+        d.high_resolution=false;
+        const record *render=Find(records,count,"display","renderer");
+        if(render) {
+            if(render->type==STRING && !strcmp(render->text,"high_resolution")) d.high_resolution=true;
+            else if(render->type!=STRING || strcmp(render->text,"original")) Warn("display","renderer");
+        }
+        d.render_width=Number(Find(records,count,"display","render_width"),640,640,1920);
+        d.render_height=Number(Find(records,count,"display","render_height"),480,480,1080);
+        if(!((d.render_width==640 && d.render_height==480) || (d.render_width==1280 && d.render_height==720) || (d.render_width==1920 && d.render_height==1080))) { d.render_width=640;d.render_height=480;Warn("display","render_width/render_height"); }
+        d.render_auto=Bool(Find(records,count,"display","render_auto"),false);
+        d.vsync=Bool(Find(records,count,"display","vsync"),false);
+        d.linear=false;const record *filter=Find(records,count,"display","filter");
+        if(filter) { if(filter->type==STRING && !strcmp(filter->text,"linear")) d.linear=true;
+            else if(filter->type!=STRING || strcmp(filter->text,"nearest")) Warn("display","filter"); }
+        d.aspect=0;const record *ratio=Find(records,count,"display","aspect_ratio");
+        if(ratio) {
+            static const char *const names[]={"auto","4:3","16:9","16:10","21:9","32:9"};
+            bool found=false;for(unsigned i=0;i<6;++i) if(ratio->type==STRING && !strcmp(ratio->text,names[i])) { d.aspect=i;found=true; }
+            if(!found) Warn("display","aspect_ratio");
+        }
         if(!VL_DisplaySet(&d)) (void)Error("SDL rejected restored display settings; other preferences loaded");
     }
 }
@@ -241,6 +262,8 @@ bool Config_Save(const char *dir)
             if(!Append(out,&n,"bind_%u_%u = %u\n",a,slot,p.binding[a][slot])) return Error("Configuration output overflow");
     }
     unsigned music,effects;bool music_on,effects_on;SD_GetSettings(&music,&effects,&music_on,&effects_on);
-    if(!Append(out,&n,"\n[audio]\nmusic_volume = %u\neffects_volume = %u\nmusic_enabled = %s\neffects_enabled = %s\n\n[display]\nfullscreen = %s\ninteger_scaling = %s\nwindow_width = %d\nwindow_height = %d\n\n[classic]\nview_size = %u\n",music,effects,music_on?"true":"false",effects_on?"true":"false",d.fullscreen?"true":"false",d.integer?"true":"false",d.width,d.height,ViewSize())) return Error("Configuration output overflow");
+    if(!Append(out,&n,"\n[audio]\nmusic_volume = %u\neffects_volume = %u\nmusic_enabled = %s\neffects_enabled = %s\n\n[display]\nfullscreen = %s\ninteger_scaling = %s\nwindow_width = %d\nwindow_height = %d\nrenderer = \"%s\"\nrender_width = %u\nrender_height = %u\n",music,effects,music_on?"true":"false",effects_on?"true":"false",d.fullscreen?"true":"false",d.integer?"true":"false",d.width,d.height,d.high_resolution?"high_resolution":"original",d.render_width,d.render_height)) return Error("Configuration output overflow");
+    static const char *const ratios[]={"auto","4:3","16:9","16:10","21:9","32:9"};
+    if(!Append(out,&n,"render_auto = %s\nvsync = %s\nfilter = \"%s\"\naspect_ratio = \"%s\"\n\n[classic]\nview_size = %u\n",d.render_auto?"true":"false",d.vsync?"true":"false",d.linear?"linear":"nearest",ratios[d.aspect<6?d.aspect:0],ViewSize())) return Error("Configuration output overflow");
     return SaveFile_WriteAtomic(path,out,n,true) || Error("Cannot atomically replace configuration; previous file retained");
 }

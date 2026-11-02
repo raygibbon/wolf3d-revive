@@ -7,4 +7,9 @@ void Audio_Pump(void);
 void Audio_Shutdown(void);
 bool Audio_Active(void);
 const char *Audio_Error(void);
+#ifdef WOLF3D_DISPLAY_TEST
+int Audio_TestQueuedBytes(void);
+void Audio_TestQueueMS(unsigned ms);
+unsigned Audio_TestTargetMS(void);
+#endif
 #endif
