@@ -28,5 +28,15 @@ int main(void)
     assert(!WL_HorizontalFov(DBL_TRUE_MIN,1,UINT_MAX,&f));
     assert(!WL_HorizontalFov(60,0,9,&f));assert(!WL_HorizontalFov(60,4,3,NULL));
     assert(WL_HorizontalFov(60,16,10,&f) && f>60);assert(WL_HorizontalFov(60,32,9,&f) && f>110 && f<120);
+    unsigned w=0,h=0;
+    assert(WL_AutoRenderSize(3840,2160,&w,&h) && w==1920 && h==1080);
+    assert(WL_AutoRenderSize(2560,1440,&w,&h) && w==1920 && h==1080);
+    assert(WL_AutoRenderSize(1920,1080,&w,&h) && w==1920 && h==1080);
+    assert(WL_AutoRenderSize(1280,720,&w,&h) && w==1280 && h==720);
+    assert(WL_AutoRenderSize(1600,1200,&w,&h) && w==1440 && h==1080);
+    assert(WL_AutoRenderSize(3840,1080,&w,&h) && w==1920 && h==540);
+    assert(WL_AutoRenderSize(3440,1440,&w,&h) && w==1920 && h>=803 && h<=804);
+    assert(!WL_AutoRenderSize(100,100,&w,&h));
+    assert(!WL_AutoRenderSize(3840,2160,NULL,&h));
     return 0;
 }
