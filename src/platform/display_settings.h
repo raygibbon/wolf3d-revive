@@ -7,7 +7,6 @@ typedef struct {
     bool high_resolution;
     unsigned render_width,render_height;
     bool render_auto,vsync,linear,smooth;
-    unsigned presentation_fps; /* 60, 120, 144, 165, 240. */
     unsigned aspect; /* 0 Auto, 1 4:3, 2 16:9, 3 16:10, 4 21:9, 5 32:9. */
     unsigned scale; /* 1..5 window-point presets; 0 means manually resized. */
     int width,height,pixel_width,pixel_height;
