@@ -19,11 +19,14 @@ Milestone 6E adds borderless desktop fullscreen, resizable windows, corrected
 Alt+Enter switches fullscreen; F11 switches integer scaling. Classic restoration
 adds original view sizes 4–19, teal borders, Change View and F1–F10 actions.
 Attract mode plays embedded original demo commands, with remaining DOS demo
-synchronization differences explicitly documented. Detailed DOS listening comparisons, persistent
-configuration and Enhanced Mode remain later work.
+synchronization differences explicitly documented. Milestone 6F persists controls,
+both custom preset profiles, audio, display and Classic view settings in atomic
+TOML preferences. Detailed DOS listening comparisons and Enhanced Mode remain
+later work.
 
 * `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
 * `Classic restoration and verification <docs/CLASSIC_FIDELITY_RESTORATION.md>`_
+* `Milestone 6F configuration schema, defaults and verification <docs/MILESTONE6F.md>`_
 * `Build and validation <docs/BUILD.md>`_
 * `Milestone 6E display settings and verification <docs/MILESTONE6E.md>`_
 * `Milestone 6D controls and verification <docs/MILESTONE6D.md>`_
@@ -38,6 +41,25 @@ configuration and Enhanced Mode remain later work.
 * `Source inventory and incremental plan <docs/PORTING.md>`_
 * `Git safeguards <docs/GIT-SAFETY.md>`_
 * `Source licensing and game-data separation <docs/LICENSING.md>`_
+
+
+Preferences are loaded at startup and saved on normal exit in
+``~/.local/share/wolf3d-revive/config.toml`` on Linux (respecting
+``XDG_DATA_HOME``), or ``%APPDATA%\wolf3d-revive\config.toml`` on Windows,
+using SDL_GetPrefPath. Defaults are Classic controls, mouse disabled (Modern:
+enabled), sensitivity 10, no inversion, music/effects 70/85 and enabled,
+windowed fit at 960x720, and Classic view size 15. Switching presets retains
+custom bindings and mouse options; Reset Defaults resets the selected profile.
+
+Schema version 1 has ``[controls] preset``, ``[classic_controls]`` and
+``[modern_controls]`` mouse options and ``bind_<action>_<slot>`` scancodes,
+``[audio]`` volumes/enables, ``[display]`` fullscreen/integer flags and exact
+window width/height, and ``[classic] view_size``. The fixed-schema TOML subset,
+all keys/binding IDs, migration rules and limits are documented in
+`MILESTONE6F <docs/MILESTONE6F.md>`_. Missing files use defaults. Malformed or
+future-version files are preserved and not overwritten on exit; repair or
+rename them to re-enable saving. Original game files and game-save formats
+remain unchanged.
 
 The historical upstream README follows unchanged.
 

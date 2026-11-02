@@ -83,15 +83,22 @@ bool VL_DisplayGet(display_settings *s)
     if(!SDL_GetRenderOutputSize(renderer,&s->pixel_width,&s->pixel_height)) return false;
     (void)SDL_strlcpy(s->error,display_error,sizeof(s->error));return true;
 }
+bool VL_DisplayPreferences(display_settings *s)
+{
+    if(!VL_DisplayGet(s)) return false;
+    if(pending) s->fullscreen=target;
+    return true;
+}
 bool VL_DisplaySet(const display_settings *s)
 {
-    if(!window || !renderer || !s || s->scale>5) return SDL_SetError("Invalid display settings");
+    if(!window || !renderer || !s || s->scale>5 || (!s->scale && (s->width<1 || s->height<1 || s->width>16384 || s->height>16384))) return SDL_SetError("Invalid display settings");
     RefreshDisplay();if(pending) return SDL_SetError("Fullscreen request still pending");
     RememberWindow();bool old_integer=integer_scale;
     integer_scale=s->integer;
     if(!ApplyPresentation()) { integer_scale=old_integer;return DisplayError(); }
     int old_w=window_w,old_h=window_h;
     if(s->scale) { window_w=(int)s->scale*320;window_h=(int)s->scale*240; }
+    else { window_w=s->width;window_h=s->height; }
     if(s->fullscreen!=Fullscreen()) {
         IN_SDLCapture(window,false);IN_SDLDiscardInput();
         bool denied=Fail(4);

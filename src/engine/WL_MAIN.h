@@ -7,5 +7,6 @@ typedef enum { UI_TITLE, UI_CREDITS, UI_HIGHSCORES, UI_MENU, UI_SCORES, UI_CONFI
 bool DemoLoopStartup(uint64_t ticks, bool menu);
 bool DemoLoop(uint64_t ticks);
 ui_state DemoLoopState(void);
+void DemoLoopPrepareExit(void);
 bool DemoLoopStartGame(uint64_t ticks);
 #endif

@@ -89,7 +89,7 @@ int HandleControlsMenu(void)
     }
     if(up || down) row=(row+(up?(Display_Available()?6U:5U):1U))%(Display_Available()?7U:6U);
     if(left || right || enter) {
-        if(row==0) CT_Reset(CT_Preset()==CT_CLASSIC?CT_MODERN:CT_CLASSIC);
+        if(row==0) CT_SelectPreset(CT_Preset()==CT_CLASSIC?CT_MODERN:CT_CLASSIC);
         else if(row==1) CT_SetMouse(!CT_MouseEnabled());
         else if(row==2) {
             unsigned sensitivity=CT_Sensitivity();

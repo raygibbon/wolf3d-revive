@@ -47,7 +47,8 @@ See [implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
    and some confirmation animation/sounds still need work. Dialog selection
    intentionally does not consume gameplay RNG.
 4. Six portable save slots and format version 1 remain; original DOS ten-slot
-   files are not introduced. Settings, including view size, are session-only.
+   files are not introduced. Settings, including view size, now persist separately
+   in [Milestone 6F TOML preferences](MILESTONE6F.md).
 5. Existing ray/scaler arithmetic is retained and extended to active sizes.
    Full VGA/CRT pixel equivalence is not established. A pre-existing actor
    projection-center difference (`width/2` versus DOS `centerx=width/2-1`) and

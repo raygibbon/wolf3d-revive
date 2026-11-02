@@ -334,7 +334,7 @@ class EngineTests(unittest.TestCase):
 
     def test_unavailable_level_keeps_menu(self):
         fixtures(self.data,ui=True)
-        env=dict(os.environ,SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software")
+        env=dict(os.environ,SDL_VIDEODRIVER="dummy",SDL_RENDER_DRIVER="software",XDG_DATA_HOME=str(self.data/"user"))
         result=subprocess.run([str(self.binary),"--data",str(self.data),"--menu","--frames","2"],env=env,text=True,capture_output=True)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("New Game unavailable",result.stderr)
