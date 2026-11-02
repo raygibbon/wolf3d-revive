@@ -68,9 +68,23 @@ bool SaveFile_WriteAtomic(const char *path,const void *bytes,size_t length,bool 
     }
 #ifdef _WIN32
     wchar_t source[4096],dest[4096];
-    if(!Wide(temp,source) || !Wide(path,dest)) return false;
+    /* The temporary file exists at this point. Keep cleanup reachable even
+       if conversion of the final destination fails (e.g. an invalid UTF-8
+       path), rather than orphaning a .tmp file beside the save slot. */
+    bool source_ok=Wide(temp,source),dest_ok=Wide(path,dest);
+    if(!source_ok || !dest_ok) ok=false;
     if(ok) ok=MoveFileExW(source,dest,MOVEFILE_WRITE_THROUGH|(overwrite?MOVEFILE_REPLACE_EXISTING:0))!=0;
-    if(!ok) (void)DeleteFileW(source);
+    if(!ok) {
+        if(source_ok) (void)DeleteFileW(source);
+        else {
+            /* A path accepted for _wopen should remain convertible, but
+               avoid leaving a temporary file on an unexpected conversion
+               failure by retrying with the known UTF-8 source path. */
+            wchar_t retry[4096];
+            if(MultiByteToWideChar(CP_UTF8,0,temp,-1,retry,4096)>0)
+                (void)DeleteFileW(retry);
+        }
+    }
 #else
     if(ok) {
         /* link() supplies atomic create-if-absent when overwrite was not
