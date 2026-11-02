@@ -117,7 +117,11 @@ unfocused clicks are ignored and held clicks are not reused as gameplay fire.
 End, death, exit or decoding failure releases demo/game state. Missing/corrupt
 streams continue the attract cycle rather than pretending a demo ran.
 
-**Synchronization limitation:** the owned streams are valid but do not complete
+**Historical results, superseded by [Milestone 6G](MILESTONE6G.md):** all four
+recordings now match the documented DOS reference scope and complete their
+recorded duration. The following table records the original restoration result.
+
+**Original synchronization limitation:** the owned streams are valid but do not complete
 their recorded paths in this port. Current measured playback is:
 
 | Demo | Source map | Declared tics | Tics before death |

@@ -119,6 +119,7 @@ static void Missing(void)
 }
 static void Demos(void)
 {
+    demo_progress progress;CHECK(!Demo_Progress(NULL) && !Demo_Progress(&progress));
     unsigned map;size_t len;w3r_byte data[]={0,7,0,216,0,0,0};
     CHECK(Demo_Validate(data,sizeof(data),&map,&len) && map==0 && len==7);
     for(size_t n=0;n<7;++n) CHECK(!Demo_Validate(data,n,&map,&len));
@@ -130,6 +131,10 @@ static void Demos(void)
         unsigned rng=0;int32_t x=0,y=0;int angle=0;uint32_t time=0,hash=0;
         for(unsigned variant=0;variant<2;++variant) {
             CT_Reset(variant?CT_MODERN:CT_CLASSIC);CHECK(Demo_Start(n,100));CHECK(!GameCanSave());
+            CHECK(Demo_Progress(&progress) && progress.map==map && progress.commands_total==(len-4)/3 && progress.commands_consumed==0 && progress.buttons==0);
+            CHECK(!Demo_Progress(NULL));
+            unsigned initial_rng=US_RndIndex();
+            CHECK(Demo_Progress(&progress) && US_RndIndex()==initial_rng);
             CT_Key(26,true);CT_Key(224,true);CT_MouseMotion(123);
             uint64_t t=100;
             while(!Demo_Finished()) { t+=variant?4U:1U;CHECK(GameStep(t));CHECK(t<=100+4*(len-4)/3+4); }
@@ -137,7 +142,8 @@ static void Demos(void)
             if(map==0) CHECK(gamestate.TimeCount==4*(len-4)/3);
             if(!variant) { rng=US_RndIndex();x=player.x;y=player.y;angle=player.angle;time=gamestate.TimeCount;hash=FrameHash(); }
             else CHECK(US_RndIndex()==rng && player.x==x && player.y==y && player.angle==angle && gamestate.TimeCount==time && FrameHash()==hash);
-            GameStop();CHECK(!Demo_Active());
+            CHECK(Demo_Progress(&progress) && progress.commands_consumed==gamestate.TimeCount/4 && progress.buttons==Demo_Buttons());
+            GameStop();CHECK(!Demo_Active() && !Demo_Progress(&progress));
         }
         printf("Demo %u validated; deterministic playback %u tics of %zu.\n",n,time,4*(len-4)/3);
     }

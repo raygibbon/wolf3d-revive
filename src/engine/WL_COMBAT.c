@@ -108,7 +108,7 @@ void	KnifeAttack (objtype *ob)
 	for (check=ob->next ; check ; check=check->next)
 		if ( (check->flags & FL_SHOOTABLE)
 		&& (check->flags & FL_VISABLE)
-		&& abs (check->viewx-(VIEWWIDTH/2)) < (VIEWWIDTH/10)
+		&& abs (check->viewx-(VIEWWIDTH/2-1)) < (VIEWWIDTH/10)
 		)
 		{
 			if (check->transx < dist)
@@ -139,7 +139,7 @@ void	GunAttack (objtype *ob)
 		for (check=ob->next ; check ; check=check->next)
 			if ( (check->flags & FL_SHOOTABLE)
 			&& (check->flags & FL_VISABLE)
-			&& abs (check->viewx-(VIEWWIDTH/2)) < (VIEWWIDTH/10)
+			&& abs (check->viewx-(VIEWWIDTH/2-1)) < (VIEWWIDTH/10)
 			)
 			{
 				if (check->transx < viewdist)
@@ -195,6 +195,9 @@ void T_Attack(bool attack)
         }
         attackheld=attack;return;
     }
+    /* DOS T_Attack clears a fresh press during an existing attack. The
+       cleared state becomes next frame's buttonheld, even on the end frame. */
+    if (attack && !attackheld) { attack=false;Demo_SuppressButtons(1U); }
     attackheld=attack;
     gamestate.attackcount-=SimulationTics();
     while(gamestate.attackcount<=0) {

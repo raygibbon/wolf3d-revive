@@ -14,6 +14,8 @@ bool Demo_Finished(void);
 /* Read one original four-tic command frame. */
 bool Demo_ReadTic(demo_command *command);
 unsigned Demo_Buttons(void);
+/* Preserve DOS buttonstate -> buttonheld latching after T_Attack suppression. */
+void Demo_SuppressButtons(unsigned mask);
 /* Read-only playback diagnostics; command counts never advance simulation. */
 typedef struct {
     unsigned map;

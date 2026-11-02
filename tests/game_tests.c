@@ -147,29 +147,45 @@ static void TestDoors(void)
     d->lock=0;d->vertical=true;
     Cmd_Use();CHECK(d->action==dr_opening && DoorSolid(0));
     for(unsigned i=0;i<63;++i) MoveDoors();
-    CHECK(d->position==64512 && DoorSolid(0));MoveDoors();
+    CHECK(d->position==64512 && DoorSolid(0));
+    actorat[d->x][d->y]=&objlist[0]; /* stale destination from a death */
+    MoveDoors();CHECK(!actorat[d->x][d->y]);
     CHECK(d->position==65535 && !DoorSolid(0));
     int32_t x=player.x;ClipMove(&player,1000,0);CHECK(player.x==x+1000);
     player.tilex=(int)d->x;player.x=(int32_t)(d->x*65536)+32768;
     for(unsigned i=0;i<301;++i) MoveDoors();
-    CHECK(d->action==dr_open);
+    CHECK(d->action==dr_open && d->ticcount==301);
+    d->ticcount=32767;MoveDoors();CHECK(d->ticcount==32768 && d->action==dr_open);
+    d->ticcount=65535;MoveDoors();CHECK(d->ticcount==0 && d->action==dr_open);
+    d->ticcount=301;
     player.tilex=(int)d->x-2;player.x=(int32_t)(d->x*65536)-2*65536;
     MoveDoors();CHECK(d->action==dr_closing && DoorSolid(0));
     for(unsigned i=0;i<64;++i) MoveDoors();
     CHECK(d->position==0 && d->action==dr_closed);
     d->lock=1;OperateDoor(0);CHECK(d->action==dr_closed);
-    /* All four corners, both orientations, and entry during closing. */
+    /* DOS checks the center row/column, not diagonal square corners. */
     int32_t left=(int32_t)d->x*65536,top=(int32_t)d->y*65536;
     for(unsigned vertical=0;vertical<2;++vertical) for(unsigned corner=0;corner<4;++corner) {
         d->vertical=vertical!=0;d->action=dr_open;d->position=65535;
         player.x=(corner&1) ? left+65536+MINDIST-1 : left-MINDIST;
         player.y=(corner&2) ? top+65536+MINDIST-1 : top-MINDIST;
         player.tilex=player.x/65536;player.tiley=player.y/65536;
+        CloseDoor(0);CHECK(d->action==dr_closing);
+        d->position=60000;MoveDoors();
+        CHECK(d->action==dr_closing && d->position==58976);
+    }
+    for(unsigned vertical=0;vertical<2;++vertical) {
+        d->vertical=vertical!=0;d->action=dr_open;d->position=65535;
+        player.x=vertical ? left-MINDIST : left+32768;
+        player.y=vertical ? top+32768 : top-MINDIST;
+        player.tilex=player.x/65536;player.tiley=player.y/65536;
         CloseDoor(0);CHECK(d->action==dr_open);
-        d->action=dr_closing;d->position=60000;MoveDoors();
-        CHECK(d->action==dr_opening && d->position==60000);
+        player.x=left+32768;player.y=top+32768;
+        player.tilex=(int)d->x;player.tiley=(int)d->y;
+        d->action=dr_closing;MoveDoors();CHECK(d->action==dr_opening);
     }
     player.x=left-MINDIST-1;player.y=top-MINDIST-1;
+    player.tilex=player.x/65536;player.tiley=player.y/65536;
     d->action=dr_open;CloseDoor(0);CHECK(d->action==dr_closing);
     ShutdownGameLevel();
 }

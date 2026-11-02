@@ -152,7 +152,8 @@ bool GameStep(uint64_t ticks)
         if (!gamestate.victoryflag || (gamestate.attackframe && player.state!=&s_deathcam)) UpdateFace();
         thrustspeed=0;
         MoveDoors();MovePWalls();
-        if ((playback?demo.use:CT_Pressed(CT_USE)) && !gamestate.victoryflag) Cmd_Use();
+        if (gamestate.attackframe && playback && demo.use) Demo_SuppressButtons(8U);
+        if (!gamestate.attackframe && (playback?demo.use:CT_Pressed(CT_USE)) && !gamestate.victoryflag) Cmd_Use();
         if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
             SD_StartMusic(24);
             FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
