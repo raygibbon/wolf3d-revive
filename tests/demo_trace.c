@@ -3,11 +3,13 @@
 #include "engine/WL_DEF.h"
 #include "engine/WL_DEMO.h"
 #include "engine/WL_SAVE.h"
+#include "engine/WL_RENDER.h"
 #include "engine/ID_US_1.h"
 #include "engine/ID_CA.h"
 #include "engine/ID_VH.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #define SAVE_STATE(name) #name,
 static const char *const names[]={"null",
 #include "engine/WL_SAVE_STATES.inc"
@@ -50,16 +52,27 @@ static void Trace(unsigned demo)
 }
 int main(int argc,char **argv)
 {
-    if(argc!=2) return 2;
+    bool high=argc==3 && !strcmp(argv[2],"--render");
+    if(argc!=2 && !high) return 2;
+    w3r_byte *pixels=high?malloc(1920*1080):NULL;
+    if(high && !pixels) return 2;
     MM_Startup();if(!CA_Startup(argv[1])) return 2;
     for(unsigned n=0;n<4;++n) {
         if(!NewViewSize(15) || !Demo_Start(n,0)) return 2;
         Trace(n);
         for(uint64_t t=4;!Demo_Finished();t+=4) {
             if(!GameStep(t)) return 2;
+            if(high) {
+                demo_progress p;wl_render_target target;int32_t depth[1920];
+                if(!Demo_Progress(&p)) return 2;
+                unsigned w=640,h=480;
+                if(p.commands_consumed%128==0) { w=1280;h=720; }
+                if(p.commands_consumed%256==0) { w=1920;h=1080; }
+                if(!WL_TargetInit(&target,pixels,1920*1080,w,h,w) || !WL_RenderFrame(&target,depth,1920,true,NULL)) return 2;
+            }
             Trace(n);
         }
         GameStop();
     }
-    CA_Shutdown();MM_Shutdown();return MM_TotalBytes()?2:0;
+    free(pixels);CA_Shutdown();MM_Shutdown();return MM_TotalBytes()?2:0;
 }

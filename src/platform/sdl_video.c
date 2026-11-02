@@ -1,10 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* SDL3 presentation boundary. Original graphics decoding lives in ID_CA/VL. */
 #include "sdl_video.h"
+#include "sdl_audio.h"
 #include "sdl_input.h"
 #include "engine/ID_TIME.h"
 #include "engine/WL_CONTROLS.h"
 #include "engine/ID_VL.h"
+#include "engine/WL_RENDER.h"
+#include "engine/WL_MAIN.h"
+#include "engine/WL_SAVE.h"
+#include <stdlib.h>
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -14,6 +19,31 @@ static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static w3r_byte rgba[VL_PIXELS * 4], last_frame[VL_PIXELS], last_palette[768];
+static bool Fail(unsigned operation);
+typedef struct { SDL_Texture *texture;w3r_byte *pixels,*rgba;wl_render_target target; } high_surface;
+static high_surface high;
+static bool high_resolution;
+static unsigned render_width=640,render_height=480;
+static int32_t high_depth[1920];
+static uint32_t high_time;
+static bool high_world,high_uploaded;
+static void FreeHigh(high_surface *s)
+{ if(s->texture) SDL_DestroyTexture(s->texture);free(s->pixels);free(s->rgba);memset(s,0,sizeof(*s)); }
+static bool CreateHigh(high_surface *s,unsigned w,unsigned h)
+{
+    memset(s,0,sizeof(*s));
+    if(!WL_RenderResolution(w,h)) return SDL_SetError("Unsupported rendering resolution");
+    size_t bytes=(size_t)w*h;
+    if(Fail(5)) return false;
+    s->pixels=malloc(bytes);s->rgba=malloc(bytes*4);
+    if(!s->pixels || !s->rgba || !WL_TargetInit(&s->target,s->pixels,bytes,w,h,w)) {
+        FreeHigh(s);return SDL_SetError("Cannot allocate rendering surface");
+    }
+    if(Fail(6)) { FreeHigh(s);return false; }
+    s->texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA32,SDL_TEXTUREACCESS_STREAMING,(int)w,(int)h);
+    if(!s->texture || !SDL_SetTextureScaleMode(s->texture,SDL_SCALEMODE_NEAREST)) { FreeHigh(s);return false; }
+    return true;
+}
 static bool uploaded;
 static uint64_t uploads;
 /* Actual fullscreen state always comes from SDL flags. Only an outstanding
@@ -79,6 +109,7 @@ bool VL_DisplayGet(display_settings *s)
     if(!window || !renderer || !s) return false;
     RefreshDisplay();memset(s,0,sizeof(*s));s->fullscreen=Fullscreen();s->integer=integer_scale;s->pending=pending;
     s->width=window_w;s->height=window_h;
+    s->high_resolution=high_resolution;s->render_width=render_width;s->render_height=render_height;
     for(unsigned i=1;i<=5;++i) if(window_w==(int)i*320 && window_h==(int)i*240) s->scale=i;
     if(!SDL_GetRenderOutputSize(renderer,&s->pixel_width,&s->pixel_height)) return false;
     (void)SDL_strlcpy(s->error,display_error,sizeof(s->error));return true;
@@ -93,9 +124,14 @@ bool VL_DisplaySet(const display_settings *s)
 {
     if(!window || !renderer || !s || s->scale>5 || (!s->scale && (s->width<1 || s->height<1 || s->width>16384 || s->height>16384))) return SDL_SetError("Invalid display settings");
     RefreshDisplay();if(pending) return SDL_SetError("Fullscreen request still pending");
+    unsigned rw=s->render_width?s->render_width:640,rh=s->render_height?s->render_height:480;
+    if(!WL_RenderResolution(rw,rh)) return SDL_SetError("Unsupported rendering resolution");
+    high_surface candidate={0};
+    bool replace=s->high_resolution && (!high.texture || rw!=render_width || rh!=render_height);
+    if(replace && !CreateHigh(&candidate,rw,rh)) return DisplayError();
     RememberWindow();bool old_integer=integer_scale;
     integer_scale=s->integer;
-    if(!ApplyPresentation()) { integer_scale=old_integer;return DisplayError(); }
+    if(!ApplyPresentation()) { integer_scale=old_integer;FreeHigh(&candidate);return DisplayError(); }
     int old_w=window_w,old_h=window_h;
     if(s->scale) { window_w=(int)s->scale*320;window_h=(int)s->scale*240; }
     else { window_w=s->width;window_h=s->height; }
@@ -105,18 +141,22 @@ bool VL_DisplaySet(const display_settings *s)
         if(Fail(1) || (!denied && ((s->fullscreen && !SDL_SetWindowFullscreenMode(window,NULL)) || !SDL_SetWindowFullscreen(window,s->fullscreen)))) {
             window_w=old_w;window_h=old_h;integer_scale=old_integer;
             char error[160];(void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
-            (void)ApplyPresentation();(void)SDL_SetError("%s",error);return DisplayError();
+            (void)ApplyPresentation();(void)SDL_SetError("%s",error);FreeHigh(&candidate);return DisplayError();
         }
         pending=true;target=s->fullscreen;restore_size=!target;request_deadline=SDL_GetTicks()+3000;
     } else if(!Fullscreen() && (window_w!=old_w || window_h!=old_h)) {
         if(!WindowSize(window_w,window_h)) {
             window_w=old_w;window_h=old_h;integer_scale=old_integer;
             char error[160];(void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
-            (void)ApplyPresentation();(void)SDL_SetError("%s",error);return DisplayError();
+            (void)ApplyPresentation();(void)SDL_SetError("%s",error);FreeHigh(&candidate);return DisplayError();
         }
         IN_SDLCapture(window,false);IN_SDLDiscardInput();
         pending=size_pending=true;target=false;request_deadline=SDL_GetTicks()+3000;
     }
+    if(replace) { FreeHigh(&high);high=candidate; }
+    if(!s->high_resolution) FreeHigh(&high);
+    if(replace || high_resolution!=s->high_resolution) high_uploaded=false;
+    high_resolution=s->high_resolution;render_width=rw;render_height=rh;
     display_error[0]=0;return true;
 }
 static bool Shortcut(const SDL_KeyboardEvent *key)
@@ -143,6 +183,7 @@ const char *VL_Error(void) { return SDL_GetError(); }
 void VL_Shutdown(void)
 {
     IN_SDLFocusLost();
+    FreeHigh(&high);high_resolution=high_uploaded=false;render_width=640;render_height=480;
     SDL_DestroyTexture(texture); texture = NULL;
     SDL_DestroyRenderer(renderer); renderer = NULL;
     SDL_DestroyWindow(window); window = NULL;
@@ -181,7 +222,23 @@ uint64_t VL_TextureUploads(void) { return uploads; }
 static bool VL_DrawScreen(void)
 {
     if (!renderer || !texture || !ApplyPresentation()) return false;
-    if (!uploaded || memcmp(last_frame,framebuffer,VL_PIXELS) || memcmp(last_palette,palette,768)) {
+    bool changed=!uploaded || memcmp(last_frame,framebuffer,VL_PIXELS) || memcmp(last_palette,palette,768);
+    bool world=GameRunning() && (DemoLoopState()==UI_GAME || DemoLoopState()==UI_DEMO);
+    if(high_resolution && (!high_uploaded || changed || world!=high_world || (world && high_time!=gamestate.TimeCount))) {
+        if(!WL_RenderFrame(&high.target,high_depth,1920,world,Audio_Pump)) return SDL_SetError("High-resolution scene rendering failed");
+        for(unsigned y=0;y<high.target.height;++y) {
+            if(y%32==0) Audio_Pump();
+            for(unsigned x=0;x<high.target.width;++x) {
+                size_t i=(size_t)y*high.target.width+x;
+                unsigned color=(unsigned)high.pixels[i]*3;
+                for(unsigned c=0;c<3;++c) { unsigned value=palette[color+c];high.rgba[i*4+c]=(w3r_byte)((value<<2)|(value>>4)); }
+                high.rgba[i*4+3]=255;
+            }
+        }
+        if(!SDL_UpdateTexture(high.texture,NULL,high.rgba,(int)high.target.width*4)) return false;
+        high_uploaded=true;high_time=gamestate.TimeCount;high_world=world;
+    }
+    if (changed) {
         if (!VL_ConvertRGBA(rgba,sizeof(rgba)) ||
             !SDL_UpdateTexture(texture,NULL,rgba,W3R_SCREEN_WIDTH*4)) return false;
         memcpy(last_frame,framebuffer,VL_PIXELS); memcpy(last_palette,palette,768);
@@ -189,14 +246,21 @@ static bool VL_DrawScreen(void)
     }
     int w,h;if(!SDL_GetRenderOutputSize(renderer,&w,&h)) return false;
     if(!SDL_SetRenderDrawColor(renderer,0,0,0,255) || !SDL_RenderClear(renderer)) return false;
-    return (w<4 || h<3) || SDL_RenderTexture(renderer,texture,NULL,NULL);
+    if(w<4 || h<3) return true;
+    if(high_resolution) {
+        unsigned left,width;WL_RenderContent(render_width,render_height,&left,&width);
+        SDL_FRect src={(float)left,0,(float)width,(float)render_height};
+        return SDL_RenderTexture(renderer,high.texture,&src,NULL);
+    }
+    return SDL_RenderTexture(renderer,texture,NULL,NULL);
 }
 
 static void SyncCapture(void) { RefreshDisplay();IN_SDLCapture(window,CT_Gameplay() && !pending); }
 bool VW_UpdateScreen(void)
 {
-    SyncCapture();
-    return VL_DrawScreen() && SDL_RenderPresent(renderer);
+    SyncCapture();Audio_Pump();
+    if(!VL_DrawScreen()) return false;
+    Audio_Pump();return SDL_RenderPresent(renderer);
 }
 
 bool VL_Capture(const char *path)

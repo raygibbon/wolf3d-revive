@@ -11,7 +11,7 @@ bool VL_DisplayPreferences(display_settings *settings); /* Pending accepted inte
 bool VL_DisplaySet(const display_settings *settings);
 #ifdef WOLF3D_DISPLAY_TEST
 /* One-shot fault injection, compiled only into the display test executable. */
-void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 size, 4 denied request */
+void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 size, 4 denied request, 5 allocation, 6 texture */
 void VL_TestExpireDisplayRequest(void);
 #endif
 uint64_t VL_GetTicks70(void);

@@ -66,9 +66,9 @@ class DemoSyncTests(unittest.TestCase):
                        ['-I'+str(ROOT/'src'),'-I'+str(sdk/'include'),str(ROOT/'tests/demo_trace.c'),
                         *map(str,sources),str(sdk/'build/libSDL3.a'),'-pthread','-lm','-o',str(cls.binary)],check=True)
 
-    def trace(self, data, destination):
+    def trace(self, data, destination, high=False):
         with destination.open('w') as stream:
-            subprocess.run([str(self.binary),str(data)],stdout=stream,check=True)
+            subprocess.run([str(self.binary),str(data)]+(["--render"] if high else []),stdout=stream,check=True)
 
     def test_synthetic_trace_repeatability(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -85,7 +85,10 @@ class DemoSyncTests(unittest.TestCase):
                 self.assertEqual(len(frame['Q']),4096)
                 self.assertTrue(frame['A'])
 
-    def test_owned_dos_frames_and_durations(self):
+    def test_owned_dos_frames_and_durations(self): self.owned_frames(False)
+    def test_owned_dos_frames_high_resolution(self): self.owned_frames(True)
+
+    def owned_frames(self,high):
         if not os.environ.get('WOLF3D_DATA'):
             self.skipTest('Owned WL6 data not supplied')
         data = Path(os.environ['WOLF3D_DATA'])
@@ -95,7 +98,7 @@ class DemoSyncTests(unittest.TestCase):
             if name not in paths or hashlib.sha256(paths[name].read_bytes()).hexdigest() != identity:
                 self.skipTest('DOS reference hashes cover a different WL6 data revision: '+name)
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory)/'trace.csv';self.trace(data,path)
+            path = Path(directory)/'trace.csv';self.trace(data,path,high)
             counts = [0]*4
             for frame in native_frames(path):
                 number,command = frame['F'][:2]

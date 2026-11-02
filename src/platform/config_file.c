@@ -6,6 +6,7 @@
 #include "sdl_video.h"
 #include "engine/WL_CONTROLS.h"
 #include "engine/WL_DEF.h"
+#include "engine/WL_RENDER.h"
 #include "engine/ID_SD.h"
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -199,6 +200,15 @@ static void Apply(const record *records,unsigned count)
         unsigned scale=Number(Find(records,count,"display","window_scale"),3,1,5);
         d.width=(int)Number(Find(records,count,"display","window_width"),scale*320,1,16384);
         d.height=(int)Number(Find(records,count,"display","window_height"),scale*240,1,16384);d.scale=0;
+        d.high_resolution=false;
+        const record *render=Find(records,count,"display","renderer");
+        if(render) {
+            if(render->type==STRING && !strcmp(render->text,"high_resolution")) d.high_resolution=true;
+            else if(render->type!=STRING || strcmp(render->text,"original")) Warn("display","renderer");
+        }
+        d.render_width=Number(Find(records,count,"display","render_width"),640,640,1920);
+        d.render_height=Number(Find(records,count,"display","render_height"),480,480,1080);
+        if(!WL_RenderResolution(d.render_width,d.render_height)) { d.render_width=640;d.render_height=480;Warn("display","render_width/render_height"); }
         if(!VL_DisplaySet(&d)) (void)Error("SDL rejected restored display settings; other preferences loaded");
     }
 }
@@ -241,6 +251,6 @@ bool Config_Save(const char *dir)
             if(!Append(out,&n,"bind_%u_%u = %u\n",a,slot,p.binding[a][slot])) return Error("Configuration output overflow");
     }
     unsigned music,effects;bool music_on,effects_on;SD_GetSettings(&music,&effects,&music_on,&effects_on);
-    if(!Append(out,&n,"\n[audio]\nmusic_volume = %u\neffects_volume = %u\nmusic_enabled = %s\neffects_enabled = %s\n\n[display]\nfullscreen = %s\ninteger_scaling = %s\nwindow_width = %d\nwindow_height = %d\n\n[classic]\nview_size = %u\n",music,effects,music_on?"true":"false",effects_on?"true":"false",d.fullscreen?"true":"false",d.integer?"true":"false",d.width,d.height,ViewSize())) return Error("Configuration output overflow");
+    if(!Append(out,&n,"\n[audio]\nmusic_volume = %u\neffects_volume = %u\nmusic_enabled = %s\neffects_enabled = %s\n\n[display]\nfullscreen = %s\ninteger_scaling = %s\nwindow_width = %d\nwindow_height = %d\nrenderer = \"%s\"\nrender_width = %u\nrender_height = %u\n\n[classic]\nview_size = %u\n",music,effects,music_on?"true":"false",effects_on?"true":"false",d.fullscreen?"true":"false",d.integer?"true":"false",d.width,d.height,d.high_resolution?"high_resolution":"original",d.render_width,d.render_height,ViewSize())) return Error("Configuration output overflow");
     return SaveFile_WriteAtomic(path,out,n,true) || Error("Cannot atomically replace configuration; previous file retained");
 }

@@ -10,7 +10,11 @@
 typedef struct {
     uint8_t *pixels;
     unsigned width,height,stride;
+    size_t capacity;
 } wl_render_target;
+#define WL_TARGET_MAX_WIDTH 4096U
+#define WL_TARGET_MAX_HEIGHT 2160U
+bool WL_TargetValid(const wl_render_target *target);
 /* Does not allocate or own pixels. Stride is in pixels, not bytes. */
 bool WL_TargetInit(wl_render_target *target,uint8_t *pixels,size_t capacity,
                    unsigned width,unsigned height,unsigned stride);

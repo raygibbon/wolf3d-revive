@@ -19,5 +19,11 @@ int main(void)
     assert(!WL_TargetPixel(&t,0,4,1));
     assert(WL_TargetPixel(&t,3,3,9));
     assert(pixels[3*6+3]==9);
+    wl_render_target valid=t;
+    assert(!WL_TargetInit(&t,NULL,0,4,4,6) && !memcmp(&t,&valid,sizeof(t)));
+    t.stride=1;assert(!WL_TargetClear(&t,0) && !WL_TargetPixel(&t,1,1,0));t=valid;
+    t.capacity=1;assert(!WL_TargetClear(&t,0) && !WL_TargetPixel(&t,0,0,0));t=valid;
+    t.height=UINT32_MAX;assert(!WL_TargetClear(&t,0) && !WL_TargetPixel(&t,0,0,0));
+    assert(!WL_TargetPixel(NULL,0,0,0) && !WL_TargetClear(NULL,0));
     return 0;
 }
