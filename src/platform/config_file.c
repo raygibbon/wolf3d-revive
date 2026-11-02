@@ -49,7 +49,7 @@ void Config_Load(const char *dir)
     bool mouse=CT_MouseEnabled(),invert=CT_Invert(),music_on=false,effects_on=false;
     SD_GetSettings(&music,&effects,&music_on,&effects_on);
     display_settings display;bool have_display=VL_DisplayGet(&display);
-    unsigned binding[CT_ACTIONS][2];
+    unsigned binding[CT_ACTIONS][2];bool binding_seen[CT_ACTIONS][2]={{false}};
     for(unsigned a=0;a<CT_ACTIONS;++a) for(unsigned j=0;j<2;++j) binding[a][j]=CT_Binding((ct_action)a,j);
     while(fgets(line,sizeof(line),f)) {
         if(!strchr(line,'\n') && !feof(f)) { int c;while((c=fgetc(f))!=EOF && c!='\n') {}continue; }
@@ -72,7 +72,7 @@ void Config_Load(const char *dir)
             else if(!strncmp(key,"bind_",5) && Number(value,&n) && n<CT_KEYS) {
                 unsigned action,slot;
                 if(sscanf(key+5,"%u_%u",&action,&slot)==2 && action<CT_ACTIONS && slot<2)
-                    binding[action][slot]=n;
+                    { binding[action][slot]=n;binding_seen[action][slot]=true; }
             }
         } else if(!strcmp(section,"audio")) {
             if(!strcmp(key,"music_volume") && Number(value,&n) && n<=100) music=n;
@@ -90,9 +90,9 @@ void Config_Load(const char *dir)
     (void)fclose(f);
     CT_Reset(preset);
     for(unsigned a=0;a<CT_ACTIONS;++a) for(unsigned j=0;j<2;++j)
-        if(binding[a][j]!=CT_Binding((ct_action)a,j)) (void)CT_Bind((ct_action)a,j,0);
+        if(binding_seen[a][j] && binding[a][j]!=CT_Binding((ct_action)a,j)) (void)CT_Bind((ct_action)a,j,0);
     for(unsigned a=0;a<CT_ACTIONS;++a) for(unsigned j=0;j<2;++j)
-        if(binding[a][j] && binding[a][j]!=CT_Binding((ct_action)a,j))
+        if(binding_seen[a][j] && binding[a][j] && binding[a][j]!=CT_Binding((ct_action)a,j))
             (void)CT_Bind((ct_action)a,j,binding[a][j]);
     CT_SetMouse(mouse);CT_SetSensitivity(sensitivity);CT_SetInvert(invert);
     SD_SetVolumes(music,effects);SD_SetEnabled(music_on,effects_on);
