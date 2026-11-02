@@ -9,6 +9,8 @@
 #include <string.h>
 unsigned wallheight[MAXVIEWWIDTH];
 static bool drawing_paused;
+static uint64_t render_serial;
+uint64_t WL_RenderSerial(void) { return render_serial; }
 static int32_t viewx,viewy;
 static uint32_t viewsin,viewcos;
 static int32_t PartialStep(int32_t step,uint16_t partial)
@@ -127,6 +129,7 @@ static const w3r_byte vgaCeiling[60]={
 unsigned WL_CeilingColor(void) { return vgaCeiling[gamestate.episode*10+gamestate.mapon]; }
 bool ThreeDRefresh(void)
 {
+    ++render_serial; /* Presentation invalidation; never saved or simulated. */
     memset(spotvis,0,sizeof(spotvis));
     /* DOS marks only cells crossed by rays, not the starting player cell. */
     for (unsigned y=0;y<VIEWHEIGHT;++y)

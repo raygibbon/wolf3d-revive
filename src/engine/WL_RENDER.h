@@ -7,6 +7,7 @@
 /* Presentation only. Never changes spotvis, actors, inventory or RNG. */
 bool WL_RenderRay(int angle,rayhit *hit);
 unsigned WL_CeilingColor(void);
+uint64_t WL_RenderSerial(void);
 bool WL_RenderResolution(unsigned width,unsigned height);
 /* Centered 4:3 image within the selected output canvas. */
 void WL_RenderContent(unsigned width,unsigned height,unsigned *x,unsigned *w);

@@ -11,7 +11,8 @@ bool VL_DisplayPreferences(display_settings *settings); /* Pending accepted inte
 bool VL_DisplaySet(const display_settings *settings);
 #ifdef WOLF3D_DISPLAY_TEST
 /* One-shot fault injection, compiled only into the display test executable. */
-void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 size, 4 denied request */
+uint64_t VL_TestSceneUploads(void);
+void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 size, 4 denied request, 5 allocation, 6 texture, 7 VSync, 8 filter */
 void VL_TestExpireDisplayRequest(void);
 #endif
 uint64_t VL_GetTicks70(void);
@@ -21,6 +22,7 @@ void VL_Shutdown(void);
 bool VW_UpdateScreen(void);
 bool VL_PollQuit(void);
 /* Diagnostic capture of the rendered viewport; game artwork stays local. */
+bool VL_Screenshot(void);
 bool VL_Capture(const char *path);
 const char *VL_Error(void);
 #endif

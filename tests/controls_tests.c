@@ -66,7 +66,7 @@ static void Core(void)
     CT_Reset(CT_MODERN);CT_MouseMotion(NAN);CT_MouseMotion(INFINITY);CT_MouseMotion(-INFINITY);CHECK(CT_MouseTurn()==0);CT_MouseButton(1,true);CT_MouseButton(1,false);CHECK(CT_Down(CT_FIRE));CT_EndTic();CHECK(!CT_Down(CT_FIRE));
     CT_MouseButton(3,true);CHECK(CT_Pressed(CT_USE) && !CT_Pressed(CT_USE));CT_Clear();
     CHECK(!CT_Bind(CT_FORWARD,0,SDL_SCANCODE_S) && CT_Binding(CT_FORWARD,0)==SDL_SCANCODE_W);
-    CHECK(!CT_Bind(CT_FIRE,0,SDL_SCANCODE_ESCAPE));CHECK(!CT_Bind(CT_FIRE,2,4));CHECK(!CT_Bind(CT_FIRE,0,512));
+    CHECK(!CT_Bind(CT_FIRE,0,SDL_SCANCODE_ESCAPE));CHECK(!CT_Bind(CT_FIRE,0,SDL_SCANCODE_F12));CHECK(!CT_Bind(CT_FIRE,2,4));CHECK(!CT_Bind(CT_FIRE,0,512));
     CHECK(CT_Bind(CT_FORWARD,0,SDL_SCANCODE_E));CT_Key(SDL_SCANCODE_W,true);CHECK(!CT_Down(CT_FORWARD));CT_Key(SDL_SCANCODE_E,true);CHECK(CT_Down(CT_FORWARD));
     CHECK(CT_Bind(CT_FORWARD,1,0) && CT_Bind(CT_FIRE,0,SDL_SCANCODE_UP));
     IN_KeyEvent(sc_UpArrow,true);CHECK(IN_ConsumePress(sc_UpArrow) && CT_Down(CT_FIRE));IN_ClearKeysDown();

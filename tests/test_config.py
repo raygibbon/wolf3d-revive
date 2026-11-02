@@ -43,6 +43,12 @@ class ConfigTests(unittest.TestCase):
     def test_unsupported_values_fall_back(self):
         self.write('[controls]\npreset="unknown"\nmouse_sensitivity=999\nmouse_enabled="false"\n[audio]\nmusic_volume=-1\neffects_volume=101\neffects_enabled=0\n[display]\nwindow_width=0\nwindow_height=999999\n[classic]\nview_size=3\n')
         s=self.run_config();self.assertEqual(s['result'],1);self.assertEqual((s['preset'],s['music'],s['effects'],s['view'],s['width'],s['height']),(0,70,85,15,960,720));self.assertTrue(s['effects_on'])
+    def test_visual_settings_and_invalid_values(self):
+        self.write('[display]\nrenderer="high_resolution"\nrender_auto=true\nrender_width=1920\nrender_height=1080\naspect_ratio="32:9"\nfilter="linear"\nvsync=true\n')
+        s=self.run_config();self.assertEqual((s['high_resolution'],s['render_auto'],s['render_width'],s['render_height'],s['aspect'],s['linear']),(1,1,1920,1080,5,1))
+        self.write('[display]\nrenderer="invalid"\nrender_auto=1\nrender_width=1234\nrender_height=999\naspect_ratio="0:0"\nfilter="cubic"\nvsync="yes"\n')
+        s=self.run_config();self.assertEqual((s['high_resolution'],s['render_auto'],s['render_width'],s['render_height'],s['aspect'],s['linear'],s['vsync']),(0,0,640,480,0,0,0))
+
     def test_duplicate_and_malformed_files(self):
         cases=['[controls]\npreset="modern"\npreset="classic"','[controls]\npreset="modern"\n[controls]\nmouse_enabled=true','[audio]\nx=1\nx=2','[audio] broken','[audio\nmusic_volume=1','[audio]\nmusic_volume=1junk','[audio]\nmusic_volume=01','[audio]\nmusic_volume=1__0','[audio]\nmusic_volume=9223372036854775808','[audio]\nmusic_volume=-9223372036854775809','[audio]\nmusic_volume=0xffffffffffffffffffff','[controls]\npreset="modern','[controls]\npreset="bad\\q"','controls=1\n[controls]\npreset="modern"','[display]\nwindow_width =','[audio]\nmusic_volume=1.2', '["audio"]\nmusic_volume=1']
         for text in cases:
@@ -58,7 +64,7 @@ class ConfigTests(unittest.TestCase):
         self.write('[controls]\npreset="modern"\nbind_0_0=22\nbind_1_0=26\nbind_4_0=0\n')
         s=self.run_config();self.assertEqual(s['profiles'][1]['bindings'][0],[22,82]);self.assertEqual(s['profiles'][1]['bindings'][1],[26,81]);self.assertEqual(s['profiles'][1]['bindings'][4],[0,0])
     def test_invalid_binding_group_is_atomic(self):
-        for bad in ('bind_8_0=8','bind_8_0=58','bind_8_0=41','bind_8_0=1','bind_8_0=511','bind_8_0=-1','bind_8_0=512','bind_8_0="x"','bind_14_2=2','bind_9999999999999999999999_0=2','bind_0_0trailing=20','bind_00_0=20'):
+        for bad in ('bind_8_0=8','bind_8_0=58','bind_8_0=69','bind_8_0=41','bind_8_0=1','bind_8_0=511','bind_8_0=-1','bind_8_0=512','bind_8_0="x"','bind_14_2=2','bind_9999999999999999999999_0=2','bind_0_0trailing=20','bind_00_0=20'):
             with self.subTest(bad=bad):
                 self.write('[controls]\npreset="classic"\nmouse_sensitivity=17\nbind_0_0=8\n'+bad)
                 s=self.run_config();p=s['profiles'][0];self.assertEqual(p['bindings'][0],[82,96]);self.assertEqual(p['bindings'][8],[224,228]);self.assertEqual(p['sensitivity'],17)
