@@ -47,7 +47,7 @@ class ConfigTests(unittest.TestCase):
         self.write('[display]\nrenderer="high_resolution"\nrender_auto=true\nrender_width=1920\nrender_height=1080\naspect_ratio="32:9"\nfilter="linear"\nsmooth_rendering=true\nvsync=true\n')
         s=self.run_config();self.assertEqual((s['high_resolution'],s['render_auto'],s['render_width'],s['render_height'],s['aspect'],s['linear'],s['smooth']),(1,1,1920,1080,5,1,1))
         self.write('[display]\nrenderer="invalid"\nrender_auto=1\nrender_width=1234\nrender_height=999\naspect_ratio="0:0"\nfilter="cubic"\nsmooth_rendering="yes"\nvsync="yes"\n')
-        s=self.run_config();self.assertEqual((s['high_resolution'],s['render_auto'],s['render_width'],s['render_height'],s['aspect'],s['linear'],s['vsync'],s['smooth'],s['fps']),(0,0,640,480,0,0,0,0))
+        s=self.run_config();self.assertEqual((s['high_resolution'],s['render_auto'],s['render_width'],s['render_height'],s['aspect'],s['linear'],s['vsync'],s['smooth']),(0,0,640,480,0,0,0,0))
 
     def test_duplicate_and_malformed_files(self):
         cases=['[controls]\npreset="modern"\npreset="classic"','[controls]\npreset="modern"\n[controls]\nmouse_enabled=true','[audio]\nx=1\nx=2','[audio] broken','[audio\nmusic_volume=1','[audio]\nmusic_volume=1junk','[audio]\nmusic_volume=01','[audio]\nmusic_volume=1__0','[audio]\nmusic_volume=9223372036854775808','[audio]\nmusic_volume=-9223372036854775809','[audio]\nmusic_volume=0xffffffffffffffffffff','[controls]\npreset="modern','[controls]\npreset="bad\\q"','controls=1\n[controls]\npreset="modern"','[display]\nwindow_width =','[audio]\nmusic_volume=1.2', '["audio"]\nmusic_volume=1']
