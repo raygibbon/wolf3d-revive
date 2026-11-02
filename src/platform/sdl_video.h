@@ -16,6 +16,7 @@ void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 si
 void VL_TestExpireDisplayRequest(void);
 #endif
 uint64_t VL_GetTicks70(void);
+unsigned VL_MonitorFrameRate(void); /* Current output refresh, bounded, 60 FPS fallback. */
 void VL_Sleep(unsigned ms);
 uint64_t VL_TextureUploads(void);
 void VL_Shutdown(void);
