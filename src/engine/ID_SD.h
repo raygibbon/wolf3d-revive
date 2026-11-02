@@ -18,6 +18,8 @@ int SD_LevelMusic(unsigned episode,unsigned floor);
 bool SD_IsDigitizedSound(soundnames sound);
 bool SD_PlaySound(soundnames sound,unsigned left,unsigned right);
 void SD_StopSound(void);
+void SD_FlushOutput(void);
+uint64_t SD_OutputGeneration(void);
 void SD_SetPosition(unsigned left,unsigned right);
 void SD_Render(int16_t *stereo,size_t frames);
 void SD_SetVolumes(unsigned music,unsigned effects); /* 0..100 */
@@ -31,4 +33,6 @@ typedef struct {
     uint8_t registers[256];
 } sd_status;
 void SD_GetStatus(sd_status *status);
+/* Original logical AL wait in 70-Hz presentation tics, independent of device. */
+unsigned SD_SoundTicks(soundnames sound);
 #endif

@@ -66,8 +66,10 @@ static void TestProgression(void)
     doorobjlist[0].action=dr_open;doorobjlist[0].position=65535;
     Key(sc_Space);CHECK(GameStep(1));
     CHECK(GameIntermission() && playstate==ex_completed && tilemap[4][2]==22 && gamestate.keys==0);
-    CHECK(LevelRatios[0].seconds==0 && LevelRatios[0].bonus==45000 && gamestate.score==46234);
-    unsigned t=1;int score=gamestate.score,lives=gamestate.lives;
+    CHECK(LevelIntermissionCounting() && gamestate.score==1234);
+    unsigned t=1;Key(sc_Enter);CHECK(GameStep(++t));
+    CHECK(!LevelIntermissionCounting() && LevelRatios[0].seconds==0 && LevelRatios[0].bonus==45000 && gamestate.score==46234);
+    int score=gamestate.score,lives=gamestate.lives;
     CHECK(GameStep(++t) && GameIntermission() && gamestate.score==score);
     Key(sc_Enter);CHECK(GameStep(++t));
     CHECK(!GameIntermission() && CA_Map()->number==1 && gamestate.mapon==1);
@@ -82,6 +84,7 @@ static void TestProgression(void)
     /* Secret elevator raw area marker, then the original episode return. */
     Place(3,2,0);((maptype *)CA_Map())->planes[0][2*64+3]=107;
     Key(sc_Space);CHECK(GameStep(++t) && GameIntermission() && playstate==ex_secretlevel);
+    Key(sc_Enter);CHECK(GameStep(++t) && GameIntermission() && !LevelIntermissionCounting());
     Key(sc_Enter);CHECK(GameStep(++t) && CA_Map()->number==9);
     Place(3,2,0);Key(sc_Space);CHECK(GameStep(++t) && GameIntermission());
     CHECK(gamestate.score==score+60000+15000);

@@ -27,8 +27,7 @@ bool DrawHighScores(void)
 }
 
 /* WL_INTER.C LevelCompleted: original par times, integer ratios and bonuses.
-   Results are shown immediately (the original acknowledgement skip path).
-   Sound/count-up/BJ breathing animation are not yet ported. */
+   The counting/sound/breathing state machine below shares this result drawing. */
 #include "WL_DEF.h"
 #include <stdio.h>
 #include <ctype.h>
@@ -122,4 +121,94 @@ bool DrawVictory(void)
         if (!US_Print(code)) return false;
     }
     return DrawStatus();
+}
+
+/* WL_INTER.C LevelCompleted loops and BJ_Breathe, resumed without DOS waits.
+   Counters run until the original sound wait or 30-VBL boundary. A logical
+   140-Hz effect length supplies the wait even with output muted/unavailable. */
+#include "ID_SD.h"
+#include "ID_IN.h"
+static unsigned breath_frame,breath_max=10;
+static struct {
+    levelratio_t final,shown;
+    unsigned stage,index,part,breath;
+    uint64_t until,breath_next;
+    bool complete,awarded;
+} completion;
+static bool Breathe(uint64_t ticks)
+{
+    if(ticks>=completion.breath_next) {
+        uint64_t steps=1+(ticks-completion.breath_next)/36;
+        completion.breath_next+=steps*36;breath_frame^=(unsigned)(steps&1U);breath_max=35;
+    }
+    completion.breath=breath_frame;
+    return VWB_DrawPic(0,16,breath_frame?L_GUY2PIC:L_GUYPIC);
+}
+static bool CompleteResults(uint64_t ticks)
+{
+    completion.shown=completion.final;completion.complete=true;
+    completion.breath_next=ticks+breath_max+1;
+    if(!completion.awarded) {
+        GivePoints(completion.final.bonus);completion.awarded=true;
+        if(gamestate.mapon<8) LevelRatios[gamestate.mapon]=completion.final;
+    }
+    return DrawLevelCompleted(&completion.final) && VWB_DrawPic(0,16,breath_frame?L_GUY2PIC:L_GUYPIC);
+}
+static void CountSound(soundnames sound)
+{
+    GameSound(sound,NULL);completion.until+=SD_SoundTicks(sound);
+}
+bool LevelIntermissionCounting(void) { return !completion.complete; }
+bool StartLevelIntermission(const levelratio_t *stats,uint64_t ticks)
+{
+    memset(&completion,0,sizeof(completion));completion.final=*stats;completion.shown=*stats;
+    completion.shown.kill=completion.shown.secret=completion.shown.treasure=0;completion.shown.bonus=0;
+    completion.until=ticks;completion.breath=breath_frame;completion.breath_next=ticks+breath_max+1;
+    if(gamestate.mapon>=8) return CompleteResults(ticks);
+    bool leave=false;return StepLevelIntermission(ticks,false,&leave);
+}
+bool StepLevelIntermission(uint64_t ticks,bool acknowledge,bool *leave)
+{
+    *leave=false;
+    if(acknowledge) {
+        if(completion.complete) { *leave=true;return true; }
+        IN_ClearKeysDown();return CompleteResults(ticks);
+    }
+    if(completion.complete) return Breathe(ticks);
+    /* Maximum legitimate WL6 count is bounded by the original map totals.
+       Run instant iterations together; never invent a frame-rate counter. */
+    for(unsigned work=0;work<20000 && !completion.complete && ticks>=completion.until;++work) {
+        unsigned limit=completion.stage==0 ? (completion.final.seconds<completion.final.par?completion.final.par-completion.final.seconds:0) :
+            completion.stage==1?completion.final.kill:completion.stage==2?completion.final.secret:completion.final.treasure;
+        if(completion.part==0) {
+            if(completion.stage==0 && !limit) { completion.stage=1;continue; }
+            if(completion.index<=limit) {
+                if(completion.stage==0) completion.shown.bonus=(int)completion.index*500;
+                else if(completion.stage==1) completion.shown.kill=completion.index;
+                else if(completion.stage==2) completion.shown.secret=completion.index;
+                else completion.shown.treasure=completion.index;
+                unsigned interval=completion.stage==0?50U:10U;
+                if(completion.index%interval==0) CountSound(ENDBONUS1SND);
+                ++completion.index;
+            } else completion.part=1;
+        } else if(completion.part==1) {
+            if(completion.stage && (limit==100 || !limit)) { completion.until+=30;completion.part=2; }
+            else { CountSound(ENDBONUS2SND);completion.part=3; }
+        } else if(completion.part==2) {
+            SD_StopSound();
+            if(limit==100) { completion.shown.bonus+=10000;CountSound(PERCENT100SND); }
+            else CountSound(NOBONUSSND);
+            completion.part=3;
+        } else {
+            ++completion.stage;completion.index=completion.part=0;
+            if(completion.stage==4) { IN_ClearKeysDown();if(!CompleteResults(ticks)) return false; }
+        }
+    }
+    if(!completion.complete && !DrawLevelCompleted(&completion.shown)) return false;
+    if(!completion.complete) {
+        for(unsigned stage=1;stage<=3;++stage) if(completion.stage<stage)
+            VWB_Bar(29*8,(12+(int)stage*2)*8,64,16,127);
+        if(!Breathe(ticks)) return false;
+    }
+    return true;
 }

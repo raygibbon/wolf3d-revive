@@ -214,9 +214,8 @@ listening remain future verification.
 
 ## Remaining work
 
-- Restore animated intermission counting and its ENDBONUS1/2, PERCENT100 and
-  NOBONUS sequencing alongside its presentation. The existing immediate-final
-  results path does not pretend to play that missing animation's sounds.
+- Animated intermission counting and ENDBONUS1/2, PERCENT100 and NOBONUS
+  sequencing are now completed by [Milestone 6C](MILESTONE6C.md).
 - Compare representative melodic/rhythm tracks and simultaneous AL effects
   against DOS on the same output route. Tune interpolation/levels only from
   that evidence; the short listening check is not a hardware-fidelity oracle.

@@ -78,6 +78,9 @@ typedef struct { unsigned kill,secret,treasure,seconds,par; int bonus; } levelra
 extern levelratio_t LevelRatios[8];
 levelratio_t LevelStats(void);
 bool DrawLevelCompleted(const levelratio_t *stats);
+bool StartLevelIntermission(const levelratio_t *stats,uint64_t ticks);
+bool StepLevelIntermission(uint64_t ticks,bool acknowledge,bool *leave);
+bool LevelIntermissionCounting(void);
 bool GameStep(uint64_t ticks);
 void GameStop(void);
 bool GameProbe(void);
@@ -85,6 +88,7 @@ bool GameProbe(void);
 typedef struct { int32_t x,y; unsigned page,column,height; int side,grid,tile; } rayhit;
 bool AsmRefresh(int fineangle,rayhit *hit);
 bool ThreeDRefresh(void);
+bool ThreeDRefreshPaused(void);
 void ScalePost(unsigned x,unsigned width,unsigned height,const w3r_byte *column);
 #include "WL_ACTOR.h"
 #endif

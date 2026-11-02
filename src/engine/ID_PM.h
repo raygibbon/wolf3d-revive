@@ -6,6 +6,7 @@
 #include <stddef.h>
 extern unsigned ChunksInFile,PMSpriteStart,PMSoundStart;
 bool PM_Startup(void);
+bool PM_Ready(void);
 void PM_Shutdown(void);
 const w3r_byte *PM_GetPage(unsigned page,size_t *length);
 bool PM_DecodeSprite(unsigned sprite,w3r_byte pixels[4096],w3r_byte opaque[4096]);

@@ -1,5 +1,9 @@
 # Milestone 6A — original campaign actors and completion
 
+Subsequent work: [Milestone 6C](MILESTONE6C.md) implements six-slot save/load,
+pause/resume and animated intermission counters/sounds. Historical remaining-work
+notes below describe the state at this report's milestone.
+
 2026-11-02. All original bosses, required projectiles and the six episode
 completion paths are implemented. **All 60 owned WL6 maps load, render and
 simulate at all four difficulties: 240/240 combinations.** Controlled SDL

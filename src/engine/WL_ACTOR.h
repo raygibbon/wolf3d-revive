@@ -95,6 +95,7 @@ void T_Attack(bool attack);
 void UpdateFace(void);
 bool DrawStatus(void);
 void ResetStatus(void);
+void InvalidateStatus(void);
 void ClearPaletteShifts(void);
 void StartBonusFlash(void);
 void StartDamageFlash(int damage);

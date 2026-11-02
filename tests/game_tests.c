@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #include "engine/WL_DEF.h"
+#include "engine/WL_SAVE.h"
 #include "engine/ID_CA.h"
 #include "engine/ID_PM.h"
 #include "engine/ID_IN.h"
@@ -215,7 +216,8 @@ static void TestMenuGame(void)
     Key(sc_Enter);CHECK(DemoLoop(53) && DemoLoop(73) && DemoLoopState()==UI_GAME);
     Key(sc_UpArrow); CHECK(DemoLoop(74));
     Key(sc_Escape); CHECK(DemoLoop(75) && DemoLoop(95) && DemoLoopState()==UI_MENU);
-    CHECK(!CA_Map() && ChunksInFile==0);
+    CHECK(CA_Map() && ChunksInFile && GameRunning());
+    GameStop();
     MainMenu[newgame].active=0;MainItems.curpos=viewscores;
 }
 int main(int argc,char **argv)

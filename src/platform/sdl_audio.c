@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 static SDL_AudioStream *stream;
+static uint64_t generation;
 static char error[256];
 bool Audio_Active(void) { return stream!=NULL; }
 const char *Audio_Error(void) { return error; }
@@ -45,11 +46,19 @@ bool Audio_Startup(void)
        !SDL_ResumeAudioStreamDevice(stream)) {
         (void)snprintf(error,sizeof(error),"%s",SDL_GetError());Audio_Shutdown();return false;
     }
-    return true;
+    generation=SD_OutputGeneration();return true;
 }
 void Audio_Pump(void)
 {
     if(!stream) return;
+    if(generation!=SD_OutputGeneration()) {
+        if(!SDL_ClearAudioStream(stream)) {
+            (void)snprintf(error,sizeof(error),"%s",SDL_GetError());
+            fprintf(stderr,"SDL3 audio stopped: %s; continuing silently.\n",error);
+            Audio_Shutdown();return;
+        }
+        generation=SD_OutputGeneration();
+    }
     int queued=SDL_GetAudioStreamQueued(stream);
     /* Bound work and latency to 32 ms. A stalled renderer can underrun but
        cannot change the rational music clock, simulation or gameplay RNG. */

@@ -3,6 +3,7 @@
    GOODTIMES control-panel slice; blocking HandleMenu is now tic-driven.
    Gameplay-dependent rows retain original disabled rendering and are skipped. */
 #include "WL_MENU.h"
+#include "WL_SAVE.h"
 #include "ID_CA.h"
 #include "ID_VH.h"
 #include "ID_US_1.h"
@@ -48,6 +49,9 @@ bool DrawMainMenu(void)
 bool SetupControlPanel(uint64_t ticks)
 {
     if (!VW_ValidateFont(1)) return false;
+    MainMenu[loadgame].active=*Save_Directory()?1:0;
+    MainMenu[savegame].active=GameCanSave() && *Save_Directory()?1:0;
+    MainMenu[backtodemo].string=GameRunning()?"Back to Game":"Back to Demo";
     if (MainItems.curpos < 0 || MainItems.curpos >= MENU_COUNT || !MainMenu[MainItems.curpos].active) MainItems.curpos = viewscores;
     shape = C_CURSOR1PIC; gun_first = true; gun_next = ticks + 9; move_next = ticks;
     return DrawMainMenu();

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_AGENT.C inventory, attackinfo, T_Attack and status-bar drawing. No gameplay assets. */
 #include "WL_DEF.h"
+#include "WL_SAVE.h"
 #include "ID_CA.h"
 #include "ID_IN.h"
 #include "ID_VH.h"
@@ -215,3 +216,12 @@ void T_Attack(bool attack)
     gamestate.attackcount+=cur->tics;++gamestate.attackframe;
     gamestate.weaponframe=attackinfo[gamestate.weapon][gamestate.attackframe-1].frame;
 }
+
+void Save_GetCombat(save_controls *c) { c->facecount=facecount;c->attackheld=attackheld;c->gotgatgun=gotgatgun; }
+void Save_SetCombat(const save_controls *c)
+{
+    facecount=c->facecount;attackheld=c->attackheld;gotgatgun=c->gotgatgun;
+    statusvalid=false;killerobj=NULL;
+}
+
+void InvalidateStatus(void) { statusvalid=false; }

@@ -396,3 +396,9 @@ void A_DeathScream(objtype *ob)
     case realhitlerobj:GameSound(EVASND,NULL);break;
     }
 }
+
+bool Save_ActorAllocated(unsigned slot) { return slot<MAXACTORS && allocated[slot]; }
+void Save_SetActorAllocation(const bool used[MAXACTORS])
+{
+    memcpy(allocated,used,sizeof(allocated));allocationfailed=false;soundpositioned=false;
+}

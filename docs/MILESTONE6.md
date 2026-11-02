@@ -1,5 +1,9 @@
 # Milestone 6 — first implementation pass: normal-level progression
 
+Subsequent work: [Milestone 6C](MILESTONE6C.md) implements six-slot save/load,
+pause/resume and animated intermission counters/sounds. Historical remaining-work
+notes below describe the state at this report's milestone.
+
 ## Current status after Milestone 6A Part 2
 
 All original bosses, required projectiles and all six episode completion

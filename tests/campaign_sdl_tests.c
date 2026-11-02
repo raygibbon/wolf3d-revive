@@ -71,6 +71,7 @@ int main(int argc,char **argv)
     CHECK(ex>=0);player.tilex=px;player.tiley=ey;player.x=px*TILEGLOBAL+32768;
     player.y=ey*TILEGLOBAL+32768;player.angle=px<ex ? 0 : 180;
     Tap(SDL_SCANCODE_SPACE);CHECK(GameIntermission());Capture(argc,argv,"intermission");
+    Tap(SDL_SCANCODE_RETURN);CHECK(GameIntermission() && !LevelIntermissionCounting());
     int score=gamestate.score;Tap(SDL_SCANCODE_RETURN);CHECK(!GameIntermission());
     if (argc==3 && strcmp(argv[2],"--missing-next")==0) {
         CHECK(DemoLoopState()==UI_ERROR && !CA_Map());

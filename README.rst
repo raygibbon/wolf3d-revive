@@ -10,11 +10,13 @@ fights verify all six finale paths. Full navigated episode playthroughs and
 DOS equivalence are not claimed. Milestone 6B adds live AdLib music, original
 voices/effects and native SDL3 audio directly from WL6 archives, plus working
 music/effects volume and mute controls. No converted soundtrack or audio cache
-is created. Animated intermission counting audio, detailed DOS listening
-comparisons, saving/loading, persistent configuration and Enhanced Mode remain
-later work.
+is created. Milestone 6C adds six named save slots, portable atomic saves in the user-data
+directory, pause/resume, deterministic restoration and animated intermission
+counters with original sound sequencing. Detailed DOS listening comparisons,
+persistent configuration and Enhanced Mode remain later work.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 6C save/load, format and intermissions <docs/MILESTONE6C.md>`_
 * `Milestone 6B native audio, licensing and fidelity <docs/MILESTONE6B.md>`_
 * `Milestone 6A actor progress and remaining campaign work <docs/MILESTONE6A.md>`_
 * `Milestone 6 progress and remaining work <docs/MILESTONE6.md>`_

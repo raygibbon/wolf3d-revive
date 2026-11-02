@@ -8,13 +8,14 @@
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include "WL_DEF.h"
+#include "WL_SAVE.h"
 #include "ID_SD.h"
 #include <string.h>
 static ui_state state, next_state;
 static bool leaving;
 static uint64_t deadline, transition_end, blink_next;
 static int cursor_x, cursor_y;
-static bool blink;
+static bool blink,resuming;
 static unsigned episode,difficulty=2;
 static bool Attract(void) { return state <= UI_HIGHSCORES; }
 ui_state DemoLoopState(void) { return state; }
@@ -37,7 +38,15 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     state = screen; leaving = false;
     IN_ClearKeysDown();
     if (screen == UI_DONE) return true;
-    if (screen == UI_GAME && !GameStartSelected(ticks+10,episode,difficulty)) return GameError() && VL_FadeIn(gamepal,10,ticks);
+    if (screen == UI_GAME) {
+        bool ok;
+        if(resuming) { GamePauseClock(ticks+10);ok=GameDrawPaused();resuming=false;
+            sd_status audio;SD_GetStatus(&audio);int song=SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon);
+            if(audio.music!=song) SD_StartMusic(song); }
+        else ok=GameStartSelected(ticks+10,episode,difficulty);
+        if(!ok) return GameError() && VL_FadeIn(gamepal,10,ticks);
+    }
+    if ((screen==UI_SAVE || screen==UI_LOAD) && !BeginSaveMenu(screen==UI_SAVE)) return false;
     if (screen == UI_TITLE) SD_StartMusic(7);
     if (screen == UI_MENU) SD_StartMusic(14);
     if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
@@ -60,10 +69,10 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
     return VL_FadeOut(Attract() ? 0 : 43,0,0,steps,ticks);
 }
-bool DemoLoopStartGame(uint64_t ticks) { episode=0;difficulty=2;return ChangeScreen(UI_GAME,ticks); }
+bool DemoLoopStartGame(uint64_t ticks) { episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
 {
-    GameStop();
+    GameStop();resuming=false;
     /* Validate the complete UI slice before starting the event loop. */
     if (!VW_ValidateFont(0) || !VW_ValidateFont(1) || !DrawHighScores() ||
         !SetupControlPanel(ticks) || !CA_CacheScreen(CREDITSPIC) || !CA_CacheScreen(TITLEPIC)) return false;
@@ -90,7 +99,7 @@ bool DemoLoop(uint64_t ticks)
     }
     if (VL_Fading() || Attract()) return true;
     if (state == UI_GAME) {
-        if (!GameVictoryPresentation() && IN_ConsumePress(sc_Escape)) { GameStop(); return Transition(UI_MENU,ticks,10); }
+        if (GameCanSave() && IN_ConsumePress(sc_Escape)) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
         if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
         return true;
@@ -98,15 +107,23 @@ bool DemoLoop(uint64_t ticks)
     if (state == UI_MENU) {
         int action = HandleMenu(ticks);
         if (action == -3) return false;
+        if (action == savegame || action == loadgame) return Transition(action==savegame?UI_SAVE:UI_LOAD,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
         if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == viewscores) return Transition(UI_SCORES,ticks,10);
-        if (action == backtodemo) return Transition(UI_TITLE,ticks,10);
+        if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {
             state = UI_CONFIRM; IN_ClearKeysDown();
             /* One original quit phrase, until the original RNG is ported. */
             if (!Message("Dost thou wish to\nleave with such hasty\nabandon?")) return false;
             cursor_x = PrintX; cursor_y = PrintY; blink = false; blink_next = ticks + 10;
+        }
+    } else if (state==UI_SAVE || state==UI_LOAD) {
+        int action=HandleSaveMenu(ticks);
+        if(action==-3) return false;
+        if(action==-1 || action==1) {
+            bool loaded=action==1 && state==UI_LOAD;
+            resuming=loaded;return Transition(loaded?UI_GAME:UI_MENU,ticks,10);
         }
     } else if (state == UI_SOUND) {
         int action=HandleSoundSettings();

@@ -2,6 +2,7 @@
 /* WL_PLAY.C keyboard controls driving the original one-tic ControlMovement.
    Simulation is explicitly 70 Hz; presentation is independent. */
 #include "WL_DEF.h"
+#include "WL_SAVE.h"
 #include "ID_IN.h"
 #include "ID_CA.h"
 #include "ID_SD.h"
@@ -104,7 +105,9 @@ bool GameStep(uint64_t ticks)
     lasttimecount=ticks;
     if (elapsed>MAXTICS) elapsed=MAXTICS; /* Discard long-pause excess, as CalcTics. */
     if (intermission) {
-        if (!IN_AnyPressed()) return true;
+        bool leave=false;
+        if(!StepLevelIntermission(ticks,IN_AnyPressed(),&leave)) return false;
+        if(!leave) return true;
         unsigned next=NextMap((unsigned)gamestate.episode,(unsigned)gamestate.mapon,playstate);
         if (next>=60 || next/10!=(unsigned)gamestate.episode) return CA_Fail("Invalid campaign progression");
         gamestate.oldscore=gamestate.score;gamestate.mapon=(int)(next%10);
@@ -143,10 +146,9 @@ bool GameStep(uint64_t ticks)
             if (gamestate.mapon==8) return CA_Fail("Invalid secret exit on episode finale");
             gamestate.keys=0;FinishPaletteShifts();
             levelratio_t stats=LevelStats();
-            if (gamestate.mapon<8) LevelRatios[gamestate.mapon]=stats;
             SD_StartMusic(16);
-            GivePoints(stats.bonus);intermission=true;IN_ClearKeysDown();
-            return DrawLevelCompleted(&stats);
+            intermission=true;IN_ClearKeysDown();
+            return StartLevelIntermission(&stats,ticks);
         }
         int move=(Down(0x2a) || Down(0x36)) ? 70 : 35;
         int cx=(Down(sc_RightArrow) ? move : 0)-(Down(sc_LeftArrow) ? move : 0);
@@ -171,3 +173,17 @@ bool GameStep(uint64_t ticks)
     }
     return true;
 }
+
+bool GameRunning(void) { return running && !finished; }
+bool GameCanSave(void)
+{
+    return GameRunning() && CA_Map() && !intermission && !victorypage && !gamestate.died &&
+        !gamestate.victoryflag && !DeathCameraActive() && playstate==ex_playing && !ActorAllocationFailed();
+}
+void GamePauseClock(uint64_t ticks) { lasttimecount=ticks; }
+void GameRestoreClock(uint64_t ticks)
+{
+    running=true;finished=intermission=false;victorypage=0;deathphase=deathwait=0;
+    lasttimecount=ticks;ResetVictory();ResetEndText();ClearPaletteShifts();
+}
+bool GameDrawPaused(void) { InvalidateStatus();return DrawPlayScreen() && ThreeDRefreshPaused(); }

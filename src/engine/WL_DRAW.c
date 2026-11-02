@@ -7,6 +7,7 @@
 #include "ID_VL.h"
 #include <string.h>
 unsigned wallheight[VIEWWIDTH];
+static bool drawing_paused;
 static int32_t viewx,viewy;
 static uint32_t viewsin,viewcos;
 static int32_t PartialStep(int32_t step,uint16_t partial)
@@ -195,10 +196,11 @@ bool DrawScaleds(void)
         statobj_t *ob=&statobjlist[i];
         if (ob->shapenum<0 || !spotvis[ob->tilex][ob->tiley]) continue;
         int x=0,height=0;
-        if (TransformTile(ob->tilex,ob->tiley,&x,&height) && ob->bonus && !gamestate.died) { GetBonus(ob);continue; }
+        if (TransformTile(ob->tilex,ob->tiley,&x,&height) && ob->bonus && !gamestate.died && !drawing_paused) { GetBonus(ob);continue; }
         if (height && count<49) { vis[count].x=x;vis[count].height=height;vis[count++].shape=ob->shapenum; }
     }
-    for (objtype *ob=player.next;ob;ob=ob->next) {
+    for (objtype *current=player.next;current;current=current->next) {
+        objtype copy=*current,*ob=drawing_paused?&copy:current;
         ob->flags&=~FL_VISABLE;
         if (!ob->state || !ob->state->shapenum) continue;
         bool visible=spotvis[ob->tilex][ob->tiley];
@@ -222,4 +224,9 @@ bool DrawScaleds(void)
         vis[farthest].height=32000;
     }
     return true;
+}
+
+bool ThreeDRefreshPaused(void)
+{
+    drawing_paused=true;bool ok=ThreeDRefresh();drawing_paused=false;return ok;
 }

@@ -3,7 +3,7 @@
 #define WL_MAIN_H
 #include <stdbool.h>
 #include <stdint.h>
-typedef enum { UI_TITLE, UI_CREDITS, UI_HIGHSCORES, UI_MENU, UI_SCORES, UI_CONFIRM, UI_GAME, UI_EPISODE, UI_DIFFICULTY, UI_ERROR, UI_SOUND, UI_DONE } ui_state;
+typedef enum { UI_TITLE, UI_CREDITS, UI_HIGHSCORES, UI_MENU, UI_SCORES, UI_CONFIRM, UI_GAME, UI_EPISODE, UI_DIFFICULTY, UI_ERROR, UI_SOUND, UI_SAVE, UI_LOAD, UI_DONE } ui_state;
 bool DemoLoopStartup(uint64_t ticks, bool menu);
 bool DemoLoop(uint64_t ticks);
 ui_state DemoLoopState(void);

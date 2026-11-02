@@ -60,3 +60,6 @@ void ControlMovement(int controlx,int controly,bool strafe)
     if (controly<0) Thrust(player.angle,-controly*150);
     else if (controly>0) Thrust((player.angle+180)%360,controly*100);
 }
+
+int Save_GetAngleFraction(void) { return anglefrac; }
+void Save_SetAngleFraction(int fraction) { anglefrac=fraction; }

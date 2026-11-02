@@ -18,6 +18,7 @@ void PM_Shutdown(void)
     if (PageFile) { (void)fclose(PageFile); PageFile=NULL; }
     ChunksInFile=PMSpriteStart=PMSoundStart=0;
 }
+bool PM_Ready(void) { return PageFile!=NULL; }
 bool PM_Startup(void)
 {
     w3r_byte header[6],directory[PM_MAX_PAGES*6]; long size;

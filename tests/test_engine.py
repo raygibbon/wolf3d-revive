@@ -38,7 +38,7 @@ def fixtures(directory, lowercase=False, ui=False):
     offsets[0], offsets[87], offsets[149] = 0, len(chunks[0]), sum(map(len, chunks))
     if ui:
         sizes = {10: (152,48), 11: (24,16), 12: (24,16), 18: (104,16),
-                 38: (32,8), 39: (32,8), 40: (32,8), 87: (320,200),
+                 28: (200,24), 29: (200,24), 38: (32,8), 39: (32,8), 40: (32,8), 87: (320,200),
                  89: (320,200), 90: (224,56)}
         dims = bytearray(struct.pack("<HH",8,8)*132)
         raw = {87: planar}
@@ -109,19 +109,19 @@ class EngineTests(unittest.TestCase):
         cc = shlex.split(os.environ.get("CC", "gcc"))
         core = [str(p) for p in sorted((ROOT / "src/engine").glob("*.c"))]
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/engine_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "engine-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "engine-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/ui_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "ui-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "ui-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/game_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "game-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "game-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/combat_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "combat-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "combat-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/campaign_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "campaign-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "campaign-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/boss_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "boss-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "boss-tests")], check=True)
         subprocess.run(cc + flags + ["-I" + str(ROOT / "src"), str(ROOT / "tests/finale_tests.c"),
-                                    *core, str(ROOT / "src/platform/data_file.c"), "-lm", "-o", str(cls.output / "finale-tests")], check=True)
+                                    *core, str(ROOT / "src/platform/data_file.c"), str(ROOT / "src/platform/save_file.c"), "-lm", "-o", str(cls.output / "finale-tests")], check=True)
         cls.engine = cls.output / "engine-tests"
         cls.compiler = cc + flags
         cls.binary = Path(os.environ.get("WOLF3D_BINARY", ROOT / "build/cart-sdl/linux/wolf3d-revive"))

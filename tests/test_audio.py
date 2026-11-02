@@ -26,7 +26,7 @@ class AudioTests(unittest.TestCase):
         sources = sorted((ROOT / 'src/engine').glob('*.c'))
         subprocess.run(shlex.split(os.environ.get('CC', 'gcc')) + flags +
                        ['-I' + str(ROOT / 'src'), '-I' + str(sdk / 'include'), str(ROOT / 'tests/audio_tests.c'),
-                        *map(str, sources), str(ROOT / 'src/platform/data_file.c'), str(ROOT / 'src/platform/sdl_audio.c'),
+                        *map(str, sources), str(ROOT / 'src/platform/data_file.c'), str(ROOT / 'src/platform/save_file.c'), str(ROOT / 'src/platform/sdl_audio.c'),
                         str(library), '-pthread', '-lm', '-o', str(cls.binary)], check=True)
 
     def setUp(self):

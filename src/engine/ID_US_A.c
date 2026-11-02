@@ -22,3 +22,5 @@ static const unsigned char rndtable[256]={
 static unsigned rndindex;
 void US_InitRndT(unsigned seed) { rndindex=seed&255U; }
 int US_RndT(void) { rndindex=(rndindex+1U)&255U;return rndtable[rndindex]; }
+
+unsigned US_RndIndex(void) { return rndindex; }

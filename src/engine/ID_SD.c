@@ -7,6 +7,7 @@
 #include "ID_CA.h"
 #include "../../third_party/emu8950/emu8950.h"
 #include <string.h>
+#include "platform/data_file.h"
 #define AUDIO_CHUNKS 288U
 #define MUSIC_BASE 261U
 #define DIGI_COUNT 46U
@@ -28,6 +29,9 @@ static const int digimap[LASTSOUND]={
     [DEATHSCREAM6SND]=40,[DEATHSCREAM7SND]=41,[DEATHSCREAM8SND]=42,
     [DEATHSCREAM9SND]=43,[KEINSND]=44,[MEINSND]=45,[ROSESND]=46
 }; /* zero = no mapping; other entries = original sample index + 1. */
+static uint64_t output_generation;
+void SD_FlushOutput(void) { ++output_generation; }
+uint64_t SD_OutputGeneration(void) { return output_generation; }
 static OPL *chip;
 static unsigned output_rate,music_volume=70,effects_volume=85;
 static bool music_enabled=true,effects_enabled=true,digitized_mode;
@@ -271,4 +275,25 @@ int SD_LevelMusic(unsigned episode,unsigned floor)
         6,20,22,21,6,20,22,21,19,26, 3,11,9,12,3,11,9,12,2,0,
         8,18,17,4,8,18,4,17,2,1, 6,20,22,21,6,20,22,21,19,15};
     return episode<6 && floor<10?songs[episode*10+floor]:-1;
+}
+
+unsigned SD_SoundTicks(soundnames sound)
+{
+    if((unsigned)sound>=LASTSOUND) return 0;
+    if(chip) return (unsigned)((CA_LE32(chunks[87+(unsigned)sound].data)+1U)/2U);
+    /* Read metadata only when PCM is disabled. No synthesiser/device startup,
+       persistent cache, audio thread IO or gameplay RNG is involved. */
+    FILE *h=CA_OpenDataFile(CA_DataDirectory(),"AUDIOHED.WL6");
+    FILE *a=CA_OpenDataFile(CA_DataDirectory(),"AUDIOT.WL6");
+    unsigned result=0;uint8_t offsets[8],common[6];long size;
+    if(h && a && !fseek(h,(long)(87+(unsigned)sound)*4,SEEK_SET) && fread(offsets,1,8,h)==8 &&
+       !fseek(a,0,SEEK_END) && (size=ftell(a))>=0) {
+        uint32_t start=CA_LE32(offsets),end=CA_LE32(offsets+4);
+        if(start<=end && end<=(unsigned long)size && end-start>=23 &&
+           !fseek(a,(long)start,SEEK_SET) && fread(common,1,6,a)==6 && CA_LE32(common)<=end-start-23)
+            result=(unsigned)((CA_LE32(common)+1U)/2U);
+    }
+    if(h) (void)fclose(h);
+    if(a) (void)fclose(a);
+    return result;
 }

@@ -53,11 +53,11 @@ bool CA_RLEWexpand(const w3r_word *src,size_t words,w3r_word *dst,size_t output,
     }
     return true;
 }
-bool CA_CacheMap(unsigned number)
+bool CA_ReadMap(unsigned number,maptype *destination)
 {
     memptr head=NULL,file=NULL,pending=NULL,scratch=NULL;
     size_t heads=0,bytes=0; bool ok=false;
-    if (number>=60) return CA_Fail("Unsupported WL6 map number");
+    if (!destination || number>=60) return CA_Fail("Unsupported WL6 map number");
     if (!CA_ReadDataFile("MAPHEAD.WL6",&head,&heads) || !CA_ReadDataFile("GAMEMAPS.WL6",&file,&bytes)) goto done;
     if (heads<242 || heads>402 || (heads-2)%4) { (void)CA_Fail("Invalid MAPHEAD table"); goto done; }
     const w3r_byte *h=head,*raw=file;
@@ -83,13 +83,23 @@ bool CA_CacheMap(unsigned number)
         if (!CA_RLEWexpand(rlew+1,expanded/2-1,map->planes[plane],MAPAREA,CA_LE16(h))) goto done;
         (void)MM_FreePtr(&scratch);
     }
-    /* Commit through the stable owner; a failed decode preserves the old map. */
-    if (!mapmem && !MM_GetPtr(&mapmem,sizeof(maptype))) { (void)CA_Fail("Map allocation failed"); goto done; }
-    memcpy(mapmem,pending,sizeof(maptype)); ok=true;
+    memcpy(destination,pending,sizeof(maptype));ok=true;
 done:
     if (scratch) (void)MM_FreePtr(&scratch);
     if (pending) (void)MM_FreePtr(&pending);
     if (head) (void)MM_FreePtr(&head);
     if (file) (void)MM_FreePtr(&file);
     return ok;
+}
+
+bool CA_InstallMap(const maptype *map)
+{
+    if(!map || map->number>=60) return CA_Fail("Invalid staged map");
+    if(!mapmem && !MM_GetPtr(&mapmem,sizeof(maptype))) return CA_Fail("Map allocation failed");
+    memcpy(mapmem,map,sizeof(maptype));return true;
+}
+bool CA_CacheMap(unsigned number)
+{
+    maptype pending;
+    return CA_ReadMap(number,&pending) && CA_InstallMap(&pending);
 }
