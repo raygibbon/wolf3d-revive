@@ -3,6 +3,7 @@
    Simulation is explicitly 70 Hz; presentation is independent. */
 #include "WL_DEF.h"
 #include "WL_SAVE.h"
+#include "WL_CONTROLS.h"
 #include "ID_IN.h"
 #include "ID_CA.h"
 #include "ID_SD.h"
@@ -48,8 +49,7 @@ bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty)
     deathphase=deathwait=0;finished=intermission=false;
     lasttimecount=ticks;running=true; IN_ClearKeysDown(); return true;
 }
-void GameStop(void) { SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
-static bool Down(unsigned scan) { return Keyboard[scan] || IN_PressPending(scan); }
+void GameStop(void) { CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and
    64000/70 candidate pixels per tic are the original values. */
@@ -137,7 +137,7 @@ bool GameStep(uint64_t ticks)
         if (!gamestate.victoryflag || (gamestate.attackframe && player.state!=&s_deathcam)) UpdateFace();
         thrustspeed=0;
         MoveDoors();MovePWalls();
-        if (IN_ConsumePress(sc_Space) && !gamestate.victoryflag) Cmd_Use();
+        if (CT_Pressed(CT_USE) && !gamestate.victoryflag) Cmd_Use();
         if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
             SD_StartMusic(24);
             FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
@@ -150,23 +150,30 @@ bool GameStep(uint64_t ticks)
             intermission=true;IN_ClearKeysDown();
             return StartLevelIntermission(&stats,ticks);
         }
-        int move=(Down(0x2a) || Down(0x36)) ? 70 : 35;
-        int cx=(Down(sc_RightArrow) ? move : 0)-(Down(sc_LeftArrow) ? move : 0);
-        int cy=(Down(sc_DownArrow) ? move : 0)-(Down(sc_UpArrow) ? move : 0);
+        int move=CT_Down(CT_RUN)?70:35;
+        int turn=(CT_Down(CT_RIGHT)?1:0)-(CT_Down(CT_LEFT)?1:0);
+        int forward=(CT_Down(CT_FORWARD)?1:0)-(CT_Down(CT_BACK)?1:0);
+        int strafe=(CT_Down(CT_STRAFE_RIGHT)?1:0)-(CT_Down(CT_STRAFE_LEFT)?1:0);
+        bool alt=CT_Down(CT_ALT);int mouse_turn=CT_MouseTurn();
         if (gamestate.victoryflag) {
             if (player.state==&s_deathcam) ++player.temp1;
             else VictorySpin();
+        } else if(CT_Preset()==CT_CLASSIC && !strafe) {
+            ControlMovement(turn*move,-forward*move,alt);
+            if(mouse_turn) ControlMovement(mouse_turn,0,false);
+        } else {
+            if(alt) { strafe+=turn;turn=0;if(strafe>1) strafe=1;if(strafe< -1) strafe=-1; }
+            ModernMovement(turn*move+mouse_turn,forward,strafe,move);
         }
-        else ControlMovement(cx,cy,Down(0x38));
         ConnectAreas();
-        if (!gamestate.victoryflag) T_Attack(Down(0x1d));
+        if (!gamestate.victoryflag) T_Attack(CT_Down(CT_FIRE));
         for (objtype *ob=player.next;ob;ob=ob->next) {
             DoActor(ob);if (DeathCameraActive()) break;
         }
         if (ActorAllocationFailed()) return false;
         UpdateSoundLoc();
         madenoise=false;
-        IN_ClearPressed();
+        IN_ClearPressed();CT_EndTic();
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
         if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh() || !DrawStatus()) return false;

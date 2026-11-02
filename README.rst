@@ -12,10 +12,12 @@ voices/effects and native SDL3 audio directly from WL6 archives, plus working
 music/effects volume and mute controls. No converted soundtrack or audio cache
 is created. Milestone 6C adds six named save slots, portable atomic saves in the user-data
 directory, pause/resume, deterministic restoration and animated intermission
-counters with original sound sequencing. Detailed DOS listening comparisons,
-persistent configuration and Enhanced Mode remain later work.
+counters with original sound sequencing. Milestone 6D adds selectable
+Classic/Modern controls, configurable key bindings and SDL3 relative mouse input. Detailed DOS listening comparisons, persistent
+configuration and Enhanced Mode remain later work.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 6D controls and verification <docs/MILESTONE6D.md>`_
 * `Milestone 6C save/load, format and intermissions <docs/MILESTONE6C.md>`_
 * `Milestone 6B native audio, licensing and fidelity <docs/MILESTONE6B.md>`_
 * `Milestone 6A actor progress and remaining campaign work <docs/MILESTONE6A.md>`_

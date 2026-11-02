@@ -2,6 +2,7 @@
 /* WL_AGENT.C inventory, attackinfo, T_Attack and status-bar drawing. No gameplay assets. */
 #include "WL_DEF.h"
 #include "WL_SAVE.h"
+#include "WL_CONTROLS.h"
 #include "ID_CA.h"
 #include "ID_IN.h"
 #include "ID_VH.h"
@@ -179,8 +180,7 @@ void CheckWeaponChange(void)
 {
     if (!gamestate.ammo) return;
     for (int weapon=wp_knife;weapon<=gamestate.bestweapon;++weapon) {
-        unsigned scan=(unsigned)(0x02+weapon);
-        if (Keyboard[scan] || IN_PressPending(scan)) {
+        if (CT_Down((ct_action)(CT_WEAPON1+weapon))) {
             gamestate.weapon=gamestate.chosenweapon=weapon;return;
         }
     }

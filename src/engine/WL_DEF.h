@@ -40,6 +40,7 @@ void ShutdownGameLevel(void);
 bool TryMove(const objtype *ob);
 void ClipMove(objtype *ob,int32_t xmove,int32_t ymove);
 void Thrust(int angle,int32_t speed);
+void ModernMovement(int turn,int forward,int strafe,int move);
 void ControlMovement(int controlx,int controly,bool strafe);
 void ResetMovement(void);
 void OpenDoor(unsigned door);

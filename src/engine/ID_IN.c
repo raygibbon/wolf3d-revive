@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* ID_IN.C keyboard make/break state and ASCII lookup, ported from DOS set-1. */
 #include "ID_IN.h"
+#include "WL_CONTROLS.h"
 #include <string.h>
 bool Keyboard[128];
 static bool pressed[128];
@@ -18,9 +19,10 @@ char IN_ScanASCII(unsigned scan)
     if (scan == sc_Space) return ' ';
     return 0;
 }
-void IN_ClearPressed(void) { memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0; }
-void IN_ClearKeysDown(void) { memset(Keyboard, 0, sizeof(Keyboard)); IN_ClearPressed(); }
-void IN_KeyEvent(unsigned scan, bool down)
+void IN_ClearPressed(void) { memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0;CT_EndTic(); }
+void IN_ClearKeysDown(void) { memset(Keyboard, 0, sizeof(Keyboard)); IN_ClearPressed();CT_Clear(); }
+void IN_KeyEvent(unsigned scan,bool down) { CT_LegacyKey(scan,down);IN_MenuKeyEvent(scan,down); }
+void IN_MenuKeyEvent(unsigned scan, bool down)
 {
     if (!scan || scan >= 128) return;
     if (down && !Keyboard[scan]) { pressed[scan] = true; LastScan = (uint8_t)scan; char ascii = IN_ScanASCII(scan); if (ascii) {

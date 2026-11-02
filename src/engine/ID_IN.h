@@ -13,6 +13,7 @@ extern char LastASCII;
 void IN_ClearKeysDown(void);
 void IN_ClearPressed(void);
 void IN_KeyEvent(unsigned scan, bool down);
+void IN_MenuKeyEvent(unsigned scan,bool down);
 bool IN_ConsumePress(unsigned scan);
 bool IN_AnyPressed(void);
 char IN_ScanASCII(unsigned scan);

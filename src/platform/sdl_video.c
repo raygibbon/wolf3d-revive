@@ -3,6 +3,7 @@
 #include "sdl_video.h"
 #include "sdl_input.h"
 #include "engine/ID_TIME.h"
+#include "engine/WL_CONTROLS.h"
 #include "engine/ID_VL.h"
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
@@ -20,6 +21,7 @@ const char *VL_Error(void) { return SDL_GetError(); }
 
 void VL_Shutdown(void)
 {
+    IN_SDLFocusLost();
     SDL_DestroyTexture(texture); texture = NULL;
     SDL_DestroyRenderer(renderer); renderer = NULL;
     SDL_DestroyWindow(window); window = NULL;
@@ -41,7 +43,7 @@ bool VL_Startup(void)
                                 SDL_TEXTUREACCESS_STREAMING, W3R_SCREEN_WIDTH, W3R_SCREEN_HEIGHT);
     if (!texture || !SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST) ||
         !SDL_SetRenderLogicalPresentation(renderer,320,240,SDL_LOGICAL_PRESENTATION_LETTERBOX)) goto failed;
-    uploads = 0;
+    IN_SDLReset();uploads = 0;
     return true;
 failed:
     (void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
@@ -66,8 +68,10 @@ static bool VL_DrawScreen(void)
            SDL_RenderTexture(renderer,texture,NULL,NULL);
 }
 
+static void SyncCapture(void) { IN_SDLCapture(window,CT_Gameplay()); }
 bool VW_UpdateScreen(void)
 {
+    SyncCapture();
     return VL_DrawScreen() && SDL_RenderPresent(renderer);
 }
 
@@ -85,11 +89,16 @@ bool VL_Capture(const char *path)
 
 bool VL_PollQuit(void)
 {
+    SyncCapture();
     SDL_Event event;
     bool quit = false;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) quit = true;
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) IN_SDLFocusLost();
+        else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) IN_SDLFocusGained();
+        else if (event.type == SDL_EVENT_MOUSE_MOTION) IN_SDLMouseMotion(event.motion.xrel);
+        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
+            IN_SDLMouseButton(event.button.button,event.type==SDL_EVENT_MOUSE_BUTTON_DOWN);
         else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) IN_SDLKey((unsigned)event.key.scancode,true);
         else if (event.type == SDL_EVENT_KEY_UP) IN_SDLKey((unsigned)event.key.scancode,false);
     }

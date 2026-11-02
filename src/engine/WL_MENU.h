@@ -25,6 +25,8 @@ bool SetupControlPanel(uint64_t ticks);
 int HandleMenu(uint64_t ticks);
 bool DrawNewSelection(bool episode,unsigned choice);
 int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice);
+bool BeginControlsMenu(void);
+int HandleControlsMenu(void);
 bool BeginSaveMenu(bool saving);
 int HandleSaveMenu(uint64_t ticks);
 bool DrawSoundSettings(void);
