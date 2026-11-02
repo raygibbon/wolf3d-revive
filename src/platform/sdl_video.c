@@ -16,6 +16,30 @@ static SDL_Texture *texture;
 static w3r_byte rgba[VL_PIXELS * 4], last_frame[VL_PIXELS], last_palette[768];
 static bool uploaded;
 static uint64_t uploads;
+static bool fullscreen, integer_scale;
+
+static bool ApplyPresentation(void)
+{
+    return renderer && SDL_SetRenderLogicalPresentation(renderer,320,240,
+        integer_scale ? SDL_LOGICAL_PRESENTATION_INTEGER_SCALE : SDL_LOGICAL_PRESENTATION_LETTERBOX);
+}
+
+static bool ToggleFullscreen(void)
+{
+    if (!window || !SDL_SetWindowFullscreen(window,!fullscreen)) return false;
+    fullscreen=!fullscreen;
+    return true;
+}
+
+static bool ToggleIntegerScale(void)
+{
+    bool previous=integer_scale;
+    integer_scale=!integer_scale;
+    if (ApplyPresentation()) return true;
+    integer_scale=previous;
+    (void)ApplyPresentation();
+    return false;
+}
 
 const char *VL_Error(void) { return SDL_GetError(); }
 
@@ -26,7 +50,7 @@ void VL_Shutdown(void)
     SDL_DestroyRenderer(renderer); renderer = NULL;
     SDL_DestroyWindow(window); window = NULL;
     SDL_Quit();
-    uploaded = false; IN_SDLFocusLost();
+    uploaded = false; fullscreen=false; integer_scale=false; IN_SDLFocusLost();
 }
 
 bool VL_Startup(void)
@@ -42,7 +66,7 @@ bool VL_Startup(void)
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
                                 SDL_TEXTUREACCESS_STREAMING, W3R_SCREEN_WIDTH, W3R_SCREEN_HEIGHT);
     if (!texture || !SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST) ||
-        !SDL_SetRenderLogicalPresentation(renderer,320,240,SDL_LOGICAL_PRESENTATION_LETTERBOX)) goto failed;
+        !ApplyPresentation()) goto failed;
     IN_SDLReset();uploads = 0;
     return true;
 failed:
@@ -99,7 +123,14 @@ bool VL_PollQuit(void)
         else if (event.type == SDL_EVENT_MOUSE_MOTION) IN_SDLMouseMotion(event.motion.xrel);
         else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
             IN_SDLMouseButton(event.button.button,event.type==SDL_EVENT_MOUSE_BUTTON_DOWN);
-        else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) IN_SDLKey((unsigned)event.key.scancode,true);
+        else if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+            /* Display shortcuts are presentation-only; don't change game controls. */
+            if (event.key.scancode == SDL_SCANCODE_RETURN && (event.key.mod & SDL_KMOD_ALT)) {
+                if (!ToggleFullscreen()) SDL_Log("Fullscreen toggle failed: %s",SDL_GetError());
+            } else if (event.key.scancode == SDL_SCANCODE_F11) {
+                if (!ToggleIntegerScale()) SDL_Log("Integer scaling toggle failed: %s",SDL_GetError());
+            } else IN_SDLKey((unsigned)event.key.scancode,true);
+        }
         else if (event.type == SDL_EVENT_KEY_UP) IN_SDLKey((unsigned)event.key.scancode,false);
     }
     return quit;
