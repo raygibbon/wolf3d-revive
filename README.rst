@@ -24,9 +24,14 @@ both custom preset profiles, audio, display and Classic view settings in atomic
 TOML preferences. Milestone 7 adds native high-resolution rendering, horizontal
 widescreen expansion through 32:9, independent centred HUD composition, desktop
 resolution selection, VSync, presentation filtering and F12 BMP screenshots.
-Original rendering remains the default; there is no separate gameplay mode.
+Milestone 8 adds optional Smooth Rendering with immutable interpolation and
+monitor refresh detection (60 FPS fallback, 240 FPS ceiling), independent of
+the original 70 Hz simulation. Actual performance and hardware limits are
+recorded in the milestone report. Original rendering remains the default;
+there is no separate gameplay mode.
 Detailed cross-device DOS listening comparisons remain later work.
 
+* `Milestone 8 frame pacing, benchmarks and verification <docs/MILESTONE8.md>`_
 * `Milestone 7 visual settings, verification and limits <docs/MILESTONE7_VISUAL.md>`_
 * `Milestone 6G DOS demo traces, synchronization and limits <docs/MILESTONE6G.md>`_
 * `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
@@ -54,7 +59,7 @@ Preferences are loaded at startup and saved on normal exit in
 using SDL_GetPrefPath. Defaults are Classic controls, mouse disabled (Modern:
 enabled), sensitivity 10, no inversion, music/effects 70/85 and enabled,
 windowed fit at 960x720, Original renderer, 640x480 internal resolution,
-Auto aspect, VSync off, nearest filtering, and Classic view size 15.
+Auto aspect, VSync off, nearest filtering, Smooth Rendering off, and Classic view size 15.
 High Resolution offers Auto desktop, 640x480, 1280x720 and 1920x1080; aspect
 choices are Auto, 4:3, 16:9, 16:10, 21:9 and 32:9. Auto rendering is bounded at
 4096x2160. F12 saves a BMP screenshot alongside config.toml. Switching presets retains
@@ -64,7 +69,7 @@ Schema version 1 has ``[controls] preset``, ``[classic_controls]`` and
 ``[modern_controls]`` mouse options and ``bind_<action>_<slot>`` scancodes,
 ``[audio]`` volumes/enables, ``[display]`` fullscreen/integer flags and exact
 window width/height, ``renderer``, ``render_width``, ``render_height``,
-``render_auto``, ``aspect_ratio``, ``vsync`` and ``filter``, and
+``render_auto``, ``aspect_ratio``, ``vsync``, ``filter`` and ``smooth_rendering``, and
 ``[classic] view_size``. The fixed-schema TOML subset,
 all keys/binding IDs, migration rules and limits are documented in
 `MILESTONE6F <docs/MILESTONE6F.md>`_. Missing files use defaults. Malformed or

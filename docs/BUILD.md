@@ -261,11 +261,14 @@ The configuration tests use Python 3.11+ for the independent standard-library
 `tomllib` output check; the native application has no Python dependency.
 
 
-## Native visual settings (Milestone 7)
+## Native visual settings (Milestones 7–8)
 
 Control → Display selects Original / High Resolution, fixed or Auto desktop
 resolution, Auto / 4:3 / 16:9 / 16:10 / 21:9 / 32:9 aspect, VSync, Integer / Fit
-and Nearest / Linear presentation filtering. Original remains the default.
+and Nearest / Linear presentation filtering. Smooth Rendering enables
+read-only interpolation in High Resolution and automatically follows the active
+display's refresh, with a 60 FPS fallback and 240 FPS ceiling. There is no
+manual FPS selection. Original remains the default.
 Alt+Enter and F11 retain their existing functions; F12 writes a BMP in the
 SDL preference directory. No image or game-data files belong in the repository.
 
@@ -286,3 +289,8 @@ with `-Werror` as well as strict C11 conversion/shadow/pedantic warnings.
 See [MILESTONE7_VISUAL.md](MILESTONE7_VISUAL.md) for schema, measurements,
 Windows/Wine checks and verification limits. Sanitizer application tests should
 set `WOLF3D_BINARY` to a separately built sanitized full executable.
+
+See [MILESTONE8.md](MILESTONE8.md) for fixed-step debt semantics, VSync pacing,
+interpolation boundary tests, end-to-end benchmarking commands and measured
+performance/hardware limitations. `test_presentation.py` verifies immutable
+snapshots and identical simulation saves across all eight requested rates.

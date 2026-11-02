@@ -52,6 +52,13 @@ static void Snapshots(void)
     CHECK(GameStartMap(0,1,2,0));CHECK(WL_PresentSample(0,sample) && sample->level==1 && sample->camera.x==player.x);
     CHECK(GameStart(0));player.angle=0;objtype attacker=player;attacker.y-=TILEGLOBAL;TakeDamage(1000,&attacker);
     CHECK(GameStep(1) && GameStep(2));CHECK(WL_PresentSample(Half(2),sample));CHECK(fabs(sample->camera.angle-3)<0.00001);
+    uint64_t death_tick=2;
+    while(gamestate.died && death_tick<600) CHECK(GameStep(++death_tick));
+    CHECK(!gamestate.died && WL_PresentSample(WL_TickNS(death_tick)+1000000,sample));
+    CHECK(sample->camera.x==player.x && sample->camera.y==player.y && sample->camera.angle==player.angle);
+    CHECK(GameStart(0));WL_PresentCapture(390);player.x+=4096;CHECK(NewViewSize(16));
+    WL_PresentCapture(391);CHECK(WL_PresentSample(Half(391),sample) && sample->camera.x==player.x);
+    CHECK(NewViewSize(15));
     /* Unmatched doors must snap, even when an index was reused. */
     CHECK(GameStart(0));doornum=1;doorobjlist[0]=(doorobj_t){4,4,0,true,dr_opening,1000,0};
     WL_PresentReset();WL_PresentCapture(400);
