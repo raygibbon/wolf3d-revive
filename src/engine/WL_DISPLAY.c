@@ -17,8 +17,8 @@ static bool Draw(const display_settings *s)
     ClearMScreen();DrawStripes(10);DrawWindow(20,34,280,144,BKGDCOLOR);
     fontnumber=1;fontcolor=TEXTCOLOR;if(!Text(87,14,"Display")) return false;
     fontnumber=0;
-    static const char *const labels[]={"Fullscreen","Scaling","Window size","Rendering","3D resolution","Aspect ratio","VSync","Filter","Smooth rendering","Frame limit","Reset defaults"};
-    for(unsigned i=0;i<11;++i) {
+    static const char *const labels[]={"Fullscreen","Scaling","Window size","Rendering","3D resolution","Aspect ratio","VSync","Filter","Smooth rendering","Reset defaults"};
+    for(unsigned i=0;i<10;++i) {
         char value[40];fontcolor=i==selected?HIGHLIGHT:TEXTCOLOR;
         if(i==0) (void)snprintf(value,sizeof(value),"%s",s->pending?"Switching...":s->fullscreen?"On":"Off");
         else if(i==1) (void)snprintf(value,sizeof(value),"%s",s->integer?"Integer":"Fit");
@@ -30,7 +30,6 @@ static bool Draw(const display_settings *s)
         else if(i==6) (void)snprintf(value,sizeof(value),"%s",s->vsync?"On":"Off");
         else if(i==7) (void)snprintf(value,sizeof(value),"%s",s->linear?"Linear":"Nearest");
         else if(i==8) (void)snprintf(value,sizeof(value),"%s",s->smooth?"On":"Off");
-        else if(i==9) (void)snprintf(value,sizeof(value),"%u FPS",s->presentation_fps);
         else (void)snprintf(value,sizeof(value),"Enter");
         if(!Text(30,39+(int)i*11,labels[i]) || !Text(176,39+(int)i*11,value)) return false;
     }
@@ -49,7 +48,7 @@ int HandleDisplayMenu(void)
     display_settings s;if(!Display_Available() || !Get(&s)) return -1;
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow),enter=IN_ConsumePress(sc_Enter);
-    if(up || down) selected=(selected+(up?10U:1U))%11U;
+    if(up || down) selected=(selected+(up?9U:1U))%10U;
     if((left || right || enter) && !s.pending) {
         if(selected==0) s.fullscreen=!s.fullscreen;
         else if(selected==1) s.integer=!s.integer;
@@ -64,12 +63,7 @@ int HandleDisplayMenu(void)
         else if(selected==6) s.vsync=!s.vsync;
         else if(selected==7) s.linear=!s.linear;
         else if(selected==8) s.smooth=!s.smooth;
-        else if(selected==9) {
-            static const unsigned rates[]={60,120,144,165,240};unsigned n=2;
-            for(unsigned i=0;i<5;++i) if(rates[i]==s.presentation_fps) n=i;
-            s.presentation_fps=rates[(n+(left?4U:1U))%5U];
-        }
-        else if(enter) { s.smooth=false;s.presentation_fps=144;s.fullscreen=s.integer=s.high_resolution=s.render_auto=s.vsync=s.linear=false;s.aspect=0;s.scale=3;s.render_width=640;s.render_height=480; }
+        else if(enter) { s.smooth=false;s.fullscreen=s.integer=s.high_resolution=s.render_auto=s.vsync=s.linear=false;s.aspect=0;s.scale=3;s.render_width=640;s.render_height=480; }
         (void)Set(&s);if(!Get(&s)) return -1;
     }
     if(up || down || left || right || enter || memcmp(&previous,&s,sizeof(s))) {
