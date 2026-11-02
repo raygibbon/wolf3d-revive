@@ -61,10 +61,10 @@ static void Snapshots(void)
     CHECK(sample->doors[0].position==5000 && sample->doors[1].position==3000);
     /* Only pushwall cells rewind; a door opening in this tick stays floor. */
     tilemap[8][8]=128;pwallstate=127;pwallpos=63;pwallx=4;pwally=4;pwalldir=0;
-    tilemap[4][4]=0xc1;tilemap[5][4]=1;WL_PresentCapture(402);
-    tilemap[8][8]=0;pwallstate=128;pwallpos=0;pwallx=5;tilemap[4][4]=0;tilemap[5][4]=0xc1;
+    tilemap[4][4]=0xc1;tilemap[5][4]=1;tilemap[6][4]=0;WL_PresentCapture(402);
+    tilemap[8][8]=0;tilemap[6][4]=1;pwallstate=128;pwallpos=0;pwallx=5;tilemap[4][4]=0;tilemap[5][4]=0xc1;
     WL_PresentCapture(403);CHECK(WL_PresentSample(Half(403),sample));
-    CHECK(sample->tiles[8][8]==0 && sample->tiles[4][4]==0xc1);
+    CHECK(sample->tiles[8][8]==0 && sample->tiles[4][4]==0xc1 && sample->tiles[6][4]==0);
     /* Unrelated pushwalls and actor teleports never connect across space. */
     pwallx=10;pwallpos=10;WL_PresentCapture(404);CHECK(WL_PresentSample(Half(404),sample));
     CHECK(sample->push_x==10 && sample->push_offset==10240);
@@ -75,6 +75,23 @@ static void Snapshots(void)
     CHECK(sample->actors[slot].x==actor->x);
     RemoveActor(actor);WL_PresentCapture(408);CHECK(WL_PresentSample(Half(408),sample));
     CHECK(!sample->actors[slot].identity);
+    const int dx[4]={1,0,-1,0},dy[4]={0,-1,0,1};
+    for(unsigned direction=0;direction<4;++direction) {
+        int nx=20+dx[direction],ny=20+dy[direction],fx=nx+dx[direction],fy=ny+dy[direction];
+        pwallx=20;pwally=20;pwalldir=(int)direction*2;pwallstate=127;pwallpos=63;
+        tilemap[20][20]=0xc1;tilemap[nx][ny]=1;tilemap[fx][fy]=0;
+        WL_PresentReset();WL_PresentCapture(500);
+        pwallx=nx;pwally=ny;pwallstate=128;pwallpos=0;
+        tilemap[20][20]=0;tilemap[nx][ny]=0xc1;tilemap[fx][fy]=1;WL_PresentCapture(501);
+        CHECK(WL_PresentSample(Half(501),sample));
+        CHECK(sample->push_x==20 && sample->push_y==20 && sample->tiles[20][20]==0xc1);
+        CHECK(sample->tiles[nx][ny]==1 && sample->tiles[fx][fy]==0);
+        CHECK(WL_PresentSample(WL_TickNS(502)+1,sample) && sample->push_x==nx && sample->tiles[fx][fy]==1);
+        pwallstate=255;pwallpos=63;WL_PresentCapture(502);
+        pwallstate=0;tilemap[nx][ny]=0;WL_PresentCapture(503);
+        CHECK(WL_PresentSample(Half(503),sample) && sample->tiles[nx][ny]==0xc1 && abs(sample->push_offset-65024)<=1);
+        CHECK(WL_PresentSample(WL_TickNS(504)+1,sample) && sample->tiles[nx][ny]==0);
+    }
     GameStop();CHECK(!WL_PresentSample(0,sample));free(sample);
     puts("Immutable poses, angle wrap, actor reuse, doors, pushwall crossings, teleport, pause, load, level and death resets passed.");
 }
@@ -107,10 +124,10 @@ static void Images(void)
 }
 static void Rates(const char *directory)
 {
-    static const unsigned rates[]={60,120,144,165,240};
+    static const unsigned rates[]={60,75,90,120,144,165,180,240};
     uint8_t *pixels=malloc(640*480);wl_present_snapshot *sample=malloc(sizeof(*sample));CHECK(pixels && sample);
     wl_render_target target;int32_t depth[640];CHECK(WL_TargetInit(&target,pixels,640*480,640,480,640));
-    for(unsigned r=0;r<5;++r) {
+    for(unsigned r=0;r<sizeof(rates)/sizeof(rates[0]);++r) {
         CT_Reset(CT_CLASSIC);CHECK(NewViewSize(15) && GameStart(0));
         uint64_t tick=0,now=0;
         for(unsigned frame=0;frame<rates[r]*2;++frame) {
@@ -124,7 +141,7 @@ static void Rates(const char *directory)
             CHECK(State()==state && immutable==Hash(WL_PresentCurrent(),sizeof(*sample)));
         }
         CHECK(tick==140 && gamestate.TimeCount==140);
-        CHECK(Save_SetDirectory(directory) && Save_Write(r,"same 140 ticks",true));
+        CHECK(Save_SetDirectory(directory) && Save_Write(r%5,"same 140 ticks",true));
         printf("%u FPS: %u presentation frames, 140 authoritative ticks.\n",rates[r],rates[r]*2);
         GameStop();
     }
