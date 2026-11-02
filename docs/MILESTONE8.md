@@ -35,3 +35,29 @@ unchanged. Inspect at 16:9 and ultrawide to confirm the intended appearance,
 and verify the palette and original framebuffer are unchanged.
 
 No code was borrowed from ECWolf. No original game archives are bundled.
+
+
+## Automatic refresh-rate pacing (PR #11 update)
+
+The Display menu now exposes Smooth Rendering on/off but no manual FPS limit.
+The platform layer queries the **current display mode** for the SDL window,
+falls back to the desktop display mode, rounds refresh to a nominal integer
+rate, and caps it at 240 FPS. If no valid display refresh can be determined,
+the fallback is 60 FPS. The existing rational presentation deadline scheduler
+uses that rate when Smooth Rendering is enabled. It is re-evaluated each frame
+to follow display changes. This is an upper target, not a guaranteed FPS.
+
+`presentation_fps` is no longer a persisted TOML setting. Older files
+carrying that key are handled as unsupported/ignored by the existing parser;
+`smooth_rendering` remains persisted. The original 70 Hz simulation,
+Classic mode and fixed-step debt rules remain independent of the new policy.
+
+When VSync is enabled, SDL's present call may block and act as a tighter
+limit than the software deadline. Actual VRR/VSync interactions, display
+migrations, and performance under load require hardware tests. Monitor
+refresh values above 240 Hz are deliberately capped to limit CPU use.
+
+The menu and config regression sources have been updated, but **no builds,
+test suite, physical monitor checks or audio listening tests were executed
+by the assistant for this update**. Keep this PR draft until the full
+regression suite and frame pacing measurements pass.
