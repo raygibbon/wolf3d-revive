@@ -4,6 +4,7 @@
 #include "engine/ID_VL.h"
 #include "platform/sdl_video.h"
 #include "platform/sdl_audio.h"
+#include "platform/config_file.h"
 #include "engine/ID_SD.h"
 #include "engine/WL_MAIN.h"
 #include "engine/WL_MENU.h"
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
     Display_Connect(VL_DisplayGet,VL_DisplaySet);
     MainMenu[soundmenu].active=1;
     char *save_path=SDL_GetPrefPath(NULL,"wolf3d-revive");
-    if(save_path) { (void)Save_SetDirectory(save_path);SDL_free(save_path); }
+    if(save_path) { (void)Save_SetDirectory(save_path);Config_Load(save_path); }
     else fputs("Save storage unavailable; gameplay remains available.\n",stderr);
     uint64_t ticks = VL_GetTicks70();
     if (!DemoLoopStartup(ticks,menu)) { fprintf(stderr,"Cannot load original UI: %s\n",CA_Error()); goto video_done; }
@@ -108,6 +109,7 @@ int main(int argc, char *argv[])
     }
     status = 0;
 video_done:
+    if(save_path) { if(status==0) Config_Save(save_path); SDL_free(save_path); }
     Display_Connect(NULL,NULL);
     Audio_Shutdown();
     VL_Shutdown();
