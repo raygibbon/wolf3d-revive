@@ -132,7 +132,7 @@ static bool Scene(view *v)
     for(unsigned i=0;i<count;++i)
         if(!Shape(v,sprites[i].center,sprites[i].shape,sprites[i].width,sprites[i].depth,false)) return false;
     static const unsigned weapons[4]={SPR_KNIFEREADY,SPR_PISTOLREADY,SPR_MACHINEGUNREADY,SPR_CHAINREADY};
-    if(!gamestate.victoryflag && !Shape(v,(double)v->w/2,weapons[gamestate.weapon]+(unsigned)gamestate.weaponframe,(double)v->h/1.2,0,true)) return false;
+    if(!gamestate.died && !gamestate.victoryflag && !Shape(v,(double)v->w/2,weapons[gamestate.weapon]+(unsigned)gamestate.weaponframe,(double)v->h/1.2,0,true)) return false;
     return !Demo_Active() || Shape(v,(double)v->w/2,SPR_DEMO,(double)v->h/1.2,0,true);
 }
 static void Bar(wl_render_target *t,int x,int y,int w,int h,w3r_byte color)
@@ -143,6 +143,28 @@ static void Bar(wl_render_target *t,int x,int y,int w,int h,w3r_byte color)
     if(w<=0 || h<=0) return;
     for(int row=0;row<h;++row) memset(t->pixels+(size_t)(y+row)*t->stride+(unsigned)x,color,(size_t)w);
 }
+/* Replay the original fizzle polynomial up to its current cursor. This is
+   presentation data only: never advance the game's cursor, RNG or timer.
+   Mapping the mask to the native viewport keeps its geometry throughout death. */
+static void DeathFizzle(const view *v,unsigned phase,uint32_t cursor)
+{
+    if(phase<2) return;
+    if(phase==3) { Bar(v->target,v->x,v->y,v->w,v->h,4);return; }
+    uint8_t mask[320*160/8]={0};uint32_t seed=1;
+    for(unsigned steps=0;seed!=cursor && steps<131071;++steps) {
+        unsigned x=seed>>8,y=(seed-1)&255U;
+        if(x<VIEWWIDTH && y<VIEWHEIGHT) { unsigned bit=y*320+x;mask[bit/8]|=(uint8_t)(1U<<(bit%8)); }
+        seed=(seed>>1)^((seed&1U)?UINT32_C(0x12000):0U);
+    }
+    for(int y=0;y<v->h;++y) {
+        if(v->service && y%16==0) v->service();
+        unsigned row=(unsigned)y*VIEWHEIGHT/(unsigned)v->h;
+        for(int x=0;x<v->w;++x) {
+            unsigned column=(unsigned)x*VIEWWIDTH/(unsigned)v->w,bit=row*320+column;
+            if(mask[bit/8]&(1U<<(bit%8))) v->target->pixels[(size_t)(v->y+y)*v->target->stride+(unsigned)(v->x+x)]=4;
+        }
+    }
+}
 bool WL_RenderFrameAspect(wl_render_target *target,int32_t *depth,size_t columns,bool world,unsigned aw,unsigned ah,void (*service)(void))
 {
     if(!WL_TargetValid(target) || !WL_RenderResolution(target->width,target->height) || !depth || columns<target->width)
@@ -152,7 +174,7 @@ bool WL_RenderFrameAspect(wl_render_target *target,int32_t *depth,size_t columns
        !WL_AspectFit(scene.width,scene.height,4,3,&ui)) return CA_Fail("Invalid rendering aspect");
     ui.x+=scene.x;ui.y+=scene.y;
     if(!WL_TargetClear(target,0)) return false;
-    bool scene_active=world && CA_Map() && !gamestate.died && !gamestate.victoryflag;
+    bool scene_active=world && CA_Map() && (!gamestate.victoryflag || gamestate.died);
     /* Original artwork remains centered and aspect-correct. The plain teal
        border expands around the new viewport rather than retaining an old
        4:3 bevel behind widescreen geometry. */
@@ -177,7 +199,9 @@ bool WL_RenderFrameAspect(wl_render_target *target,int32_t *depth,size_t columns
     Bar(target,v.x-bx,v.y-by,bx,v.h+2*by,0);
     Bar(target,v.x+v.w,v.y-by,bx,v.h+2*by,125);
     Bar(target,v.x-bx,v.y+v.h,bx,by,124);
-    return Scene(&v);
+    uint32_t cursor=0;unsigned phase=GameDeathPresentation(&cursor);
+    if(phase!=3 && !Scene(&v)) return false;
+    DeathFizzle(&v,phase,cursor);return true;
 }
 
 bool WL_RenderFrame(wl_render_target *target,int32_t *depth,size_t columns,bool world,void (*service)(void))

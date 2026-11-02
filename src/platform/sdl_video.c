@@ -29,7 +29,9 @@ static Uint64 auto_retry;
 static wl_rectangle high_scene;
 static unsigned render_width=640,render_height=480;
 static int32_t high_depth[WL_TARGET_MAX_WIDTH];
-static uint32_t high_time;
+static uint32_t high_time,high_death_cursor;
+static unsigned high_death_phase;
+static bool high_dying;
 static uint64_t high_serial,high_uploads;
 static bool high_world,high_uploaded;
 static void FreeHigh(high_surface *s)
@@ -299,7 +301,9 @@ static bool VL_DrawScreen(void)
         high_scene=scene;
     }
     if(!ApplyPresentation()) return false;
-    if(high_resolution && world && (!high_uploaded || changed || world!=high_world || (world && (high_time!=gamestate.TimeCount || high_serial!=WL_RenderSerial())))) {
+    uint32_t death_cursor=0;unsigned death_phase=GameDeathPresentation(&death_cursor);
+    bool dying=world && gamestate.died;
+    if(high_resolution && world && (!high_uploaded || changed || world!=high_world || dying!=high_dying || (dying && (death_phase!=high_death_phase || death_cursor!=high_death_cursor)) || (world && (high_time!=gamestate.TimeCount || high_serial!=WL_RenderSerial())))) {
         if(!WL_RenderFrameAspect(&high.target,high_depth,WL_TARGET_MAX_WIDTH,world,high_scene.width,high_scene.height,Audio_Pump)) return SDL_SetError("High-resolution scene rendering failed");
         w3r_byte colors[256][4];
         for(unsigned i=0;i<256;++i) {
@@ -314,6 +318,7 @@ static bool VL_DrawScreen(void)
             }
         }
         if(!SDL_UpdateTexture(high.texture,NULL,high.rgba,(int)high.target.width*4)) return false;
+        high_death_cursor=death_cursor;high_death_phase=death_phase;high_dying=dying;
         high_uploaded=true;high_time=gamestate.TimeCount;high_world=world;high_serial=WL_RenderSerial();++high_uploads;
     }
     if (changed) {

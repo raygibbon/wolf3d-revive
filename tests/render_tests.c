@@ -98,6 +98,56 @@ static void Wide(void)
     key.key.repeat=true;CHECK(SDL_PushEvent(&key));Pump();key.type=SDL_EVENT_KEY_UP;CHECK(SDL_PushEvent(&key));Pump();
     CHECK(US_RndIndex()==rng);free(narrow);free(wide);CHECK(NewViewSize(15));CHECK(GameDrawPaused());
 }
+static void DeathFrame(wl_render_target *t,unsigned aw,unsigned ah,unsigned expected)
+{
+    int32_t depth[1920];uint32_t seed,before=Hash(framebuffer,VL_PIXELS),clock=gamestate.TimeCount;
+    unsigned phase=GameDeathPresentation(&seed),rng=US_RndIndex();int angle=player.angle;
+    CHECK(phase==expected && WL_RenderFrameAspect(t,depth,1920,true,aw,ah,NULL));
+    CHECK(before==Hash(framebuffer,VL_PIXELS) && clock==gamestate.TimeCount && rng==US_RndIndex() && angle==player.angle);
+    uint32_t after;CHECK(GameDeathPresentation(&after)==phase && after==seed);
+    wl_rectangle r;CHECK(WL_AspectFit(t->width,t->height,aw,ah,&r));
+    unsigned vx=r.x+(unsigned)VIEWX*r.width/320,vy=r.y+(unsigned)VIEWY*r.height/200;
+    unsigned right=r.x+((unsigned)VIEWX+VIEWWIDTH)*r.width/320,bottom=r.y+((unsigned)VIEWY+VIEWHEIGHT)*r.height/200;
+    /* This lies outside the former 4:3 world rectangle in widescreen. The
+       scene must remain geometry (or fizzle red), never the old teal border. */
+    CHECK(t->pixels[(size_t)(vy+1)*t->stride+vx+1]!=127);
+    if(phase==3) for(unsigned y=vy;y<bottom;++y) for(unsigned x=vx;x<right;++x) CHECK(t->pixels[(size_t)y*t->stride+x]==4);
+    Pump();
+    int n;SDL_Window **windows=SDL_GetWindows(&n);CHECK(windows && n==1);
+    SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(SDL_GetRenderer(windows[0]),&rect));SDL_free(windows);
+    CHECK(fabs((double)rect.w*ah-(double)rect.h*aw)<(double)(aw+ah));
+}
+static void DeathContinuity(void)
+{
+    static const unsigned sizes[][2]={{640,480},{1280,720},{1920,1080}};
+    static const unsigned ratios[][2]={{4,3},{16,9},{16,10},{21,9},{32,9},{16,9}};
+    uint8_t *pixels=malloc(1920*1080);CHECK(pixels);unsigned duration=0;
+    for(unsigned n=0;n<3;++n) for(unsigned a=0;a<6;++a) {
+        CHECK(NewViewSize(15) && GameStart(0));player.angle=0;CHECK(GameDrawPaused());
+        display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=true;d.render_auto=d.integer=false;
+        d.render_width=sizes[n][0];d.render_height=sizes[n][1];d.aspect=a==5?0:a+1;d.scale=0;d.width=1280;d.height=720;CHECK(VL_DisplaySet(&d));Pump();
+        wl_render_target t;CHECK(WL_TargetInit(&t,pixels,1920*1080,sizes[n][0],sizes[n][1],sizes[n][0]));
+        objtype attacker=player;attacker.y-=TILEGLOBAL;TakeDamage(1000,&attacker);CHECK(gamestate.died);
+        uint64_t tic=1;CHECK(GameStep(tic));DeathFrame(&t,ratios[a][0],ratios[a][1],1);
+        while(GameDeathPresentation(NULL)<2 && tic<100) CHECK(GameStep(++tic));
+        DeathFrame(&t,ratios[a][0],ratios[a][1],2);
+        for(unsigned i=0;i<10;++i) CHECK(GameStep(++tic));
+        DeathFrame(&t,ratios[a][0],ratios[a][1],2);
+        /* A red Classic source can stay byte-identical while the native
+           fizzle cursor advances. It still needs a new native upload. */
+        for(unsigned y=0;y<VIEWHEIGHT;++y) memset(framebuffer+((unsigned)VIEWY+y)*320+VIEWX,4,VIEWWIDTH);
+        Pump();uint64_t uploads=VL_TestSceneUploads();CHECK(GameStep(++tic));Pump();
+        CHECK(VL_TestSceneUploads()==uploads+1);
+        while(GameDeathPresentation(NULL)<3 && tic<300) CHECK(GameStep(++tic));
+        DeathFrame(&t,ratios[a][0],ratios[a][1],3);
+        while(gamestate.died && tic<600) CHECK(GameStep(++tic));
+        CHECK(!gamestate.died && gamestate.lives==2);
+        DeathFrame(&t,ratios[a][0],ratios[a][1],0);
+        if(!duration) duration=(unsigned)tic;
+        CHECK(duration==tic);
+    }
+    free(pixels);printf("Death rotation, fizzle, red hold and respawn keep every aspect at all presets (%u tics).\n",duration);
+}
 static void OwnedLevels(void)
 {
     uint8_t *pixels=malloc(640*480);wl_render_target t;int32_t depth[640];
@@ -209,7 +259,7 @@ int main(int argc,char **argv)
     CHECK(VL_DisplayGet(&d) && d.high_resolution);
     /* Switching display preference cannot consume a simulation tic or RNG. */
     for(unsigned n=0;n<30;++n) { d.high_resolution=!d.high_resolution;CHECK(VL_DisplaySet(&d));Pump();CHECK(US_RndIndex()==rng && gamestate.TimeCount==clock); }
-    Wide();
+    Wide();DeathContinuity();
     if(!strcmp(argv[3],"synthetic")) Visual();
     else { AudioStress();OwnedLevels(); }
     GameStop();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());

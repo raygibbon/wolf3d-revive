@@ -175,9 +175,10 @@ reference source modifications or commercial captures are part of this change.
 | Check | Result |
 | --- | --- |
 | CART C11 SDL build | Passed |
-| Full normal owned-data regression suite | 115 passed, 498.884 s |
+| Full normal owned-data regression suite, after death correction | 115 passed, 461.480 s |
 | Focused final visual suite (including all 60 maps) | 5 passed, 18.465 s |
-| Full ASan/UBSan owned-data suite | 115 passed, 992.864 s; no sanitizer diagnostics |
+| Full ASan/UBSan owned-data suite, initial Milestone 7 baseline | 115 passed, 992.864 s; no sanitizer diagnostics |
+| Death correction ASan/UBSan focused visual suite | 5 passed, 72.641 s; no sanitizer diagnostics |
 | CART SDL3 and desktop-directory regressions | Passed |
 | Strict GCC C11 (`-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror`) | Passed |
 | Strict MinGW full app, aspect, renderer and demo-trace cross-links, SDL3 3.4.18 | Passed |
@@ -242,6 +243,34 @@ Original** versus **27,652 KiB High Resolution at 1920×1080**. Elapsed times
 were 2.315 s and 8.711 s respectively; these include the main loop's 4 ms waits,
 simulation, fades and rendering and are not a renderer-only benchmark.
 
+## Death transition correction
+
+The initial death fallback switched the world content to a centred 4:3 Classic
+image, visibly narrowing a widescreen scene. Death now retains the same native
+viewport, projection, teal border and independently centred HUD through the
+turn toward the killer, red fizzle, red hold and respawn. The weapon disappears
+on death as in the original renderer.
+
+A read-only death phase/cursor query exposes the existing presentation progress.
+The native renderer replays the original 17-bit polynomial up to that cursor,
+then maps the mask across the entire native viewport. It never advances the
+game's fizzle cursor, RNG or timer. The SDL upload cache also watches death
+phase/cursor changes: a Classic source pixel already red can leave framebuffer
+bytes unchanged while native fizzle coverage still needs updating.
+
+Regression coverage checks all three fixed resolutions, all five explicit
+aspects plus Auto in a 16:9 window, and every death phase through respawn. The
+controlled death takes 290 original ticks in each case. Checks include native
+viewport edges outside the former 4:3 world, full red coverage, stable SDL
+presentation proportions, cursor-driven uploads with an unchanged Classic
+framebuffer, and read-only frame/RNG/clock/cursor behaviour. Native X11 captures
+of rotation, fizzle, red hold and respawn were inspected locally. Original
+framebuffer hashes remain unchanged. Follow-up checks passed: full normal suite
+115/115, focused visual suite 5/5 normally and under ASan/UBSan, strict CART C11,
+strict MinGW full application/render harness, Wine owned-data death/Auto-aspect
+cases and native X11 capture inspection. The death fix did not require changes
+to the original death simulation or saved-game format.
+
 ## Verified limits and deferred work
 
 - Physical Windows, Windows audio, real ultrawide panels, multiple-monitor
@@ -249,8 +278,8 @@ simulation, fades and rendering and are not a renderer-only benchmark.
   dummy dimensions cover API behaviour, not every OS/driver.
 - VSync may be unsupported or ineffective on a backend; SDL rejection is shown.
   Linear presentation can soften original pixel artwork, by choice only.
-- Death/fizzle and scripted victory presentation use the original composited
-  framebuffer at higher display scale. Normal world geometry is native.
+- Scripted victory presentation uses the original composited framebuffer at
+  higher display scale. Normal world geometry and death presentation are native.
 - The original 0.1-degree ray tables and source-art resolution remain visible at
   high pixel counts. No antialiasing, new artwork, increased vertical FOV or
   replacement rendering API is introduced. Very high resolution is CPU costly.
