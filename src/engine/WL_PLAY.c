@@ -151,13 +151,22 @@ bool GameStep(uint64_t ticks)
             return StartLevelIntermission(&stats,ticks);
         }
         int move=(Down(0x2a) || Down(0x36)) ? 70 : 35;
+        /* Preserve DOS arrow turning while allowing familiar WASD movement.
+           A/D strafe using the original Alt-strafe path; never turn the camera.
+           Keyboard scan codes are physical (SDL3 maps them in sdl_input.c). */
         int cx=(Down(sc_RightArrow) ? move : 0)-(Down(sc_LeftArrow) ? move : 0);
-        int cy=(Down(sc_DownArrow) ? move : 0)-(Down(sc_UpArrow) ? move : 0);
+        int cy=((Down(sc_DownArrow) || Down(0x1f)) ? move : 0)
+              -((Down(sc_UpArrow) || Down(0x11)) ? move : 0);
+        int sidestep=(Down(0x20) ? move : 0)-(Down(0x1e) ? move : 0);
         if (gamestate.victoryflag) {
             if (player.state==&s_deathcam) ++player.temp1;
             else VictorySpin();
         }
-        else ControlMovement(cx,cy,Down(0x38));
+        else {
+            bool alt_strafe=Down(0x38);
+            ControlMovement(cx,cy,alt_strafe);
+            if (sidestep) ControlMovement(sidestep,0,true);
+        }
         ConnectAreas();
         if (!gamestate.victoryflag) T_Attack(Down(0x1d));
         for (objtype *ob=player.next;ob;ob=ob->next) {
