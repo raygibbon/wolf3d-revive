@@ -178,7 +178,7 @@ bool WL_RenderFrameAspect(wl_render_target *target,int32_t *depth,size_t columns
     /* Original artwork remains centered and aspect-correct. The plain teal
        border expands around the new viewport rather than retaining an old
        4:3 bevel behind widescreen geometry. */
-    if(scene_active) Bar(target,(int)scene.x,(int)scene.y,(int)scene.width,(int)(scene.height*4/5),127);
+    /* Fill the full widescreen playfield with the original teal border color.\n       The central 4:3 status artwork below is drawn over this background;\n       do not leave black side gutters beneath the playfield. */\n    if(scene_active) Bar(target,(int)scene.x,(int)scene.y,(int)scene.width,(int)scene.height,127);
     for(unsigned y=scene_active?ui.height*4/5:0;y<ui.height;++y) {
         if(service && y%32==0) service();
         for(unsigned x=0;x<ui.width;++x)
