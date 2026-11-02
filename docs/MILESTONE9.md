@@ -48,3 +48,43 @@ aspect; they are not forcibly cropped to 16:9.
 
 No compilation, automated test suite, or physical 4K verification was
 performed as part of the initial GitHub-only change.
+
+## Architecture comparison: Wolf3D iOS versus Revive
+
+The original [Wolf3D iOS source](https://github.com/id-Software/Wolf3D-iOS)
+uses CPU world traversal and GPU wall quads (see
+`wolf3d/code/wolf/wolf_opengl.c`, `R_Draw_Wall`). This is a different
+architecture from Revive's **CPU software raycaster and SDL3 texture upload**.
+The iPhone's `iphoneFrame` also couples gameplay with rendering, unlike
+Revive's independent fixed 70 Hz simulation and presentation snapshots.
+
+**Decision:** do not replace Revive's renderer with the iOS geometry renderer,
+add GLES/Vulkan as a dependency or copy any iOS/ECWolf source. Milestone 9 is
+a targeted **software-render-resolution policy**: Auto keeps the internal
+image at or under 1920x1080 and SDL3 fits the resulting texture to the actual
+window or monitor. The existing manual 640x480/1280x720/1920x1080 choices,
+widescreen framing, classic DOS mode and interpolation remain available.
+
+This follows the same separate-internal-resolution-and-display principle
+used by pixel-art games, not the exact rendering technology of Stardew Valley.
+
+## Performance acceptance before merge
+
+For a 3840x2160 16:9 display, verify Auto selects 1920x1080 without
+changing fullscreen/window output size. Check nearest-neighbour 2x scaling
+against linear, compare the 1080p output against the former native-4K Auto
+path, and measure frame times with VSync and smooth presentation on/off.
+
+Also check 2560x1440, 1600x1200, 3440x1440 and 3840x1080 to ensure correct
+aspect handling and no unexpected cropping. Test menu↔game transitions,
+fullscreen toggles, monitor migration, allocation-failure rollback and
+high-DPI output sizes. Review any ultra-wide source sampling where the
+1920x1080 ceiling implies a shorter 1920x540 render target.
+
+The 1080p cap **reduces work but does not guarantee 144 FPS**: Milestone 8
+reported about 71 actual FPS at 1080p for a diagnostic 144 FPS target on the
+measured CPU. Do not introduce adaptive resolution or GPU drawing just to
+claim a higher FPS number; first verify consistent pacing and artwork quality.
+
+No compilation, benchmark or physical monitor testing was run for this
+documentation update.
