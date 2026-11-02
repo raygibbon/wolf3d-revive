@@ -25,7 +25,11 @@ opens quit confirmation in the menu (Y exits, N/Escape cancels). Closing the
 window exits directly. New Game opens the episode and difficulty pages; arrows select, Enter/Space
 confirm and Escape goes back. Sound opens functional Music/Effects enable
 switches and independent volumes: Up/Down select, Enter/Space toggles a switch,
-Left/Right changes volume in 5% steps. Settings last for this session. Other
+Left/Right changes volume in 5% steps. Settings last for this session. Control opens Classic/Modern presets, mouse
+enable, sensitivity/invert, reset and two-key action bindings. On the binding
+page, arrows select action/alternative, Enter captures a key, Delete unbinds
+and Escape cancels. Conflicts retain the old assignment. Changing presets
+resets its bindings and mouse options. Other
 unported main-menu rows stay disabled. A failed
 level load reports the reason and returns to the menu after acknowledgement.
 
@@ -41,6 +45,15 @@ saves. Back to Game resumes the paused simulation. Saving is unavailable during
 death, intermissions and victory cinematics. Victory statistics acknowledge with a key; ending articles
 use arrows, Enter or Page Up/Down for pages and Escape to close, followed by
 scores and return to menu. `--level` starts E1M1 at medium difficulty directly.
+
+Classic is the default, with the original keyboard controls above. To use WASD
+and mouse, open Control and select Modern. W/S move, A/D strafe, mouse X turns,
+left-click fires and right-click opens/uses; arrows, Ctrl, Space, Shift and 1–4
+remain available. Mouse capture starts after gameplay fade-in and releases for
+menus and focus loss. Sensitivity 1–40 sets 0.05–2 degrees/count (default 10,
+0.5 degrees/count). Gameplay bindings do not change menu navigation. These
+settings last for the application session and remain current when loading a
+save. See [Milestone 6D](MILESTONE6D.md) for input timing and validation details.
 
 `--no-audio` skips sound loading/device output. Otherwise music and sounds read
 AUDIOHED/AUDIOT/VSWAP directly; nothing is converted or written to disk. Audio
@@ -106,9 +119,10 @@ The Windows target explicitly selects GCC/MinGW so the warning flags match.
 Use a Windows SDL SDK/import library, not the Linux `cart-sdl` profile. Put the
 matching SDL3 DLL beside the executable or on PATH. All application C modules pass strict MinGW C11 compilation. A manual cross-link with
 the official SDL3 3.4.18 MinGW SDK and a five-frame E1M1 smoke test under Wine
-with dummy video/audio passed. Milestone 6C also cross-links all 38 C units
-and verifies Windows save/overwrite/cancel, UTF-8 save paths and restart/load
-under Wine; see [MILESTONE6C.md](MILESTONE6C.md). This is not native Windows verification;
+with dummy video/audio passed. Milestone 6C verifies Windows save/overwrite/cancel, UTF-8 save paths and
+restart/load under Wine; see [MILESTONE6C.md](MILESTONE6C.md). Milestone 6D
+cross-links all 40 C units and passes the Windows controls harness under Wine;
+see [MILESTONE6D.md](MILESTONE6D.md). This is not native Windows verification;
 physical Windows playback, device changes and resize behaviour still need
 Windows testing. See [MILESTONE6B.md](MILESTONE6B.md). No CMake build system was introduced.
 
@@ -170,7 +184,9 @@ RNG independence, both boss delay modes and repeated SDL dummy lifecycle. Finale
 SDL tests also initialise sound. Save tests cover all six slots, process restart,
 portable CRC/field decoding, corrupt inputs, source identity, failed/competing
 writes, deterministic actor/door/pushwall/projectile/boss continuation, audio
-restoration and SDL menu input. See [Milestone 6C](MILESTONE6C.md).
+restoration and SDL menu input. Controls regressions add Classic/Modern input,
+diagonal bounds, mouse sensitivity/buttons/capture, focus transitions, binding
+conflicts, settings and save/RNG equivalence. See [Milestone 6C](MILESTONE6C.md).
 
 From CART, regression checks can use the current executable by absolute path:
 

@@ -458,7 +458,7 @@ class EngineTests(unittest.TestCase):
         subprocess.run(self.compiler + ["-I" + str(ROOT / "src"), "-I" + str(sdk / "include"),
                        str(ROOT / "tests/video_tests.c"), str(ROOT / "src/engine/ID_VL.c"),
                        str(ROOT / "src/platform/sdl_video.c"), str(ROOT / "src/platform/sdl_input.c"),
-                       str(ROOT / "src/engine/ID_IN.c"), str(library), "-pthread", "-lm",
+                       str(ROOT / "src/engine/ID_IN.c"), str(ROOT / "src/engine/WL_CONTROLS.c"), str(library), "-pthread", "-lm",
                        "-o", str(program)], check=True)
         env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_RENDER_DRIVER="software")
         subprocess.run([str(program), str(self.data / "readback.bmp")], env=env, check=True)

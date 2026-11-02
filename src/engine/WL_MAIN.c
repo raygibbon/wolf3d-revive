@@ -10,6 +10,7 @@
 #include "WL_DEF.h"
 #include "WL_SAVE.h"
 #include "ID_SD.h"
+#include "WL_CONTROLS.h"
 #include <string.h>
 static ui_state state, next_state;
 static bool leaving;
@@ -50,6 +51,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_TITLE) SD_StartMusic(7);
     if (screen == UI_MENU) SD_StartMusic(14);
     if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
+    if(screen==UI_CONTROLS && !BeginControlsMenu()) return false;
     if (screen == UI_SOUND && !DrawSoundSettings()) return false;
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
@@ -79,7 +81,7 @@ bool DemoLoopStartup(uint64_t ticks, bool menu)
     if (!VL_FadeOut(0,0,0,0,ticks)) return false;
     return ChangeScreen(menu ? UI_MENU : UI_TITLE,ticks);
 }
-bool DemoLoop(uint64_t ticks)
+static bool StepDemoLoop(uint64_t ticks)
 {
     /* Catch up to scheduled screen deadlines; never derive time from frames. */
     for (unsigned transitions = 0; transitions < 16; ++transitions) {
@@ -99,7 +101,7 @@ bool DemoLoop(uint64_t ticks)
     }
     if (VL_Fading() || Attract()) return true;
     if (state == UI_GAME) {
-        if (GameCanSave() && IN_ConsumePress(sc_Escape)) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
+        if (GameCanSave() && (CT_Pressed(CT_MENU) || IN_ConsumePress(sc_Escape))) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
         if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
         return true;
@@ -108,6 +110,7 @@ bool DemoLoop(uint64_t ticks)
         int action = HandleMenu(ticks);
         if (action == -3) return false;
         if (action == savegame || action == loadgame) return Transition(action==savegame?UI_SAVE:UI_LOAD,ticks,10);
+        if (action == control) return Transition(UI_CONTROLS,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
         if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == viewscores) return Transition(UI_SCORES,ticks,10);
@@ -125,6 +128,9 @@ bool DemoLoop(uint64_t ticks)
             bool loaded=action==1 && state==UI_LOAD;
             resuming=loaded;return Transition(loaded?UI_GAME:UI_MENU,ticks,10);
         }
+    } else if(state==UI_CONTROLS) {
+        int action=HandleControlsMenu();if(action==-3) return false;
+        if(action==-1) return Transition(UI_MENU,ticks,10);
     } else if (state == UI_SOUND) {
         int action=HandleSoundSettings();
         if(action==-3) return false;
@@ -152,6 +158,13 @@ bool DemoLoop(uint64_t ticks)
             if (blink) { PrintX = cursor_x; PrintY = cursor_y; fontcolor = 0; if (!US_Print("_")) return false; }
         }
     }
-    IN_ClearPressed();
+    IN_ClearPressed();CT_EndTic();
     return true;
+}
+
+bool DemoLoop(uint64_t ticks)
+{
+    bool ok=StepDemoLoop(ticks);
+    CT_SetGameplay(ok && state==UI_GAME && GameCanSave() && !VL_Fading());
+    return ok;
 }

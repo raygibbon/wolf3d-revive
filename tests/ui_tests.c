@@ -85,7 +85,7 @@ static void TestAttract(void)
     CHECK(DemoLoop(2659)); CHECK(MainItems.curpos == backtodemo);
     CHECK(DemoLoop(2660)); CHECK(MainItems.curpos == quit);
     IN_KeyEvent(sc_DownArrow,false); CHECK(DemoLoop(2661));
-    Key(sc_DownArrow); CHECK(DemoLoop(2662)); CHECK(MainItems.curpos == viewscores);
+    Key(sc_DownArrow); CHECK(DemoLoop(2662)); CHECK(MainItems.curpos == control);
     Key(sc_UpArrow); CHECK(DemoLoop(2663)); CHECK(MainItems.curpos == quit);
     Key(0x2f); CHECK(DemoLoop(2664)); CHECK(MainItems.curpos == viewscores); /* V shortcut */
     Key(sc_Enter); CHECK(DemoLoop(2665)); CHECK(DemoLoop(2685)); CHECK(DemoLoopState() == UI_SCORES);

@@ -26,12 +26,14 @@ int main(int argc,char **argv)
     int32_t x=player.x;Key(SDL_SCANCODE_UP,true);Step(74);CHECK(player.x>x);Step(82);x=player.x;
     SDL_Event event;memset(&event,0,sizeof(event));event.type=SDL_EVENT_WINDOW_FOCUS_LOST;CHECK(SDL_PushEvent(&event));
     Step(83);CHECK(player.x==x);
+    event.type=SDL_EVENT_WINDOW_FOCUS_GAINED;CHECK(SDL_PushEvent(&event));
     Tap(SDL_SCANCODE_RIGHT);Step(84);int angle=player.angle;CHECK(angle==359);Step(85);CHECK(player.angle==angle);
     Key(SDL_SCANCODE_LCTRL,true);Step(86);CHECK(gamestate.attackframe==1);
     Key(SDL_SCANCODE_RCTRL,true);Step(92);
     Key(SDL_SCANCODE_LCTRL,false);Step(98);CHECK(gamestate.ammo==7);
     Step(104);Step(110);Step(112);CHECK(gamestate.ammo==7 && !gamestate.attackframe);
     event.type=SDL_EVENT_WINDOW_FOCUS_LOST;CHECK(SDL_PushEvent(&event));Step(113);
+    event.type=SDL_EVENT_WINDOW_FOCUS_GAINED;CHECK(SDL_PushEvent(&event));
     Tap(SDL_SCANCODE_RCTRL);Step(114);Step(120);Step(126);CHECK(gamestate.ammo==6);
     Tap(SDL_SCANCODE_ESCAPE);Tap(SDL_SCANCODE_RETURN);Step(127);Step(147);CHECK(DemoLoopState()==UI_MENU);
     Step(148);CHECK(DemoLoopState()==UI_MENU); /* No Enter leakage into a second game. */

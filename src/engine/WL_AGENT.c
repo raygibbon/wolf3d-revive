@@ -4,6 +4,8 @@
 #include "WL_DEF.h"
 #include "ID_CA.h"
 #include "ID_SD.h"
+#include <math.h>
+#include <stdlib.h>
 static int anglefrac;
 void ResetMovement(void) { anglefrac=0; }
 bool TryMove(const objtype *ob)
@@ -55,7 +57,7 @@ void ControlMovement(int controlx,int controly,bool strafe)
     } else {
         anglefrac+=controlx;
         int units=anglefrac/20; anglefrac-=units*20;
-        player.angle=(player.angle-units+360)%360;
+        player.angle=(player.angle-units)%360;if(player.angle<0) player.angle+=360;
     }
     if (controly<0) Thrust(player.angle,-controly*150);
     else if (controly>0) Thrust((player.angle+180)%360,controly*100);
@@ -63,3 +65,23 @@ void ControlMovement(int controlx,int controly,bool strafe)
 
 int Save_GetAngleFraction(void) { return anglefrac; }
 void Save_SetAngleFraction(int fraction) { anglefrac=fraction; }
+
+/* Modern input shares ClipMove/Thrust's original speed constants and tile
+   interactions, but combines translation once per tic. Classic stays above. */
+void ModernMovement(int turn,int forward,int strafe,int move)
+{
+    ControlMovement(turn,0,false);
+    int f=forward*move*(forward<0?100:150),s=strafe*move*150;
+    int speed=abs(f)>abs(s)?abs(f):abs(s);
+    if(f && s) { /* Bound the Euclidean speed to the faster component. */
+        int maximum=abs(f)>abs(s)?abs(f):abs(s);
+        int length=(int)ceil(sqrt((double)f*f+(double)s*s));
+        f=(int)((int64_t)f*maximum/length);s=(int)((int64_t)s*maximum/length);
+    }
+    int32_t dx=FixedByFrac(f,sintable[player.angle+90])+FixedByFrac(s,sintable[(player.angle+270)%360+90]);
+    int32_t dy=-FixedByFrac(f,sintable[player.angle])-FixedByFrac(s,sintable[(player.angle+270)%360]);
+    if(!f && !s) return;
+    thrustspeed+=speed;ClipMove(&player,dx,dy);
+    player.tilex=player.x/65536;player.tiley=player.y/65536;
+    if(CA_Map()->planes[1][player.tiley*64+player.tilex]==99) (void)VictoryTile();
+}
