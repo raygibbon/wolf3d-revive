@@ -8,6 +8,8 @@
 #include "engine/ID_PM.h"
 #include "engine/ID_US_1.h"
 #include "platform/sdl_video.h"
+#include "platform/sdl_audio.h"
+#include "engine/ID_SD.h"
 #include "platform/config_file.h"
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -17,6 +19,33 @@
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,CA_Error(),SDL_GetError());exit(1); } } while(0)
 static uint32_t Hash(const void *data,size_t n) { const unsigned char *p=data;uint32_t h=2166136261U;while(n--) h=(h^*p++)*16777619U;return h; }
 static void Pump(void) { CHECK(!VL_PollQuit());CHECK(VW_UpdateScreen()); }
+/* Force long frames without stalling any individual rendering batch. The
+   real dummy device drains concurrently, so servicing only once per frame
+   would empty the 24-32 ms queue. */
+static unsigned services,empty;
+static uint64_t last_service,max_gap;
+static void ServiceAudio(void)
+{
+    SDL_Delay(1);
+    uint64_t now=SDL_GetTicksNS(),gap=now-last_service;
+    if(gap>max_gap) max_gap=gap;
+    last_service=now;
+    if(!Audio_TestQueuedBytes()) ++empty;
+    CHECK(Audio_TestQueuedBytes()>=0);Audio_Pump();++services;
+}
+static void AudioStress(void)
+{
+    CHECK(Audio_Startup());SD_StartMusic(7);Audio_Pump();
+    uint8_t *pixels=malloc(1920*1080);int32_t depth[1920];wl_render_target t;
+    CHECK(pixels && WL_TargetInit(&t,pixels,1920*1080,1920,1080,1920));
+    CHECK(NewViewSize(19));last_service=SDL_GetTicksNS();uint64_t start=last_service;
+    for(unsigned i=0;i<3;++i) CHECK(WL_RenderFrame(&t,depth,1920,true,ServiceAudio));
+    CHECK(services>300 && SDL_GetTicksNS()-start>32000000);
+    CHECK(!empty); /* No drained queue despite frames longer than its capacity. */
+    sd_status status;SD_GetStatus(&status);CHECK(status.frames>48000/10);
+    printf("Audio render stress: %u services, %u empty queues, longest gap %.2f ms.\n",services,empty,(double)max_gap/1000000);
+    free(pixels);Audio_Shutdown();CHECK(NewViewSize(15));
+}
 static void Visual(void)
 {
     CHECK(GameStart(0));InitObjects();CHECK(NewViewSize(15));
@@ -113,6 +142,7 @@ int main(int argc,char **argv)
     /* Switching display preference cannot consume a simulation tic or RNG. */
     for(unsigned n=0;n<30;++n) { d.high_resolution=!d.high_resolution;CHECK(VL_DisplaySet(&d));Pump();CHECK(US_RndIndex()==rng && gamestate.TimeCount==clock); }
     if(!strcmp(argv[3],"synthetic")) Visual();
+    else AudioStress();
     GameStop();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
     puts("Native render targets, all sizes/views, HUD, isolation, persistence, switching and failure recovery passed.");return 0;
 }

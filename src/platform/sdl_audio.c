@@ -11,6 +11,9 @@ static SDL_AudioStream *stream;
 static uint64_t generation;
 static char error[256];
 bool Audio_Active(void) { return stream!=NULL; }
+#ifdef WOLF3D_DISPLAY_TEST
+int Audio_TestQueuedBytes(void) { return stream?SDL_GetAudioStreamQueued(stream):-1; }
+#endif
 const char *Audio_Error(void) { return error; }
 void Audio_Shutdown(void)
 {
