@@ -8,6 +8,8 @@ void IN_SDLKey(unsigned code, bool down);
 void IN_SDLFocusLost(void);
 void IN_SDLFocusGained(void);
 void IN_SDLReset(void);
+void IN_SDLDiscardInput(void);
+bool IN_SDLFocused(void);
 void IN_SDLCapture(SDL_Window *window,bool gameplay);
 void IN_SDLMouseMotion(double x);
 void IN_SDLMouseButton(unsigned button,bool down);

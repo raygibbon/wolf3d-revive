@@ -4,6 +4,7 @@
    Gameplay-dependent rows retain original disabled rendering and are skipped. */
 #include "WL_MENU.h"
 #include "WL_SAVE.h"
+#include "WL_DISPLAY.h"
 #include "ID_CA.h"
 #include "ID_VH.h"
 #include "ID_US_1.h"
@@ -15,7 +16,7 @@
 CP_iteminfo MainItems = {76, 55, MENU_COUNT, viewscores, 24};
 CP_itemtype MainMenu[MENU_COUNT] = {
     {0,"New Game"}, {0,"Sound"}, {1,"Control"}, {0,"Load Game"}, {0,"Save Game"},
-    {0,"Change View"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
+    {0,"Display"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
 };
 static int shape = C_CURSOR1PIC;
 static uint64_t gun_next, move_next;
@@ -49,6 +50,7 @@ bool DrawMainMenu(void)
 bool SetupControlPanel(uint64_t ticks)
 {
     if (!VW_ValidateFont(1)) return false;
+    MainMenu[changeview].active=Display_Available()?1:0;
     MainMenu[loadgame].active=*Save_Directory()?1:0;
     MainMenu[savegame].active=GameCanSave() && *Save_Directory()?1:0;
     MainMenu[backtodemo].string=GameRunning()?"Back to Game":"Back to Demo";

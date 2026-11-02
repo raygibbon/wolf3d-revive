@@ -3,8 +3,16 @@
 #define SDL_VIDEO_H
 #include <stdbool.h>
 #include <stdint.h>
+#include "display_settings.h"
 
 bool VL_Startup(void);
+bool VL_DisplayGet(display_settings *settings);
+bool VL_DisplaySet(const display_settings *settings);
+#ifdef WOLF3D_DISPLAY_TEST
+/* One-shot fault injection, compiled only into the display test executable. */
+void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 size, 4 denied request */
+void VL_TestExpireDisplayRequest(void);
+#endif
 uint64_t VL_GetTicks70(void);
 void VL_Sleep(unsigned ms);
 uint64_t VL_TextureUploads(void);

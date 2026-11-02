@@ -9,6 +9,7 @@
 #include "engine/WL_MENU.h"
 #include "engine/WL_DEF.h"
 #include "engine/WL_SAVE.h"
+#include "engine/WL_DISPLAY.h"
 #include <SDL3/SDL_filesystem.h>
 #include <errno.h>
 #include <stdio.h>
@@ -83,6 +84,7 @@ int main(int argc, char *argv[])
     else { fprintf(stderr,"New Game unavailable: %s\n",CA_Error()); if (level) goto done; }
     if (!VL_Startup()) { fprintf(stderr, "SDL3 video: %s\n", VL_Error()); goto video_done; }
     if (!no_audio && !Audio_Startup()) fprintf(stderr,"Audio unavailable: %s; continuing silently.\n",Audio_Error());
+    Display_Connect(VL_DisplayGet,VL_DisplaySet);
     MainMenu[soundmenu].active=1;
     char *save_path=SDL_GetPrefPath(NULL,"wolf3d-revive");
     if(save_path) { (void)Save_SetDirectory(save_path);SDL_free(save_path); }
@@ -106,6 +108,7 @@ int main(int argc, char *argv[])
     }
     status = 0;
 video_done:
+    Display_Connect(NULL,NULL);
     Audio_Shutdown();
     VL_Shutdown();
 done:

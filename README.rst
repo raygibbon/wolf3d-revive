@@ -13,10 +13,14 @@ music/effects volume and mute controls. No converted soundtrack or audio cache
 is created. Milestone 6C adds six named save slots, portable atomic saves in the user-data
 directory, pause/resume, deterministic restoration and animated intermission
 counters with original sound sequencing. Milestone 6D adds selectable
-Classic/Modern controls, configurable key bindings and SDL3 relative mouse input. Detailed DOS listening comparisons, persistent
+Classic/Modern controls, configurable key bindings and SDL3 relative mouse input.
+Milestone 6E adds borderless desktop fullscreen, resizable windows, corrected
+4:3 presentation, integer/fit scaling and an original-font Display menu.
+Alt+Enter switches fullscreen; F11 switches integer scaling. Detailed DOS listening comparisons, persistent
 configuration and Enhanced Mode remain later work.
 
 * `Build and validation <docs/BUILD.md>`_
+* `Milestone 6E display settings and verification <docs/MILESTONE6E.md>`_
 * `Milestone 6D controls and verification <docs/MILESTONE6D.md>`_
 * `Milestone 6C save/load, format and intermissions <docs/MILESTONE6C.md>`_
 * `Milestone 6B native audio, licensing and fidelity <docs/MILESTONE6B.md>`_

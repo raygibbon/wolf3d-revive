@@ -55,6 +55,25 @@ menus and focus loss. Sensitivity 1–40 sets 0.05–2 degrees/count (default 10
 settings last for the application session and remain current when loading a
 save. See [Milestone 6D](MILESTONE6D.md) for input timing and validation details.
 
+Display in the main or paused menu selects fullscreen, integer scaling and
+window sizes from 320×240 through 1600×1200 (1×–5×). Up/Down selects a row;
+Left/Right or Enter changes a setting. Reset Defaults restores a 960×720
+window with fit scaling. Settings last for the session, including across loads.
+Alt+Enter (including keypad Enter) switches borderless desktop fullscreen;
+F11 switches integer scaling. These shortcuts are consumed before gameplay
+or menu input; F11 cannot be assigned to a gameplay action. Fullscreen changes
+clear pending input, so release and press held controls again afterwards.
+
+The unchanged 320×200 framebuffer fills a 320×240 logical canvas for the
+original 4:3 proportions. Fit mode maximizes that canvas with black borders;
+integer mode uses whole multiples of the corrected canvas. Below 320×240
+drawable pixels, integer mode temporarily uses fit to avoid cropping. Windows
+can be resized freely and restore their previous windowed size after fullscreen.
+Size presets use window points; presentation uses drawable pixels on high-DPI
+systems. Mouse capture releases during pending mode changes and returns only
+for focused gameplay. See [Milestone 6E](MILESTONE6E.md) for calculations,
+failure recovery and verification limits.
+
 `--no-audio` skips sound loading/device output. Otherwise music and sounds read
 AUDIOHED/AUDIOT/VSWAP directly; nothing is converted or written to disk. Audio
 startup/device errors report a reason and allow silent gameplay. The logical
@@ -122,7 +141,9 @@ the official SDL3 3.4.18 MinGW SDK and a five-frame E1M1 smoke test under Wine
 with dummy video/audio passed. Milestone 6C verifies Windows save/overwrite/cancel, UTF-8 save paths and
 restart/load under Wine; see [MILESTONE6C.md](MILESTONE6C.md). Milestone 6D
 cross-links all 40 C units and passes the Windows controls harness under Wine;
-see [MILESTONE6D.md](MILESTONE6D.md). This is not native Windows verification;
+see [MILESTONE6D.md](MILESTONE6D.md). Milestone 6E cross-links all 41 C units
+and passes the Windows display geometry/gameplay harness under Wine with
+dummy drivers; see [MILESTONE6E.md](MILESTONE6E.md). This is not native Windows verification;
 physical Windows playback, device changes and resize behaviour still need
 Windows testing. See [MILESTONE6B.md](MILESTONE6B.md). No CMake build system was introduced.
 
@@ -187,6 +208,9 @@ writes, deterministic actor/door/pushwall/projectile/boss continuation, audio
 restoration and SDL menu input. Controls regressions add Classic/Modern input,
 diagonal bounds, mouse sensitivity/buttons/capture, focus transitions, binding
 conflicts, settings and save/RNG equivalence. See [Milestone 6C](MILESTONE6C.md).
+Display regressions add full-output black-bar readback, integer/fit geometry,
+tiny windows, drawable dimensions, external/fullscreen state changes, shortcut
+consumption, injected SDL failures, capture/focus and display-independent saves.
 
 From CART, regression checks can use the current executable by absolute path:
 

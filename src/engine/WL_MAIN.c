@@ -11,6 +11,7 @@
 #include "WL_SAVE.h"
 #include "ID_SD.h"
 #include "WL_CONTROLS.h"
+#include "WL_DISPLAY.h"
 #include <string.h>
 static ui_state state, next_state;
 static bool leaving;
@@ -51,6 +52,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_TITLE) SD_StartMusic(7);
     if (screen == UI_MENU) SD_StartMusic(14);
     if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
+    if(screen==UI_DISPLAY && !BeginDisplayMenu()) return false;
     if(screen==UI_CONTROLS && !BeginControlsMenu()) return false;
     if (screen == UI_SOUND && !DrawSoundSettings()) return false;
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
@@ -110,6 +112,7 @@ static bool StepDemoLoop(uint64_t ticks)
         int action = HandleMenu(ticks);
         if (action == -3) return false;
         if (action == savegame || action == loadgame) return Transition(action==savegame?UI_SAVE:UI_LOAD,ticks,10);
+        if (action == changeview) return Transition(UI_DISPLAY,ticks,10);
         if (action == control) return Transition(UI_CONTROLS,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
         if (action == newgame) return Transition(UI_EPISODE,ticks,10);
@@ -128,6 +131,9 @@ static bool StepDemoLoop(uint64_t ticks)
             bool loaded=action==1 && state==UI_LOAD;
             resuming=loaded;return Transition(loaded?UI_GAME:UI_MENU,ticks,10);
         }
+    } else if(state==UI_DISPLAY) {
+        int action=HandleDisplayMenu();if(action==-3) return false;
+        if(action==-1) return Transition(UI_MENU,ticks,10);
     } else if(state==UI_CONTROLS) {
         int action=HandleControlsMenu();if(action==-3) return false;
         if(action==-1) return Transition(UI_MENU,ticks,10);
