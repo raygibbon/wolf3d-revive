@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_AGENT.C inventory, attackinfo, T_Attack and status-bar drawing. No gameplay assets. */
 #include "WL_DEF.h"
+#include "WL_DEMO.h"
 #include "WL_SAVE.h"
 #include "WL_CONTROLS.h"
 #include "ID_CA.h"
@@ -67,7 +68,7 @@ void GetBonus(statobj_t *ob)
 }
 void UpdateFace(void)
 {
-    ++facecount;
+    facecount+=SimulationTics();
     if (facecount>US_RndT()) {
         gamestate.faceframe=US_RndT()>>6;
         if (gamestate.faceframe==3) gamestate.faceframe=1;
@@ -180,7 +181,7 @@ void CheckWeaponChange(void)
 {
     if (!gamestate.ammo) return;
     for (int weapon=wp_knife;weapon<=gamestate.bestweapon;++weapon) {
-        if (CT_Down((ct_action)(CT_WEAPON1+weapon))) {
+        if (Demo_Active()?(Demo_Buttons()&(16U<<(unsigned)weapon))!=0:CT_Down((ct_action)(CT_WEAPON1+weapon))) {
             gamestate.weapon=gamestate.chosenweapon=weapon;return;
         }
     }
@@ -195,26 +196,28 @@ void T_Attack(bool attack)
         attackheld=attack;return;
     }
     attackheld=attack;
-    if (--gamestate.attackcount>0) return;
-    /* attackframe is stored +1 so zero remains the original non-attack state. */
-    const struct atkinf *cur=&attackinfo[gamestate.weapon][gamestate.attackframe-1];
-    switch (cur->attack) {
-    case -1:
-        gamestate.weapon=gamestate.ammo ? gamestate.chosenweapon : wp_knife;
-        gamestate.attackframe=gamestate.weaponframe=0;return;
-    case 4:
-        if (!gamestate.ammo) break;
-        if (attack) gamestate.attackframe-=2;
-        /* fall through */
-    case 1:
-        if (!gamestate.ammo) { ++gamestate.attackframe;break; }
-        GunAttack(&player);--gamestate.ammo;break;
-    case 2: KnifeAttack(&player);break;
-    case 3: if (gamestate.ammo && attack) gamestate.attackframe-=2;break;
-    default: break;
+    gamestate.attackcount-=SimulationTics();
+    while(gamestate.attackcount<=0) {
+        /* attackframe is stored +1 so zero remains the original non-attack state. */
+        const struct atkinf *cur=&attackinfo[gamestate.weapon][gamestate.attackframe-1];
+        switch (cur->attack) {
+        case -1:
+            gamestate.weapon=gamestate.ammo ? gamestate.chosenweapon : wp_knife;
+            gamestate.attackframe=gamestate.weaponframe=0;return;
+        case 4:
+            if (!gamestate.ammo) break;
+            if (attack) gamestate.attackframe-=2;
+            /* fall through */
+        case 1:
+            if (!gamestate.ammo) { ++gamestate.attackframe;break; }
+            GunAttack(&player);--gamestate.ammo;break;
+        case 2: KnifeAttack(&player);break;
+        case 3: if (gamestate.ammo && attack) gamestate.attackframe-=2;break;
+        default: break;
+        }
+        gamestate.attackcount+=cur->tics;++gamestate.attackframe;
+        gamestate.weaponframe=attackinfo[gamestate.weapon][gamestate.attackframe-1].frame;
     }
-    gamestate.attackcount+=cur->tics;++gamestate.attackframe;
-    gamestate.weaponframe=attackinfo[gamestate.weapon][gamestate.attackframe-1].frame;
 }
 
 void Save_GetCombat(save_controls *c) { c->facecount=facecount;c->attackheld=attackheld;c->gotgatgun=gotgatgun; }

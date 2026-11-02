@@ -16,7 +16,7 @@
 CP_iteminfo MainItems = {76, 55, MENU_COUNT, viewscores, 24};
 CP_itemtype MainMenu[MENU_COUNT] = {
     {0,"New Game"}, {0,"Sound"}, {1,"Control"}, {0,"Load Game"}, {0,"Save Game"},
-    {0,"Display"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
+    {1,"Change View"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
 };
 static int shape = C_CURSOR1PIC;
 static uint64_t gun_next, move_next;
@@ -50,9 +50,10 @@ bool DrawMainMenu(void)
 bool SetupControlPanel(uint64_t ticks)
 {
     if (!VW_ValidateFont(1)) return false;
-    MainMenu[changeview].active=Display_Available()?1:0;
+    MainMenu[changeview].active=1;
     MainMenu[loadgame].active=*Save_Directory()?1:0;
     MainMenu[savegame].active=GameCanSave() && *Save_Directory()?1:0;
+    MainMenu[viewscores].string=GameRunning()?"End Game":"View Scores";
     MainMenu[backtodemo].string=GameRunning()?"Back to Game":"Back to Demo";
     if (MainItems.curpos < 0 || MainItems.curpos >= MENU_COUNT || !MainMenu[MainItems.curpos].active) MainItems.curpos = viewscores;
     shape = C_CURSOR1PIC; gun_first = true; gun_next = ticks + 9; move_next = ticks;

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_MAIN.C DemoLoop and WL_MENU.C control panel, resumed by monotonic tics.
-   Title 15s -> credits 10s -> scores 10s; stop at menu instead of faking demos. */
+   Title 15s -> credits 10s -> scores 10s -> validated original demo. */
 #include "WL_MAIN.h"
 #include "WL_MENU.h"
 #include "ID_CA.h"
@@ -12,14 +12,20 @@
 #include "ID_SD.h"
 #include "WL_CONTROLS.h"
 #include "WL_DISPLAY.h"
+#include "WL_DEMO.h"
+#include <stdio.h>
 #include <string.h>
 static ui_state state, next_state;
 static bool leaving;
 static uint64_t deadline, transition_end, blink_next;
 static int cursor_x, cursor_y;
 static bool blink,resuming;
-static unsigned episode,difficulty=2;
-static bool Attract(void) { return state <= UI_HIGHSCORES; }
+static unsigned episode,difficulty=2,demo_number;
+static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
+static bool boss_music,boss_effects,choosequick;
+static int quickslot=-1;
+static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_ERROR } quick_action;
+static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO; }
 ui_state DemoLoopState(void) { return state; }
 
 static bool GameError(void)
@@ -40,6 +46,17 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     state = screen; leaving = false;
     IN_ClearKeysDown();
     if (screen == UI_DONE) return true;
+    if(screen==UI_DEMO) {
+        bool started=false;
+        for(unsigned n=0;n<4 && !started;++n) started=Demo_Start(demo_number++%4,ticks+30);
+        if(!started) { GameStop();return ChangeScreen(UI_TITLE,ticks); }
+    }
+    if(screen==UI_VIEW && !BeginViewMenu()) return false;
+    if(screen==UI_BOSS) {
+        unsigned music,effects;SD_GetSettings(&music,&effects,&boss_music,&boss_effects);
+        SD_SetEnabled(false,boss_effects);VWB_Bar(0,0,320,200,0);
+        fontnumber=0;fontcolor=15;PrintX=WindowX=PrintY=0;if(!US_Print("C>")) return false;
+    }
     if (screen == UI_GAME) {
         bool ok;
         if(resuming) { GamePauseClock(ticks+10);ok=GameDrawPaused();resuming=false;
@@ -73,15 +90,44 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
     return VL_FadeOut(Attract() ? 0 : 43,0,0,steps,ticks);
 }
-bool DemoLoopStartGame(uint64_t ticks) { episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
+bool DemoLoopStartGame(uint64_t ticks) { quickslot=-1;episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
 {
-    GameStop();resuming=false;
+    GameStop();resuming=false;quickslot=-1;demo_number=0;panel_return=UI_MENU;choosequick=false;
     /* Validate the complete UI slice before starting the event loop. */
     if (!VW_ValidateFont(0) || !VW_ValidateFont(1) || !DrawHighScores() ||
         !SetupControlPanel(ticks) || !CA_CacheScreen(CREDITSPIC) || !CA_CacheScreen(TITLEPIC)) return false;
     if (!VL_FadeOut(0,0,0,0,ticks)) return false;
     return ChangeScreen(menu ? UI_MENU : UI_TITLE,ticks);
+}
+static bool ReturnPanel(uint64_t ticks)
+{
+    resuming=panel_return==UI_GAME;return Transition(panel_return,ticks,10);
+}
+static bool QuickDialog(int action,uint64_t ticks)
+{
+    quick_action=action;if(state!=UI_QUICK) quick_return=state;FinishPaletteShifts();
+    if(GameRunning() && !GameDrawPaused()) return false;
+    state=UI_QUICK;IN_ClearKeysDown();
+    const char *text=action==QUICK_END?"Are you sure you want\nto end the game? (Y/N)":
+        action==QUICK_QUIT?"Dost thou wish to\nleave with such hasty\nabandon? (Y/N)":
+        action==QUICK_ERROR?"Quick operation failed.\nPress a key to return.":NULL;
+    if(!text) {
+        save_info info;Save_ReadInfo((unsigned)quickslot,&info);
+        char message[128];(void)snprintf(message,sizeof(message),"Load Game called\n\"%s\"? (Y/N)",info.description);
+        return Message(message);
+    }
+    (void)ticks;return Message(text);
+}
+static bool QuickSave(uint64_t ticks)
+{
+    save_info info;if(quickslot>=0) { quickslot=(int)SaveMenuSelected();Save_ReadInfo((unsigned)quickslot,&info); }
+    if(quickslot<0 || info.status!=SAVE_VALID) {
+        quickslot=-1;choosequick=true;panel_return=UI_GAME;return Transition(UI_SAVE,ticks,10);
+    }
+    IN_ClearKeysDown();GamePauseClock(ticks);
+    if(!Save_Write((unsigned)quickslot,info.description,true)) return QuickDialog(QUICK_ERROR,ticks);
+    return true;
 }
 static bool StepDemoLoop(uint64_t ticks)
 {
@@ -93,33 +139,39 @@ static bool StepDemoLoop(uint64_t ticks)
             if (!ChangeScreen(next_state,transition_end)) return false;
             continue;
         }
-        if (Attract() && IN_AnyPressed()) return Transition(UI_MENU,ticks,30);
-        if (Attract() && ticks >= deadline) {
-            ui_state next = state == UI_TITLE ? UI_CREDITS : state == UI_CREDITS ? UI_HIGHSCORES : UI_MENU;
+        if (Attract() && IN_AnyPressed()) { if(state==UI_DEMO) GameStop();return Transition(UI_MENU,ticks,30); }
+        if (Attract() && state!=UI_DEMO && ticks >= deadline) {
+            ui_state next = state == UI_TITLE ? UI_CREDITS : state == UI_CREDITS ? UI_HIGHSCORES : UI_DEMO;
             if (!Transition(next,deadline,30)) return false;
             continue;
         }
         break;
     }
-    if (VL_Fading() || Attract()) return true;
+    if(VL_Fading()) return true;
+    if(state==UI_DEMO) {
+        if(!GameStep(ticks) || Demo_Finished()) { GameStop();return Transition(UI_TITLE,ticks,30); }
+        return true;
+    }
+    if(Attract()) return true;
     if (state == UI_GAME) {
-        /* DOS US_ControlPanel shortcuts (WOLFSRC/WL_MENU.C).
-           F5 currently opens the native Display panel; the original
-           viewport-size panel is still pending its raycaster migration. */
-        if (IN_ConsumePress(0x3c) && GameCanSave() && *Save_Directory()) {
-            FinishPaletteShifts();return Transition(UI_SAVE,ticks,10);
-        }
-        if (IN_ConsumePress(0x3d) && *Save_Directory()) {
-            FinishPaletteShifts();return Transition(UI_LOAD,ticks,10);
-        }
-        if (IN_ConsumePress(0x3e)) {
-            FinishPaletteShifts();return Transition(UI_SOUND,ticks,10);
-        }
-        if (IN_ConsumePress(0x3f) && Display_Available()) {
-            FinishPaletteShifts();return Transition(UI_DISPLAY,ticks,10);
-        }
-        if (IN_ConsumePress(0x40)) {
-            FinishPaletteShifts();return Transition(UI_CONTROLS,ticks,10);
+        /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
+           direct F-key panels return to the game, not the main menu. */
+        if(GameCanSave()) {
+            panel_return=UI_GAME;choosequick=false;
+            if(IN_ConsumePress(0x3b)) { FinishPaletteShifts();return Transition(UI_BOSS,ticks,10); }
+            if(IN_ConsumePress(0x3c) && *Save_Directory()) { FinishPaletteShifts();return Transition(UI_SAVE,ticks,10); }
+            if(IN_ConsumePress(0x3d) && *Save_Directory()) { FinishPaletteShifts();return Transition(UI_LOAD,ticks,10); }
+            if(IN_ConsumePress(0x3e)) { FinishPaletteShifts();return Transition(UI_SOUND,ticks,10); }
+            if(IN_ConsumePress(0x3f)) { FinishPaletteShifts();return Transition(UI_VIEW,ticks,10); }
+            if(IN_ConsumePress(0x40)) { FinishPaletteShifts();return Transition(UI_CONTROLS,ticks,10); }
+            if(IN_ConsumePress(0x41)) return QuickDialog(QUICK_END,ticks);
+            if(IN_ConsumePress(0x42) && *Save_Directory()) return QuickSave(ticks);
+            if(IN_ConsumePress(0x43) && *Save_Directory()) {
+                save_info info;if(quickslot>=0) { quickslot=(int)SaveMenuSelected();Save_ReadInfo((unsigned)quickslot,&info); }
+                if(quickslot>=0 && info.status==SAVE_VALID) return QuickDialog(QUICK_LOAD,ticks);
+                quickslot=-1;choosequick=true;return Transition(UI_LOAD,ticks,10);
+            }
+            if(IN_ConsumePress(0x44)) return QuickDialog(QUICK_QUIT,ticks);
         }
         if (GameCanSave() && (CT_Pressed(CT_MENU) || IN_ConsumePress(sc_Escape))) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
@@ -127,18 +179,20 @@ static bool StepDemoLoop(uint64_t ticks)
         return true;
     }
     if (state == UI_MENU) {
+        panel_return=UI_MENU;choosequick=false;
+        if(IN_ConsumePress(0x3b)) return Transition(UI_BOSS,ticks,10);
         int action = HandleMenu(ticks);
         if (action == -3) return false;
         if (action == savegame || action == loadgame) return Transition(action==savegame?UI_SAVE:UI_LOAD,ticks,10);
-        if (action == changeview) return Transition(UI_DISPLAY,ticks,10);
+        if (action == changeview) return Transition(UI_VIEW,ticks,10);
         if (action == control) return Transition(UI_CONTROLS,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
-        if (action == newgame) return Transition(UI_EPISODE,ticks,10);
-        if (action == viewscores) return Transition(UI_SCORES,ticks,10);
+        if (action == newgame) { quickslot=-1;return Transition(UI_EPISODE,ticks,10); }
+        if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {
             state = UI_CONFIRM; IN_ClearKeysDown();
-            /* One original quit phrase, until the original RNG is ported. */
+            /* Keep dialog choice outside gameplay RNG. */
             if (!Message("Dost thou wish to\nleave with such hasty\nabandon?")) return false;
             cursor_x = PrintX; cursor_y = PrintY; blink = false; blink_next = ticks + 10;
         }
@@ -147,18 +201,35 @@ static bool StepDemoLoop(uint64_t ticks)
         if(action==-3) return false;
         if(action==-1 || action==1) {
             bool loaded=action==1 && state==UI_LOAD;
-            resuming=loaded;return Transition(loaded?UI_GAME:UI_MENU,ticks,10);
+            if(action==1 && choosequick) quickslot=(int)SaveMenuSelected();
+            choosequick=false;
+            if(loaded) { resuming=true;return Transition(UI_GAME,ticks,10); }
+            return ReturnPanel(ticks);
         }
     } else if(state==UI_DISPLAY) {
         int action=HandleDisplayMenu();if(action==-3) return false;
-        if(action==-1) return Transition(UI_MENU,ticks,10);
+        if(action==-1) return Transition(display_return,ticks,10);
     } else if(state==UI_CONTROLS) {
         int action=HandleControlsMenu();if(action==-3) return false;
-        if(action==-1) return Transition(UI_MENU,ticks,10);
+        if(action==2) { display_return=UI_CONTROLS;return Transition(UI_DISPLAY,ticks,10); }
+        if(action==-1) return ReturnPanel(ticks);
+    } else if(state==UI_VIEW) {
+        int action=HandleViewMenu(ticks);if(action==-3) return false;
+        if(action==-1 || action==1) return ReturnPanel(ticks);
+    } else if(state==UI_BOSS) {
+        if(IN_ConsumePress(sc_Escape)) { SD_SetEnabled(boss_music,boss_effects);return ReturnPanel(ticks); }
+    } else if(state==UI_QUICK) {
+        bool yes=IN_ConsumePress(sc_Y),no=IN_ConsumePress(sc_N)|IN_ConsumePress(sc_Escape);
+        if(yes || no || (quick_action==QUICK_ERROR && IN_AnyPressed())) {
+            if(yes && quick_action==QUICK_QUIT) return Transition(UI_DONE,ticks,10);
+            if(yes && quick_action==QUICK_END) { GameStop();gamestate.lives=0;quickslot=-1;return Transition(UI_HIGHSCORES,ticks,10); }
+            if(yes && quick_action==QUICK_LOAD && !Save_Load((unsigned)quickslot,ticks)) return QuickDialog(QUICK_ERROR,ticks);
+            resuming=quick_return==UI_GAME;return Transition(quick_return,ticks,10);
+        }
     } else if (state == UI_SOUND) {
         int action=HandleSoundSettings();
         if(action==-3) return false;
-        if(action==-1) return Transition(UI_MENU,ticks,10);
+        if(action==-1) return ReturnPanel(ticks);
     } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
         bool choosing_episode=state==UI_EPISODE;
         int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);

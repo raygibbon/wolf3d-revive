@@ -35,6 +35,7 @@ void IN_SDLMouseButton(unsigned button,bool down)
     if(button>=8 || mousebuttons[button]==down) return;
     mousebuttons[button]=down;
     if(captured && focused) CT_MouseButton(button,down);
+    else if(focused && down) IN_AckEvent();
 }
 unsigned IN_MapSDLScancode(unsigned code)
 {

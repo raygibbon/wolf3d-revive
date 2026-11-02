@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #include "engine/WL_MAIN.h"
+#include "engine/WL_DEF.h"
 #include "engine/WL_MENU.h"
 #include "engine/ID_CA.h"
 #include "engine/ID_VH.h"
@@ -79,7 +80,8 @@ static void TestAttract(void)
     CHECK(DemoLoop(1080)); CHECK(DemoLoopState() == UI_TITLE && VL_Fading());
     CHECK(DemoLoop(1110)); CHECK(DemoLoopState() == UI_CREDITS);
     CHECK(DemoLoop(1870)); CHECK(DemoLoopState() == UI_HIGHSCORES);
-    CHECK(DemoLoop(2640)); CHECK(DemoLoopState() == UI_MENU && !VL_Fading());
+    CHECK(DemoLoop(2640)); CHECK(DemoLoopState() == UI_TITLE || DemoLoopState() == UI_DEMO);
+    CHECK(DemoLoopStartup(2630,true)); CHECK(DemoLoop(2640));
     MainItems.curpos = viewscores;
     IN_KeyEvent(sc_DownArrow,true); CHECK(DemoLoop(2640)); CHECK(MainItems.curpos == backtodemo);
     CHECK(DemoLoop(2659)); CHECK(MainItems.curpos == backtodemo);
@@ -99,7 +101,8 @@ static void TestAttract(void)
     Key(sc_Enter); CHECK(DemoLoop(2763)); CHECK(DemoLoopState() == UI_CONFIRM);
     Key(sc_Y); CHECK(DemoLoop(2764)); CHECK(DemoLoop(2774)); CHECK(DemoLoopState() == UI_DONE);
     /* A single coarse clock update reaches the same menu; no frame-count timing. */
-    CHECK(DemoLoopStartup(0,false) && DemoLoop(2640)); CHECK(DemoLoopState() == UI_MENU);
+    CHECK(DemoLoopStartup(0,false) && DemoLoop(2640)); CHECK(DemoLoopState() == UI_TITLE || DemoLoopState() == UI_DEMO);
+    GameStop();
     MainItems.curpos = viewscores; CHECK(SetupControlPanel(0)); IN_ClearKeysDown();
     IN_KeyEvent(sc_DownArrow,true); CHECK(HandleMenu(0) == -2); IN_ClearPressed();
     CHECK(HandleMenu(60) == -2); int coarse = MainItems.curpos;

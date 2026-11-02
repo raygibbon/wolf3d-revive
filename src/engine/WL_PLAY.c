@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-/* WL_PLAY.C keyboard controls driving the original one-tic ControlMovement.
-   Simulation is explicitly 70 Hz; presentation is independent. */
+/* WL_PLAY.C controls and clock: normal play uses one 70-Hz tic per update;
+   original demo commands use four-tic frames. Presentation is independent. */
 #include "WL_DEF.h"
+#include "WL_DEMO.h"
 #include "WL_SAVE.h"
 #include "WL_CONTROLS.h"
 #include "ID_IN.h"
@@ -42,14 +43,21 @@ bool GameProbe(void)
 bool GameStart(uint64_t ticks) { return GameStartSelected(ticks,0,2); }
 bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty)
 {
+    if(episode>5) { GameStop();return CA_Fail("Invalid episode/difficulty"); }
+    return GameStartMap(ticks,episode*10,difficulty,(unsigned)(ticks&255U));
+}
+bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed)
+{
     GameStop();
-    US_InitRndT((unsigned)(ticks&255U));
-    if (!NewGame(difficulty,episode) || !SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop(); return false; }
-    SD_StartMusic(SD_LevelMusic(episode,0));
+    if(map>=60) return CA_Fail("Invalid original map number");
+    if(!NewGame(difficulty,map/10)) return false;
+    gamestate.mapon=(int)(map%10);US_InitRndT(seed);
+    if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop(); return false; }
+    SD_StartMusic(SD_LevelMusic(map/10,map%10));
     deathphase=deathwait=0;finished=intermission=false;
     lasttimecount=ticks;running=true; IN_ClearKeysDown(); return true;
 }
-void GameStop(void) { CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
+void GameStop(void) { Demo_Stop();CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and
    64000/70 candidate pixels per tic are the original values. */
@@ -102,7 +110,12 @@ bool GameStep(uint64_t ticks)
     if (!running || ticks<lasttimecount) return CA_Fail("Invalid simulation clock/state");
     uint64_t elapsed=ticks-lasttimecount;
     if (!elapsed) return true; /* Retain quick make/break input until a tic runs. */
-    lasttimecount=ticks;
+    unsigned dt=(unsigned)SimulationTics();
+    if(Demo_Active()) {
+        if(elapsed<4) return true;
+        uint64_t remainder=elapsed%4;lasttimecount=ticks-remainder;elapsed-=remainder;
+        if(elapsed>8) elapsed=8;
+    } else lasttimecount=ticks;
     if (elapsed>MAXTICS) elapsed=MAXTICS; /* Discard long-pause excess, as CalcTics. */
     if (intermission) {
         bool leave=false;
@@ -127,17 +140,19 @@ bool GameStep(uint64_t ticks)
         }
         return true;
     }
-    for (uint64_t tic=0;tic<elapsed;++tic) {
+    for (uint64_t tic=0;tic<elapsed;tic+=dt) {
         if (finished) break;
+        demo_command demo={0};bool playback=Demo_Active();
+        if(playback && !Demo_ReadTic(&demo)) break;
         if (gamestate.died) { if (!Died(ticks-elapsed+tic+1)) return false;continue; }
         if (DeathCameraActive()) { if (!StepDeathCamera()) return false;continue; }
-        if (gamestate.TimeCount<UINT32_MAX) ++gamestate.TimeCount;
+        if (gamestate.TimeCount<=UINT32_MAX-dt) gamestate.TimeCount+=dt;
         /* Original T_Player returns before face/input in BJ victory; T_Attack
            still updates the face, while s_deathcam has no player thinker. */
         if (!gamestate.victoryflag || (gamestate.attackframe && player.state!=&s_deathcam)) UpdateFace();
         thrustspeed=0;
         MoveDoors();MovePWalls();
-        if (CT_Pressed(CT_USE) && !gamestate.victoryflag) Cmd_Use();
+        if ((playback?demo.use:CT_Pressed(CT_USE)) && !gamestate.victoryflag) Cmd_Use();
         if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
             SD_StartMusic(24);
             FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
@@ -158,6 +173,8 @@ bool GameStep(uint64_t ticks)
         if (gamestate.victoryflag) {
             if (player.state==&s_deathcam) ++player.temp1;
             else VictorySpin();
+        } else if(playback) {
+            ControlMovement(demo.x*(int)dt,demo.y*(int)dt,(demo.buttons&2U)!=0);
         } else if(CT_Preset()==CT_CLASSIC && !strafe) {
             ControlMovement(turn*move,-forward*move,alt);
             if(mouse_turn) ControlMovement(mouse_turn,0,false);
@@ -166,7 +183,7 @@ bool GameStep(uint64_t ticks)
             ModernMovement(turn*move+mouse_turn,forward,strafe,move);
         }
         ConnectAreas();
-        if (!gamestate.victoryflag) T_Attack(CT_Down(CT_FIRE));
+        if (!gamestate.victoryflag) T_Attack(playback?(demo.buttons&1U)!=0:CT_Down(CT_FIRE));
         for (objtype *ob=player.next;ob;ob=ob->next) {
             DoActor(ob);if (DeathCameraActive()) break;
         }
@@ -184,7 +201,7 @@ bool GameStep(uint64_t ticks)
 bool GameRunning(void) { return running && !finished; }
 bool GameCanSave(void)
 {
-    return GameRunning() && CA_Map() && !intermission && !victorypage && !gamestate.died &&
+    return GameRunning() && !Demo_Active() && CA_Map() && !intermission && !victorypage && !gamestate.died &&
         !gamestate.victoryflag && !DeathCameraActive() && playstate==ex_playing && !ActorAllocationFailed();
 }
 void GamePauseClock(uint64_t ticks) { lasttimecount=ticks; }

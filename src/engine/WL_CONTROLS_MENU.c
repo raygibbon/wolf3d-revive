@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #include "WL_CONTROLS.h"
 #include "WL_MENU.h"
+#include "WL_DISPLAY.h"
 #include "ID_IN.h"
 #include "ID_VH.h"
 #include "ID_US_1.h"
@@ -46,9 +47,9 @@ static bool Draw(void)
         if(!Text(30,153,waiting?(conflict?"Key reserved or in use.":"Press a key; Esc cancels."):"Enter binds; Delete clears.")) return false;
         fontcolor=TEXTCOLOR;return Text(20,182,"Arrows select; Esc returns.");
     }
-    static const char *const labels[]={"Preset","Mouse","Sensitivity","Invert mouse X","Reset defaults","Key bindings"};
-    for(unsigned i=0;i<6;++i) {
-        fontcolor=i==row?HIGHLIGHT:TEXTCOLOR;int y=52+(int)i*19;char value[32];
+    static const char *const labels[]={"Preset","Mouse","Sensitivity","Invert mouse X","Reset defaults","Key bindings","Display settings"};
+    for(unsigned i=0;i<(Display_Available()?7U:6U);++i) {
+        fontcolor=i==row?HIGHLIGHT:TEXTCOLOR;int y=52+(int)i*16;char value[32];
         if(!Text(30,y,labels[i])) return false;
         if(i==0) (void)snprintf(value,sizeof(value),"%s",CT_Preset()==CT_CLASSIC?"Classic":"Modern");
         else if(i==1) (void)snprintf(value,sizeof(value),"%s",CT_MouseEnabled()?"On":"Off");
@@ -59,7 +60,7 @@ static bool Draw(void)
     }
     fontcolor=TEXTCOLOR;return Text(20,182,"Arrows change; Enter selects.");
 }
-bool BeginControlsMenu(void) { bindings_page=waiting=conflict=false;IN_ClearKeysDown();return Draw(); }
+bool BeginControlsMenu(void) { row=0;bindings_page=waiting=conflict=false;IN_ClearKeysDown();return Draw(); }
 int HandleControlsMenu(void)
 {
     if(waiting) {
@@ -86,7 +87,7 @@ int HandleControlsMenu(void)
         if(enter) { waiting=true;conflict=false;IN_ClearKeysDown(); }
         return !(up || down || left || right || enter) || Draw()?0:-3;
     }
-    if(up || down) row=(row+(up?5U:1U))%6U;
+    if(up || down) row=(row+(up?(Display_Available()?6U:5U):1U))%(Display_Available()?7U:6U);
     if(left || right || enter) {
         if(row==0) CT_Reset(CT_Preset()==CT_CLASSIC?CT_MODERN:CT_CLASSIC);
         else if(row==1) CT_SetMouse(!CT_MouseEnabled());
@@ -97,6 +98,7 @@ int HandleControlsMenu(void)
             CT_SetSensitivity(sensitivity);
         } else if(row==3) CT_SetInvert(!CT_Invert());
         else if(row==4 && enter) CT_Reset(CT_Preset());
+        else if(row==6 && enter) return 2;
         else if(row==5 && enter) { bindings_page=true;binding=alternative=0; }
         IN_ClearKeysDown();
     }

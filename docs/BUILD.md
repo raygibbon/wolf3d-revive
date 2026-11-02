@@ -55,13 +55,18 @@ menus and focus loss. Sensitivity 1–40 sets 0.05–2 degrees/count (default 10
 settings last for the application session and remain current when loading a
 save. See [Milestone 6D](MILESTONE6D.md) for input timing and validation details.
 
-Display in the main or paused menu selects fullscreen, integer scaling and
+Change View in the main or paused menu changes the actual 3D viewport through
+the original sizes 4–19 (64×32 through 304×152; default 240×120). Arrows preview,
+Enter accepts and Escape cancels. The original teal border and 40-pixel HUD stay
+around the view. This is independent of SDL window or presentation size.
+
+Control → Display settings selects fullscreen, integer scaling and
 window sizes from 320×240 through 1600×1200 (1×–5×). Up/Down selects a row;
 Left/Right or Enter changes a setting. Reset Defaults restores a 960×720
 window with fit scaling. Settings last for the session, including across loads.
 Alt+Enter (including keypad Enter) switches borderless desktop fullscreen;
 F11 switches integer scaling. These shortcuts are consumed before gameplay
-or menu input; F11 cannot be assigned to a gameplay action. Fullscreen changes
+or menu input; F1–F11 cannot be assigned to gameplay actions. Fullscreen changes
 clear pending input, so release and press held controls again afterwards.
 
 The unchanged 320×200 framebuffer fills a 320×240 logical canvas for the
@@ -73,6 +78,20 @@ Size presets use window points; presentation uses drawable pixels on high-DPI
 systems. Mouse capture releases during pending mode changes and returns only
 for focused gameplay. See [Milestone 6E](MILESTONE6E.md) for calculations,
 failure recovery and verification limits.
+
+During living gameplay, F2 Save, F3 Load, F4 Sound, F5 Change View and F6
+Control return directly to the paused game. F1 is the original GOODTIMES boss
+key: a black C> screen, Escape to return. F7 confirms End Game; F8 selects a
+quick slot on first use then saves directly; F9 selects a quick slot on first
+use then confirms quickload; F10 confirms Quit. These features keep six native
+save slots and the existing save format. View/control/display settings remain
+current when loading.
+
+After title, credits and scores, attract mode plays available T_DEMO0–3 streams
+from the original graphics archive. A key or click aborts. Missing/corrupt demos
+are skipped safely. Owned demos still terminate early in the native simulation;
+see [Classic restoration](CLASSIC_FIDELITY_RESTORATION.md) for measured durations
+and remaining source-fidelity differences.
 
 `--no-audio` skips sound loading/device output. Otherwise music and sounds read
 AUDIOHED/AUDIOT/VSWAP directly; nothing is converted or written to disk. Audio
@@ -143,7 +162,10 @@ restart/load under Wine; see [MILESTONE6C.md](MILESTONE6C.md). Milestone 6D
 cross-links all 40 C units and passes the Windows controls harness under Wine;
 see [MILESTONE6D.md](MILESTONE6D.md). Milestone 6E cross-links all 41 C units
 and passes the Windows display geometry/gameplay harness under Wine with
-dummy drivers; see [MILESTONE6E.md](MILESTONE6E.md). This is not native Windows verification;
+dummy drivers; see [MILESTONE6E.md](MILESTONE6E.md). Classic restoration builds
+all 43 C units and passes synthetic/owned viewport, shortcut and demo tests
+under Wine; see [CLASSIC_FIDELITY_RESTORATION.md](CLASSIC_FIDELITY_RESTORATION.md).
+This is not native Windows verification;
 physical Windows playback, device changes and resize behaviour still need
 Windows testing. See [MILESTONE6B.md](MILESTONE6B.md). No CMake build system was introduced.
 
@@ -220,3 +242,6 @@ CART=/absolute/path/to/wolf3d-revive/build/tools/cart sh tests/test_desktop_dirs
 ```
 
 See [milestone 6 results and scope](MILESTONE6.md) for validation and remaining work.
+
+Classic regression coverage and DOS comparison limits are recorded in
+[CLASSIC_FIDELITY_RESTORATION.md](CLASSIC_FIDELITY_RESTORATION.md).

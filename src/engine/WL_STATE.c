@@ -8,7 +8,7 @@
 #include "ID_US_1.h"
 #include <stdlib.h>
 #include <string.h>
-#define tics 1
+#define tics SimulationTics()
 #define MAPSIZE 64
 #define MAPSPOT(x,y,p) (CA_Map()->planes[(p)][(y)*64+(x)])
 extern statetype s_grdstand;

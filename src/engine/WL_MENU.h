@@ -29,6 +29,7 @@ bool BeginControlsMenu(void);
 int HandleControlsMenu(void);
 bool BeginSaveMenu(bool saving);
 int HandleSaveMenu(uint64_t ticks);
+unsigned SaveMenuSelected(void);
 bool DrawSoundSettings(void);
 int HandleSoundSettings(void);
 bool Message(const char *text);

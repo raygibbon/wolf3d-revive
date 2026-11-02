@@ -16,9 +16,14 @@ counters with original sound sequencing. Milestone 6D adds selectable
 Classic/Modern controls, configurable key bindings and SDL3 relative mouse input.
 Milestone 6E adds borderless desktop fullscreen, resizable windows, corrected
 4:3 presentation, integer/fit scaling and an original-font Display menu.
-Alt+Enter switches fullscreen; F11 switches integer scaling. Detailed DOS listening comparisons, persistent
+Alt+Enter switches fullscreen; F11 switches integer scaling. Classic restoration
+adds original view sizes 4–19, teal borders, Change View and F1–F10 actions.
+Attract mode plays embedded original demo commands, with remaining DOS demo
+synchronization differences explicitly documented. Detailed DOS listening comparisons, persistent
 configuration and Enhanced Mode remain later work.
 
+* `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
+* `Classic restoration and verification <docs/CLASSIC_FIDELITY_RESTORATION.md>`_
 * `Build and validation <docs/BUILD.md>`_
 * `Milestone 6E display settings and verification <docs/MILESTONE6E.md>`_
 * `Milestone 6D controls and verification <docs/MILESTONE6D.md>`_

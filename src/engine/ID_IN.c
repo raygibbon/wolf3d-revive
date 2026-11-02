@@ -4,7 +4,8 @@
 #include "WL_CONTROLS.h"
 #include <string.h>
 bool Keyboard[128];
-static bool pressed[128];
+static bool pressed[128],ack;
+void IN_AckEvent(void) { ack=true; }
 static unsigned ascii_scans[128], ascii_read, ascii_write;
 uint8_t LastScan;
 char LastASCII;
@@ -19,7 +20,7 @@ char IN_ScanASCII(unsigned scan)
     if (scan == sc_Space) return ' ';
     return 0;
 }
-void IN_ClearPressed(void) { memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0;CT_EndTic(); }
+void IN_ClearPressed(void) { ack=false; memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0;CT_EndTic(); }
 void IN_ClearKeysDown(void) { memset(Keyboard, 0, sizeof(Keyboard)); IN_ClearPressed();CT_Clear(); }
 void IN_KeyEvent(unsigned scan,bool down) { CT_LegacyKey(scan,down);IN_MenuKeyEvent(scan,down); }
 void IN_MenuKeyEvent(unsigned scan, bool down)
@@ -40,6 +41,7 @@ bool IN_ConsumePress(unsigned scan)
 }
 bool IN_AnyPressed(void)
 {
+    if(ack) return true;
     for (unsigned i = 1; i < 128; ++i) if (pressed[i]) return true;
     return false;
 }

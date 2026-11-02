@@ -13,6 +13,7 @@
 static save_info entries[SAVE_SLOTS];
 static unsigned selected;
 static bool saving;
+unsigned SaveMenuSelected(void) { return selected; }
 static enum { PICK_SLOT,OVERWRITE,EDIT_NAME,SLOT_ERROR } phase;
 static char name[SAVE_DESCRIPTION];
 static bool DrawSlots(void)

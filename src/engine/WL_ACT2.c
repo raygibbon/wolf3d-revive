@@ -7,7 +7,7 @@
 #include "ID_US_1.h"
 #include <stdlib.h>
 #include <math.h>
-#define tics 1
+#define tics SimulationTics()
 #define PROJECTILESIZE INT32_C(0xc000)
 #define PROJSIZE INT32_C(0x2000)
 
@@ -466,7 +466,7 @@ bool ProjectileTryMove(objtype *ob)
 }
 void T_Projectile(objtype *ob)
 {
-    int32_t speed=ob->speed;
+    int32_t speed=ob->speed*SimulationTics();
     int32_t dx=FixedByFrac(speed,sintable[ob->angle+90]);
     int32_t dy=-FixedByFrac(speed,sintable[ob->angle]);
     if (dx>0x10000) dx=0x10000;

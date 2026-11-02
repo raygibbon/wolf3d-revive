@@ -46,7 +46,7 @@ extern objtype *killerobj;
 bool GameFinished(void);
 extern statobj_t statobjlist[MAXSTATS];
 extern bool staticblock[64][64],spotvis[64][64],areabyplayer[37],madenoise;
-extern unsigned wallheight[VIEWWIDTH];
+extern unsigned wallheight[MAXVIEWWIDTH];
 extern int areaMap[64][64],thrustspeed;
 void InitObjects(void);
 objtype *GetNewActor(void);

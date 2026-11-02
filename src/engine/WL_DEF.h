@@ -9,10 +9,17 @@
 #define ANGLES 360
 #define FINEANGLES 3600
 #define MAXTICS 10
-#define VIEWWIDTH 240
-#define VIEWHEIGHT 120
-#define VIEWX 40
-#define VIEWY 20
+#define MAXVIEWWIDTH 304
+extern uint16_t viewwidth,viewheight,viewxorigin,viewyorigin;
+#define VIEWWIDTH viewwidth
+#define VIEWHEIGHT viewheight
+#define VIEWX viewxorigin
+#define VIEWY viewyorigin
+bool NewViewSize(unsigned size);
+unsigned ViewSize(void);
+bool BeginViewMenu(void);
+int HandleViewMenu(uint64_t ticks);
+int SimulationTics(void); /* Normal play: 1. Original demo frames: 4. */
 typedef struct objstruct {
     int32_t x,y; int angle,tilex,tiley;
     int dir,obclass,areanumber,hitpoints,ticcount,temp1,temp2,viewx,viewheight;
@@ -30,7 +37,7 @@ extern doorobj_t doorobjlist[64];
 extern unsigned doornum;
 extern uint32_t sintable[450];
 extern int32_t finetangent[900];
-extern int pixelangle[VIEWWIDTH];
+extern int pixelangle[MAXVIEWWIDTH];
 int32_t FixedByFrac(int32_t a,uint32_t signed_magnitude);
 int32_t WL_FloorShift(int64_t value,unsigned bits);
 void BuildTables(void);
@@ -57,6 +64,7 @@ void ResetPushwalls(void);
 bool DoorSolid(unsigned door);
 /* Original difficulty order: baby, easy, medium, hard. */
 bool NewGame(unsigned difficulty,unsigned episode);
+bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed);
 bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty);
 bool GameStart(uint64_t ticks);
 typedef enum { ex_playing,ex_completed,ex_secretlevel,ex_victorious } exit_t;

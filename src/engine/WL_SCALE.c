@@ -8,7 +8,7 @@
 void ScalePost(unsigned x,unsigned width,unsigned height,const w3r_byte *source)
 {
     unsigned scale=height/8;
-    unsigned maxscale=VIEWWIDTH*3/4-1;
+    unsigned maxscale=(unsigned)VIEWWIDTH*3/4-1;
     if (scale>maxscale) scale=maxscale;
     if (!scale) scale=1;
     unsigned stepbytwo=VIEWHEIGHT/2;
@@ -29,7 +29,7 @@ void ScalePost(unsigned x,unsigned width,unsigned height,const w3r_byte *source)
 static bool DrawShape(int center,unsigned sprite,unsigned height,bool weapon)
 {
     unsigned scale=weapon ? height/2 : height/8;
-    if (!scale || scale>VIEWWIDTH*3/4-1) return true;
+    if (!scale || scale>(unsigned)VIEWWIDTH*3/4-1) return true;
     if (scale>=VIEWHEIGHT/2) scale=VIEWHEIGHT/2+(scale-VIEWHEIGHT/2)/3*3;
     w3r_byte pixels[4096],opaque[4096];
     if (!PM_DecodeSprite(sprite,pixels,opaque)) return false;

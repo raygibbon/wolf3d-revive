@@ -1,23 +1,69 @@
-# Classic DOS fidelity restoration (work in progress)
+# Classic DOS fidelity restoration
 
-Goal: Classic follows the original 1992 DOS Wolfenstein 3D behaviour; Enhanced may add conveniences without changing Classic.
+Classic targets the original DOS rules; this branch does **not** claim complete
+DOS equivalence. Work is on `feature/classic-fidelity-restoration`, PR #5.
+See [implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
 
-## Implemented on this branch
+## Restored in this pass
 
-- Restore in-game F2 Save, F3 Load, F4 Sound, F5 view/display and F6 Controls entry points. Original DOS dispatch is in `WOLFSRC/WL_MENU.C` (`US_ControlPanel`). F5 currently opens Revive's SDL display panel, **not** the original DOS view-size panel; therefore this is not yet fully faithful.
-- Preserve current save eligibility and SDL keyboard input boundary. No gameplay timing or data formats changed.
+- Variable-size 3D viewport: all original sizes 4–19, default 15, using
+  `WL_MAIN.C` NewViewSize/CalcProjection formulas. Rays, wall/sprite scalers,
+  weapon placement, combat view thresholds and death effects use active sizes.
+- Original teal play border and bevel (`WL_GAME.C` DrawPlayBorder), including
+  safe restoration around the viewport, HUD, menus and save/load.
+- DOS Change View preview, arrows, bounds, Enter acceptance and Escape cancel
+  (`WL_MENU.C` CP_ChangeView). Native SDL display controls are separate, under
+  Control → Display settings.
+- F2 Save, F3 Load, F4 Sound, F5 Change View and F6 Control now return directly
+  to paused gameplay. The initial branch compiled and passed 70 regressions,
+  but its F-key panels returned to the main menu and F5 opened SDL settings.
+- F1 implements the **GOODTIMES boss key**, matching `VERSION.H` and
+  `US_ControlPanel`: a native black “C>” screen, paused music/gameplay, Escape
+  to return. The non-GOODTIMES HelpScreens path is a different release variant.
+- F7 End Game confirmation, F8 quicksave/initial slot selection, F9 quickload
+  confirmation/initial slot selection and F10 Quit confirmation, following
+  `CP_CheckQuick`. Function keys are reserved from gameplay bindings.
+- Original embedded `T_DEMO0`–`T_DEMO3` command playback in the attract cycle,
+  with bounded archive decoding, fixed RNG seed, signed movement, original
+  buttons, four-tic updates and key/click abort. Missing/corrupt/unsupported
+  demos are skipped; the attract loop continues instead of fabricating input.
 
-## Significant remaining gaps: do not claim complete Classic fidelity
+## Remaining fidelity differences
 
-1. **Original variable 3D view size and teal border.** `src/engine/WL_DEF.h` fixes `VIEWWIDTH=240`, `VIEWHEIGHT=120`, `VIEWX=40`, `VIEWY=20`. Original DOS `CP_ChangeView` uses `viewwidth`/16 and `NewViewSize` (see `WOLFSRC/WL_MENU.C`). Restoring this requires dynamically sized ray columns, projection/pixel-angle tables, wall/sprite/HUD drawing, death animation, and careful on-screen clipping. Do not merely scale the 240x120 image.
-2. **Original F1 Help and F7-F10 quick control panel actions.** DOS implements these in `WOLFSRC/WL_MENU.C`; they require proper pause/confirmation and game-state integration.
-3. **Original attract-mode demos.** Current `src/engine/WL_MAIN.c` rotates title, credits and highscores, whereas the DOS `WOLFSRC/WL_GAME.C` includes demo recording/playback. Gameplay/demo tick sequencing and assets need parity tests.
-4. **Exact original view-size UI.** In Revive `changeview` opens the modern display settings screen. Classic should instead present the DOS change-view workflow, with OS window/scaling controls separated.
-5. Audit high-score entry/persistence, help content, cheats/debug flags, keyboard edge cases, menus and effects against the corresponding `WOLFSRC` paths.
+1. **DOS demo synchronization remains incomplete.** The owned retail streams
+   decode and replay deterministically, but terminate in deaths before their
+   declared lengths. They must not be described as complete, synchronized DOS
+   playbacks. Four-tic update support is restored; further player/AI/render
+   ordering comparison against an instrumented DOS run is still needed. See
+   measured durations in the implementation report.
+2. The GOODTIMES boss screen uses the existing game font in the 320×200 SDL
+   framebuffer, rather than switching hardware to BIOS text mode. Help for
+   other release layouts is not implemented. The retained owned help article
+   contains picture references that do not fit this GOODTIMES picture layout;
+   it is not silently remapped or drawn out of bounds.
+3. End Game releases the current game and returns to high scores/attract mode.
+   The original Game Over card sequence, high-score name entry/persistence,
+   exact randomized quit phrases, quick-operation Saving/Loading interstitials
+   and some confirmation animation/sounds still need work. Dialog selection
+   intentionally does not consume gameplay RNG.
+4. Six portable save slots and format version 1 remain; original DOS ten-slot
+   files are not introduced. Settings, including view size, are session-only.
+5. Existing ray/scaler arithmetic is retained and extended to active sizes.
+   Full VGA/CRT pixel equivalence is not established. A pre-existing actor
+   projection-center difference (`width/2` versus DOS `centerx=width/2-1`) and
+   safe clipping of death-fizzle edge pixels remain for a separate source-
+   fidelity review; default-view rendering regressions remain unchanged.
+6. Cheats/debug options, release-specific help/menu layouts, complete original
+   mouse-driven control-panel navigation, and exhaustive keyboard/menu/audio
+   parity remain unaudited or incomplete. Classic/Modern here are input
+   presets, not a new Enhanced gameplay mode.
 
-## Test plan
+## Protection and verification
 
-- Build with CART and run the full owned-WL6 regression suite, sanitizer suite and MinGW cross-build.
-- Add tests pressing F2-F6 during gameplay and verifying the resulting UI screen, including unavailable save directories, faded transitions, pause/resume and load.
-- For dynamic viewport work, compare every original view size with DOS source formulas, projections, sprite clipping, status-bar boundary, save/load continuation, death effects, and menu restoration.
-- Never alter `WOLFSRC/`, redistribute commercial assets, or claim real hardware parity from automated tests alone.
+WOLFSRC, master and commercial game files are unchanged. All generated data,
+private captures and binaries remain outside tracked source assets. Tests cover
+all 16 view sizes, border/HUD/sprite/death clipping, save/RNG isolation, function
+keys, pause/return, quick-operation errors, demo headers/cadence/input isolation,
+missing/corrupt streams and owned data. Full regression, sanitizer and available
+Windows results and hardware limitations are recorded in
+[CLASSIC_FIDELITY_RESTORATION.md](CLASSIC_FIDELITY_RESTORATION.md).
