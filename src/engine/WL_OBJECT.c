@@ -130,8 +130,9 @@ static const int dirx[9]={1,1,0,-1,-1,-1,0,1,0};
 static const int diry[9]={0,-1,-1,-1,0,1,1,1,0};
 static bool CheckTile(int x,int y,bool diagonal,int *door)
 {
-    if (x<=0 || y<=0 || x>=63 || y>=63 || staticblock[x][y]) return false;
-    if (actorat[x][y] && (actorat[x][y]->flags&FL_SHOOTABLE)) return false;
+    if (x<=0 || y<=0 || x>=63 || y>=63) return false;
+    if (actorat[x][y]) return !(actorat[x][y]->flags&FL_SHOOTABLE);
+    if (staticblock[x][y]) return false;
     unsigned tile=tilemap[x][y];
     if (!tile || tile==64) return true;
     if (!(tile&128) || (tile&64)) return false;

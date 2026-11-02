@@ -961,8 +961,9 @@ void KillActor (objtype *ob)
  }
  gamestate.killcount++;
  ob->flags &= ~FL_SHOOTABLE;
- for (int x=0;x<64;++x) for (int y=0;y<64;++y)
-        if (actorat[x][y]==ob) actorat[x][y]=NULL;
+ /* DOS clears the actual death cell after retargeting tilex/tiley. Its
+    previous destination reservation can remain until overwritten. */
+ actorat[ob->tilex][ob->tiley]=NULL;
  ob->flags |= FL_NONMARK;
 }
 

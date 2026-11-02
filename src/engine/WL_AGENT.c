@@ -13,14 +13,19 @@ bool TryMove(const objtype *ob)
     int xl=WL_FloorShift((int64_t)ob->x-MINDIST,16),xh=WL_FloorShift((int64_t)ob->x+MINDIST,16);
     int yl=WL_FloorShift((int64_t)ob->y-MINDIST,16),yh=WL_FloorShift((int64_t)ob->y+MINDIST,16);
     if (xl<0 || yl<0 || xh>=64 || yh>=64) return false;
-    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (tilemap[x][y] && tilemap[x][y]!=64) {
+    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (!actorat[x][y] && tilemap[x][y] && tilemap[x][y]!=64) {
         unsigned tile=tilemap[x][y];
         if (!(tile&128) || DoorSolid(tile&127)) return false;
     }
-    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (staticblock[x][y]) return false;
-    for (unsigned i=0;i<objcount;++i) {
-        const objtype *other=&objlist[i];
-        if (!(other->flags&FL_SHOOTABLE)) continue;
+    for (int y=yl;y<=yh;++y) for (int x=xl;x<=xh;++x) if (!actorat[x][y] && staticblock[x][y]) return false;
+    /* DOS tests the expanded reservation grid, not every physical actor. */
+    if(xl>0) --xl;
+    if(yl>0) --yl;
+    if(xh<63) ++xh;
+    if(yh<63) ++yh;
+    for(int y=yl;y<=yh;++y) for(int x=xl;x<=xh;++x) {
+        const objtype *other=actorat[x][y];
+        if (!other || !(other->flags&FL_SHOOTABLE)) continue;
         int64_t dx=(int64_t)ob->x-other->x,dy=(int64_t)ob->y-other->y;
         if (dx>=-MINACTORDIST && dx<=MINACTORDIST && dy>=-MINACTORDIST && dy<=MINACTORDIST) return false;
     }

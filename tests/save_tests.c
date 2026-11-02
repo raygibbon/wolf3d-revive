@@ -22,6 +22,7 @@ static void Scenario(void)
     gamestate.score=45678;gamestate.nextextra=80000;gamestate.oldscore=12345;
     GiveWeapon(wp_chaingun);gamestate.attackframe=2;gamestate.attackcount=4;gamestate.weaponframe=2;
     OpenDoor(0);for(unsigned i=0;i<17;++i) MoveDoors();
+    doorobjlist[0].ticcount=304; /* a blocked DOS timer need not stop at 300 */
     tilemap[30][12]=1;pushable[30][12]=true;PushWall(30,12,east);
     for(unsigned i=0;i<37;++i) MovePWalls();
     PlaceItemType(bo_clip,3,3);GetBonus(&statobjlist[statcount-1]);
@@ -34,7 +35,7 @@ static void Scenario(void)
     CHECK(Save_Write(0,"moving world",true));
     Step(1,90);CHECK(Save_Write(1,"continuous",true));unsigned rng=US_RndIndex();
     CHECK(Save_Load(0,0));CHECK(gamestate.health==89 && gamestate.ammo==91 && gamestate.lives==7 && gamestate.keys==3);
-    CHECK(pwallstate==38 && pwallpos==19 && doorobjlist[0].position==17408 && staticblock[40][40]);
+    CHECK(pwallstate==38 && pwallpos==19 && doorobjlist[0].position==17408 && doorobjlist[0].ticcount==304 && staticblock[40][40]);
     CHECK(statobjlist[statcount-1].shapenum==-1 && gamestate.weapon==wp_chaingun && gamestate.attackframe==2);
     Step(1,90);CHECK(US_RndIndex()==rng);CHECK(Save_Write(2,"restored",true));
 }

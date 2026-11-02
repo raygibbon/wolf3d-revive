@@ -125,7 +125,7 @@ static const w3r_byte vgaCeiling[60]={
 bool ThreeDRefresh(void)
 {
     memset(spotvis,0,sizeof(spotvis));
-    spotvis[player.tilex][player.tiley]=true;
+    /* DOS marks only cells crossed by rays, not the starting player cell. */
     for (unsigned y=0;y<VIEWHEIGHT;++y)
         for (unsigned x=0;x<VIEWWIDTH;++x)
             framebuffer[(VIEWY+y)*320+VIEWX+x]=(w3r_byte)(y<VIEWHEIGHT/2 ? vgaCeiling[gamestate.episode*10+gamestate.mapon] : 0x19);
@@ -169,7 +169,7 @@ static void Transform(int32_t x,int32_t y,int32_t bias,int *sx,int *height,int32
     *ny=FixedByFrac(gy,viewcos)+FixedByFrac(gx,viewsin);
     if (*nx<MINDIST) { *height=0;return; }
     int scale=(VIEWWIDTH/2)*(FOCALLENGTH+MINDIST)/32768;
-    *sx=VIEWWIDTH/2+(int)((int64_t)*ny*scale / *nx);
+    *sx=VIEWWIDTH/2-1+(int)((int64_t)*ny*scale / *nx);
     *height=(65536*scale/64)/(*nx/256);
 }
 void TransformActor(objtype *ob)
@@ -185,7 +185,7 @@ bool TransformTile(int tx,int ty,int *x,int *height)
 int CalcRotate(const objtype *ob)
 {
     static const int dirangle[9]={0,45,90,135,180,225,270,315,360};
-    int viewangle=player.angle+(VIEWWIDTH/2-ob->viewx)/8;
+    int viewangle=player.angle+(VIEWWIDTH/2-1-ob->viewx)/8;
     int angle=(viewangle-180)-(ob->obclass==rocketobj ? ob->angle : dirangle[ob->dir])+ANGLES/16;
     angle%=ANGLES;if (angle<0) angle+=ANGLES;
     return ob->state->rotate==2 ? 4*(angle/(ANGLES/2)) : angle/(ANGLES/8);
@@ -203,15 +203,15 @@ bool DrawScaleds(void)
     }
     for (objtype *current=player.next;current;current=current->next) {
         objtype copy=*current,*ob=drawing_paused?&copy:current;
-        ob->flags&=~FL_VISABLE;
         if (!ob->state || !ob->state->shapenum) continue;
         bool visible=spotvis[ob->tilex][ob->tiley];
         for (int dx=-1;dx<=1;++dx) for (int dy=-1;dy<=1;++dy) {
             int x=ob->tilex+dx,y=ob->tiley+dy;
             if (x>=0 && y>=0 && x<64 && y<64 && !tilemap[x][y] && spotvis[x][y]) visible=true;
         }
-        if (!visible) continue;
+        if (!visible) { ob->flags&=~FL_VISABLE;continue; }
         ob->active=true;TransformActor(ob);
+        /* DOS retains the prior visible flag on the too-close branch. */
         if (!ob->viewheight) continue;
         ob->flags|=FL_VISABLE;
         if (count<49) {

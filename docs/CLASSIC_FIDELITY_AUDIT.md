@@ -30,12 +30,11 @@ See [implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
 
 ## Remaining fidelity differences
 
-1. **DOS demo synchronization remains incomplete.** The owned retail streams
-   decode and replay deterministically, but terminate in deaths before their
-   declared lengths. They must not be described as complete, synchronized DOS
-   playbacks. Four-tic update support is restored; further player/AI/render
-   ordering comparison against an instrumented DOS run is still needed. See
-   measured durations in the implementation report.
+1. **Demo synchronization is verified for the Milestone 6G reference scope.**
+   All four recordings match every traced frame through their declared durations
+   at view size 15 with DOS sound off. Other releases/view sizes and enabled-DOS
+   audio timing need equivalent comparisons. See [MILESTONE6G.md](MILESTONE6G.md)
+   for the original executable reference, proven corrections and remaining limits.
 2. The GOODTIMES boss screen uses the existing game font in the 320×200 SDL
    framebuffer, rather than switching hardware to BIOS text mode. Help for
    other release layouts is not implemented. The retained owned help article
@@ -49,11 +48,9 @@ See [implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
 4. Six portable save slots and format version 1 remain; original DOS ten-slot
    files are not introduced. Settings, including view size, now persist separately
    in [Milestone 6F TOML preferences](MILESTONE6F.md).
-5. Existing ray/scaler arithmetic is retained and extended to active sizes.
-   Full VGA/CRT pixel equivalence is not established. A pre-existing actor
-   projection-center difference (`width/2` versus DOS `centerx=width/2-1`) and
-   safe clipping of death-fizzle edge pixels remain for a separate source-
-   fidelity review; default-view rendering regressions remain unchanged.
+5. Full VGA/CRT pixel equivalence is not established. Milestone 6G corrects
+   actor projection to DOS `centerx=width/2-1` and verifies traced visibility at
+   the default size. Safe clipping of death-fizzle edge pixels remains.
 6. Cheats/debug options, release-specific help/menu layouts, complete original
    mouse-driven control-panel navigation, and exhaustive keyboard/menu/audio
    parity remain unaudited or incomplete. Classic/Modern here are input

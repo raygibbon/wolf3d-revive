@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WOLFSRC/WL_ACT1.C OpenDoor/CloseDoor/OperateDoor/MoveDoors, one tic at a
-   time. Full player/actor bounds protect closing doors; key inventory gates
-   locked doors. ConnectAreas rebuilds connectivity in the one-tic game loop. */
+   time. Original marked-grid/center-row checks protect closing doors; key
+   inventory gates locked doors. ConnectAreas rebuilds connectivity in the one-tic game loop. */
 #include "WL_DEF.h"
 #include <string.h>
 static void DoorSound(soundnames sound,const doorobj_t *d)
@@ -19,22 +19,27 @@ void OpenDoor(unsigned door)
     if (d->action==dr_open) d->ticcount=0;
     else d->action=dr_opening;
 }
+/* WL_ACT1.C CloseDoor uses the marked actor grid, including corpses. A
+   non-shootable actor can still obstruct a doorway in the DOS simulation. */
+static bool DoorOccupied(const doorobj_t *d)
+{
+    return actorat[d->x][d->y]!=NULL ||
+        (player.tilex==(int)d->x && player.tiley==(int)d->y);
+}
 static bool PlayerBlocks(const doorobj_t *d)
 {
-    int64_t left=(int64_t)d->x*TILEGLOBAL,top=(int64_t)d->y*TILEGLOBAL;
-    /* TryMove treats the whole door cell as solid while closing. Use the
-       same inclusive square here, including all four doorway corners. */
-    if ((int64_t)player.x+MINDIST>=left && (int64_t)player.x-MINDIST<left+TILEGLOBAL &&
-        (int64_t)player.y+MINDIST>=top && (int64_t)player.y-MINDIST<top+TILEGLOBAL) return true;
-    for (unsigned i=0;i<objcount;++i) {
-        const objtype *ob=&objlist[i];
-        if (!(ob->flags&FL_SHOOTABLE)) continue;
-        if ((ob->tilex==(int)d->x && ob->tiley==(int)d->y) ||
-            ((int64_t)ob->x+MINDIST>=left && (int64_t)ob->x-MINDIST<left+TILEGLOBAL &&
-             (int64_t)ob->y+MINDIST>=top && (int64_t)ob->y-MINDIST<top+TILEGLOBAL)) return true;
+    int x=(int)d->x,y=(int)d->y;
+    if (DoorOccupied(d)) return true;
+    if (d->vertical) {
+        if (player.tiley==y && ((player.x+MINDIST)/TILEGLOBAL==x || (player.x-MINDIST)/TILEGLOBAL==x)) return true;
+        const objtype *a=x>0?actorat[x-1][y]:NULL,*b=x<63?actorat[x+1][y]:NULL;
+        return (a && (a->x+MINDIST)/TILEGLOBAL==x) || (b && (b->x-MINDIST)/TILEGLOBAL==x);
     }
-    return false;
+    if (player.tilex==x && ((player.y+MINDIST)/TILEGLOBAL==y || (player.y-MINDIST)/TILEGLOBAL==y)) return true;
+    const objtype *a=y>0?actorat[x][y-1]:NULL,*b=y<63?actorat[x][y+1]:NULL;
+    return (a && (a->y+MINDIST)/TILEGLOBAL==y) || (b && (b->y-MINDIST)/TILEGLOBAL==y);
 }
+
 void CloseDoor(unsigned door)
 {
     if (door>=doornum) return;
@@ -56,15 +61,18 @@ void MoveDoors(void)
     for (unsigned i=0;i<doornum;++i) {
         doorobj_t *d=&doorobjlist[i];
         if (d->action==dr_open) {
-            if (d->ticcount<300) d->ticcount+=(unsigned)SimulationTics();
-            if (d->ticcount>=300) CloseDoor(i);
+            /* Original signed 16-bit door timer, including blocked-door wrap. */
+            d->ticcount=(d->ticcount+(unsigned)SimulationTics())&65535U;
+            if (d->ticcount>=300 && d->ticcount<32768) CloseDoor(i);
         } else if (d->action==dr_opening) {
             if(!d->position) DoorSound(OPENDOORSND,d);
             unsigned position=(unsigned)d->position+1024U*(unsigned)SimulationTics();
-            if (position>=65535) { position=65535;d->ticcount=0;d->action=dr_open; }
+            if (position>=65535) { position=65535;d->ticcount=0;d->action=dr_open;
+                /* DOS DoorOpening releases the destination reservation. */
+                actorat[d->x][d->y]=NULL; }
             d->position=(uint16_t)position;
         } else if (d->action==dr_closing) {
-            if (PlayerBlocks(d)) { OpenDoor(i);continue; }
+            if (DoorOccupied(d)) { OpenDoor(i);continue; }
             if (d->position<=1024U*(unsigned)SimulationTics()) { d->position=0;d->action=dr_closed; }
             else d->position=(uint16_t)(d->position-1024U*(unsigned)SimulationTics());
         }

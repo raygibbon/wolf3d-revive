@@ -18,12 +18,13 @@ Milestone 6E adds borderless desktop fullscreen, resizable windows, corrected
 4:3 presentation, integer/fit scaling and an original-font Display menu.
 Alt+Enter switches fullscreen; F11 switches integer scaling. Classic restoration
 adds original view sizes 4–19, teal borders, Change View and F1–F10 actions.
-Attract mode plays embedded original demo commands, with remaining DOS demo
-synchronization differences explicitly documented. Milestone 6F persists controls,
+Milestone 6G matches all four original attract demos against instrumented DOS
+traces at the verified default view size and silent reference settings. Milestone 6F persists controls,
 both custom preset profiles, audio, display and Classic view settings in atomic
 TOML preferences. Detailed DOS listening comparisons and Enhanced Mode remain
 later work.
 
+* `Milestone 6G DOS demo traces, synchronization and limits <docs/MILESTONE6G.md>`_
 * `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
 * `Classic restoration and verification <docs/CLASSIC_FIDELITY_RESTORATION.md>`_
 * `Milestone 6F configuration schema, defaults and verification <docs/MILESTONE6F.md>`_

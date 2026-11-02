@@ -41,12 +41,12 @@ static void TestSpawn(void)
 static void TestSprites(void)
 {
     CHECK(GameStart(0));objtype *guard=Guard();CHECK(guard);
-    TransformActor(guard);CHECK(guard->viewheight>0 && guard->viewx==VIEWWIDTH/2 && guard->transx>2*65536);
+    TransformActor(guard);CHECK(guard->viewheight>0 && guard->viewx==VIEWWIDTH/2-1 && guard->transx>2*65536);
     CHECK(guard->flags&FL_VISABLE);CHECK(CalcRotate(guard)==0);
     guard->dir=east;CHECK(CalcRotate(guard)==4);guard->dir=west;
     guard->state=&s_grdpain;CHECK(CalcRotate(guard)==0);guard->dir=east;CHECK(CalcRotate(guard)==4);
     guard->state=&s_grdstand;guard->x=player.x-65536;TransformActor(guard);CHECK(!guard->viewheight);
-    int x,height;CHECK(!TransformTile(5,2,&x,&height) && height>0 && x==VIEWWIDTH/2);
+    int x,height;CHECK(!TransformTile(5,2,&x,&height) && height>0 && x==VIEWWIDTH/2-1);
     player.x+=20000;CHECK(TransformTile(3,2,&x,&height));
     memset(framebuffer,201,VL_PIXELS);memset(wallheight,0,sizeof(wallheight));
     CHECK(ScaleShape(120,0,256));
@@ -126,7 +126,8 @@ static void TestMovement(void)
     CHECK(GameStart(0));objtype *guard=Guard();
     guard->dir=southwest;tilemap[guard->tilex-1][guard->tiley]=1;CHECK(!TryWalk(guard));tilemap[guard->tilex-1][guard->tiley]=0;
     guard->dir=east;CHECK(TryWalk(guard) && guard->tilex==6 && guard->distance==-1 && doorobjlist[0].action==dr_opening);
-    /* Door occupancy includes the reserved destination and physical bounds. */
+    /* The reservation becomes blocking when DoActor marks the grid. */
+    actorat[guard->tilex][guard->tiley]=guard;
     doorobjlist[0].position=65535;doorobjlist[0].action=dr_open;CloseDoor(0);CHECK(doorobjlist[0].action==dr_open);
     CHECK(GameStart(0));guard=Guard();guard->x=player.x+MINACTORDIST+100;guard->y=player.y;guard->dir=west;guard->distance=65536;
     int32_t x=guard->x;MoveObj(guard,200);CHECK(guard->x==x && guard->distance==65536);

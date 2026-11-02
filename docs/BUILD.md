@@ -91,9 +91,11 @@ current when loading.
 
 After title, credits and scores, attract mode plays available T_DEMO0–3 streams
 from the original graphics archive. A key or click aborts. Missing/corrupt demos
-are skipped safely. Owned demos still terminate early in the native simulation;
-see [Classic restoration](CLASSIC_FIDELITY_RESTORATION.md) for measured durations
-and remaining source-fidelity differences.
+are skipped safely. All four tested owned recordings now match the instrumented
+DOS reference at view size 15 with DOS sound off, through their exact durations.
+See [Milestone 6G](MILESTONE6G.md) for private reference builds, frame tracing,
+source identities and verification limits. Run the added regressions with
+`WOLF3D_DATA=/path/to/WL6 python3 -m unittest discover -s tests -p test_demo_sync.py -v`.
 
 `--no-audio` skips sound loading/device output. Otherwise music and sounds read
 AUDIOHED/AUDIOT/VSWAP directly; nothing is converted or written to disk. Audio

@@ -229,7 +229,7 @@ static bool Valid(const snapshot *s)
     }
     for(unsigned i=0;i<s->door_count;++i) {
         const doorobj_t *d=&s->doors[i];
-        if(d->x<1 || d->x>62 || d->y<1 || d->y>62 || d->lock>5 || (unsigned)d->action>3 || d->ticcount>300 ||
+        if(d->x<1 || d->x>62 || d->y<1 || d->y>62 || d->lock>5 || (unsigned)d->action>3 || d->ticcount>65535 ||
            s->walls[d->x][d->y]!=(128U+i)) return false;
     }
     for(unsigned i=0;i<s->stat_count;++i) {
