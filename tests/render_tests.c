@@ -98,6 +98,21 @@ static void Wide(void)
     key.key.repeat=true;CHECK(SDL_PushEvent(&key));Pump();key.type=SDL_EVENT_KEY_UP;CHECK(SDL_PushEvent(&key));Pump();
     CHECK(US_RndIndex()==rng);free(narrow);free(wide);CHECK(NewViewSize(15));CHECK(GameDrawPaused());
 }
+static void OwnedLevels(void)
+{
+    uint8_t *pixels=malloc(640*480);wl_render_target t;int32_t depth[640];
+    CHECK(pixels && WL_TargetInit(&t,pixels,640*480,640,480,640));
+    for(unsigned map=0;map<60;++map) {
+        CHECK(GameStartMap(0,map,2,0));
+        for(int angle=0;angle<360;angle+=90) {
+            player.angle=angle;CHECK(GameDrawPaused());
+            unsigned rng=US_RndIndex();uint32_t before=Hash(framebuffer,VL_PIXELS);
+            CHECK(WL_RenderFrameAspect(&t,depth,640,true,16,9,NULL));
+            CHECK(rng==US_RndIndex() && before==Hash(framebuffer,VL_PIXELS));
+        }
+    }
+    free(pixels);puts("All 60 owned maps rendered natively in four cardinal directions.");
+}
 static void Visual(void)
 {
     CHECK(GameStart(0));InitObjects();CHECK(NewViewSize(15));
@@ -196,7 +211,7 @@ int main(int argc,char **argv)
     for(unsigned n=0;n<30;++n) { d.high_resolution=!d.high_resolution;CHECK(VL_DisplaySet(&d));Pump();CHECK(US_RndIndex()==rng && gamestate.TimeCount==clock); }
     Wide();
     if(!strcmp(argv[3],"synthetic")) Visual();
-    else AudioStress();
+    else { AudioStress();OwnedLevels(); }
     GameStop();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
     puts("Native render targets, all sizes/views, HUD, isolation, persistence, switching and failure recovery passed.");return 0;
 }

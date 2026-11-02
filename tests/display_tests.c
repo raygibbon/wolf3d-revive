@@ -21,9 +21,15 @@ static SDL_Renderer *renderer;
 static uint64_t ticks;
 static display_settings Settings(void) { display_settings s;CHECK(VL_DisplayGet(&s));return s; }
 static void Pump(void) { CHECK(!VL_PollQuit());CHECK(VW_UpdateScreen()); }
+static void AwaitDisplay(void)
+{
+    Uint64 until=SDL_GetTicks()+4000;
+    do { CHECK(SDL_SyncWindow(window));Pump();if(!Settings().pending) return;SDL_Delay(2); } while(SDL_GetTicks()<until);
+    CHECK(!Settings().pending);
+}
 static void Set(display_settings s)
 {
-    CHECK(VL_DisplaySet(&s));CHECK(SDL_SyncWindow(window));Pump();CHECK(!Settings().pending);
+    CHECK(VL_DisplaySet(&s));AwaitDisplay();CHECK(!Settings().pending);
 }
 static void Resize(int w,int h) { CHECK(SDL_SetWindowSize(window,w,h));CHECK(SDL_SyncWindow(window));Pump(); }
 static void Key(SDL_Scancode code,bool down,SDL_Keymod mod)
@@ -35,7 +41,7 @@ static void Shortcut(bool full)
     Key(full?SDL_SCANCODE_RETURN:SDL_SCANCODE_F11,true,full?SDL_KMOD_LALT:SDL_KMOD_NONE);
     Key(full?SDL_SCANCODE_RETURN:SDL_SCANCODE_F11,false,full?SDL_KMOD_LALT:SDL_KMOD_NONE);
     if(full) Key(SDL_SCANCODE_LALT,false,SDL_KMOD_NONE);
-    CHECK(!VL_PollQuit());CHECK(SDL_SyncWindow(window));Pump();
+    CHECK(!VL_PollQuit());AwaitDisplay();
 }
 static void Pixel(SDL_Surface *s,int x,int y,unsigned r,unsigned g,unsigned b)
 {
@@ -107,7 +113,7 @@ static void Geometry(void)
 }
 static void Step(unsigned n)
 { while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));CHECK(VW_UpdateScreen()); } }
-static void Tap(SDL_Scancode code) { Key(code,true,SDL_KMOD_NONE);Key(code,false,SDL_KMOD_NONE);Step(1); }
+static void Tap(SDL_Scancode code) { Key(code,true,SDL_KMOD_NONE);Key(code,false,SDL_KMOD_NONE);Step(1);AwaitDisplay(); }
 static void Capture(const char *name)
 {
     const char *dir=getenv("WOLF3D_CAPTURE_DIR");if(!dir) return;
