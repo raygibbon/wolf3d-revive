@@ -130,7 +130,7 @@ static void Game(void)
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().scale==4);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(Settings().high_resolution);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().render_width==1280);
-    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(!Settings().integer && Settings().scale==3 && !Settings().high_resolution);
+    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(!Settings().integer && Settings().scale==3 && !Settings().high_resolution);
     Tap(SDL_SCANCODE_ESCAPE);Step(21);CT_Reset(CT_MODERN);CHECK(DemoLoopStartGame(ticks));Step(11);CHECK(IN_SDLCaptured());
     display_settings native=Settings();native.high_resolution=true;native.aspect=2;Set(native);CHECK(IN_SDLCaptured());
     native.high_resolution=false;Set(native);CHECK(IN_SDLCaptured());native.high_resolution=true;Set(native);CHECK(IN_SDLCaptured());
