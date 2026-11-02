@@ -14,4 +14,11 @@ bool Demo_Finished(void);
 /* Read one original four-tic command frame. */
 bool Demo_ReadTic(demo_command *command);
 unsigned Demo_Buttons(void);
+/* Read-only playback diagnostics; command counts never advance simulation. */
+typedef struct {
+    unsigned map;
+    size_t commands_total,commands_consumed;
+    unsigned buttons;
+} demo_progress;
+bool Demo_Progress(demo_progress *progress);
 #endif
