@@ -56,17 +56,17 @@ void MoveDoors(void)
     for (unsigned i=0;i<doornum;++i) {
         doorobj_t *d=&doorobjlist[i];
         if (d->action==dr_open) {
-            if (d->ticcount<300) ++d->ticcount;
+            if (d->ticcount<300) d->ticcount+=(unsigned)SimulationTics();
             if (d->ticcount>=300) CloseDoor(i);
         } else if (d->action==dr_opening) {
             if(!d->position) DoorSound(OPENDOORSND,d);
-            unsigned position=(unsigned)d->position+1024;
+            unsigned position=(unsigned)d->position+1024U*(unsigned)SimulationTics();
             if (position>=65535) { position=65535;d->ticcount=0;d->action=dr_open; }
             d->position=(uint16_t)position;
         } else if (d->action==dr_closing) {
             if (PlayerBlocks(d)) { OpenDoor(i);continue; }
-            if (d->position<=1024) { d->position=0;d->action=dr_closed; }
-            else d->position=(uint16_t)(d->position-1024);
+            if (d->position<=1024U*(unsigned)SimulationTics()) { d->position=0;d->action=dr_closed; }
+            else d->position=(uint16_t)(d->position-1024U*(unsigned)SimulationTics());
         }
     }
 }
@@ -122,7 +122,7 @@ void MovePWalls(void)
 {
     if (!pwallstate) return;
     unsigned oldblock=pwallstate/128;
-    ++pwallstate;
+    pwallstate+=(unsigned)SimulationTics();
     if (pwallstate/128!=oldblock) {
         unsigned tile=tilemap[pwallx][pwally]&63;
         tilemap[pwallx][pwally]=0;

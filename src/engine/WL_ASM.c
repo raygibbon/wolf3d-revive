@@ -6,7 +6,7 @@
 #include <limits.h>
 uint32_t sintable[450];
 int32_t finetangent[900];
-int pixelangle[VIEWWIDTH];
+int pixelangle[MAXVIEWWIDTH];
 static int32_t FromBits(uint32_t bits)
 {
     return bits<=INT32_MAX ? (int32_t)bits : -(int32_t)(UINT32_MAX-bits)-1;

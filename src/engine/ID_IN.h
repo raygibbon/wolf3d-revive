@@ -16,6 +16,7 @@ void IN_KeyEvent(unsigned scan, bool down);
 void IN_MenuKeyEvent(unsigned scan,bool down);
 bool IN_ConsumePress(unsigned scan);
 bool IN_AnyPressed(void);
+void IN_AckEvent(void); /* Fresh mouse press outside relative gameplay. */
 char IN_ScanASCII(unsigned scan);
 char IN_NextASCII(void);
 bool IN_PressPending(unsigned scan);

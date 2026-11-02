@@ -34,8 +34,8 @@ bool UpdatePaletteShifts(void)
     int white=bonuscount ? bonuscount/6+1 : 0,red=damagecount ? damagecount/10+1 : 0;
     if (white>3) white=3;
     if (red>6) red=6;
-    if (bonuscount) --bonuscount;
-    if (damagecount) --damagecount;
+    if (bonuscount) { bonuscount-=SimulationTics();if(bonuscount<0) bonuscount=0; }
+    if (damagecount) { damagecount-=SimulationTics();if(damagecount<0) damagecount=0; }
     if (red || white) {
         palshifted=true;
         return VL_SetPalette(red ? redshifts[red-1] : whiteshifts[white-1],768);

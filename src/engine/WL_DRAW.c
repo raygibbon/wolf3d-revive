@@ -2,11 +2,12 @@
 /* WL_DR_A.ASM quadrant initialization and vertcheck/horizcheck translated
    directly to bounded C; WL_DRAW.C wall/door hits, texture flips and height. */
 #include "WL_DEF.h"
+#include "WL_DEMO.h"
 #include "ID_CA.h"
 #include "ID_PM.h"
 #include "ID_VL.h"
 #include <string.h>
-unsigned wallheight[VIEWWIDTH];
+unsigned wallheight[MAXVIEWWIDTH];
 static bool drawing_paused;
 static int32_t viewx,viewy;
 static uint32_t viewsin,viewcos;
@@ -154,7 +155,8 @@ bool ThreeDRefresh(void)
             return SimpleScaleShape(VIEWWIDTH/2,SPR_DEATHCAM,VIEWHEIGHT+1);
         return true;
     }
-    return SimpleScaleShape(VIEWWIDTH/2,weapons[gamestate.weapon]+(unsigned)gamestate.weaponframe,VIEWHEIGHT+1);
+    return SimpleScaleShape(VIEWWIDTH/2,weapons[gamestate.weapon]+(unsigned)gamestate.weaponframe,VIEWHEIGHT+1) &&
+        (!Demo_Active() || SimpleScaleShape(VIEWWIDTH/2,SPR_DEMO,VIEWHEIGHT+1));
 }
 
 /* WL_DRAW.C TransformActor/TransformTile: signed-magnitude rotation,

@@ -116,7 +116,9 @@ static void Capture(const char *name)
 static void Game(void)
 {
     Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(DemoLoopStartup(0,true));Step(11);
-    MainItems.curpos=changeview;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);Capture("display-settings");
+    MainItems.curpos=control;Tap(SDL_SCANCODE_RETURN);Step(21);
+    for(unsigned n=0;n<6;++n) Tap(SDL_SCANCODE_DOWN);
+    Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);Capture("display-settings");
     Tap(SDL_SCANCODE_RETURN);CHECK(Settings().fullscreen);Tap(SDL_SCANCODE_RETURN);CHECK(!Settings().fullscreen);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(Settings().integer);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().scale==4);
@@ -129,9 +131,11 @@ static void Game(void)
     Event(SDL_EVENT_WINDOW_FOCUS_LOST);Pump();CHECK(!IN_SDLCaptured());
     Event(SDL_EVENT_WINDOW_FOCUS_GAINED);Pump();CHECK(IN_SDLCaptured());
     Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(!IN_SDLCaptured());
-    MainItems.curpos=changeview;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);
+    MainItems.curpos=control;Tap(SDL_SCANCODE_RETURN);Step(21);
+    for(unsigned n=0;n<6;++n) Tap(SDL_SCANCODE_DOWN);
+    Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);
     time=gamestate.TimeCount;Step(70);CHECK(gamestate.TimeCount==time);
-    Tap(SDL_SCANCODE_ESCAPE);Step(21);MainItems.curpos=backtodemo;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(IN_SDLCaptured());
+    Tap(SDL_SCANCODE_ESCAPE);Step(21);Tap(SDL_SCANCODE_ESCAPE);Step(21);MainItems.curpos=backtodemo;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(IN_SDLCaptured());
     GameStop();Display_Connect(NULL,NULL);
     CT_Reset(CT_CLASSIC);
     for(unsigned variant=0;variant<2;++variant) {
