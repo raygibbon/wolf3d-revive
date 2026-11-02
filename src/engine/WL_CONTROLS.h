@@ -8,7 +8,17 @@
 typedef enum { CT_CLASSIC,CT_MODERN } ct_preset;
 typedef enum { CT_FORWARD,CT_BACK,CT_LEFT,CT_RIGHT,CT_STRAFE_LEFT,CT_STRAFE_RIGHT,
     CT_RUN,CT_ALT,CT_FIRE,CT_USE,CT_WEAPON1,CT_WEAPON2,CT_WEAPON3,CT_WEAPON4,CT_MENU,CT_ACTIONS } ct_action;
-void CT_Reset(ct_preset preset);
+typedef struct {
+    unsigned binding[CT_ACTIONS][2];
+    bool mouse,invert;
+    unsigned sensitivity;
+} ct_profile;
+void CT_DefaultProfile(ct_preset preset,ct_profile *profile);
+void CT_GetProfile(ct_preset preset,ct_profile *profile);
+bool CT_SetProfile(ct_preset preset,const ct_profile *profile);
+bool CT_ValidProfile(const ct_profile *profile);
+void CT_SelectPreset(ct_preset preset); /* Retains each preset's custom profile. */
+void CT_Reset(ct_preset preset); /* Explicit reset to defaults for this preset. */
 void CT_SetGameplay(bool active);
 bool CT_Gameplay(void);
 ct_preset CT_Preset(void);

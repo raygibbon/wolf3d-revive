@@ -7,6 +7,7 @@
 
 bool VL_Startup(void);
 bool VL_DisplayGet(display_settings *settings);
+bool VL_DisplayPreferences(display_settings *settings); /* Pending accepted intent for persistence. */
 bool VL_DisplaySet(const display_settings *settings);
 #ifdef WOLF3D_DISPLAY_TEST
 /* One-shot fault injection, compiled only into the display test executable. */

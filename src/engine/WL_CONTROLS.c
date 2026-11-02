@@ -3,6 +3,8 @@
 #include <float.h>
 #include <string.h>
 static ct_preset preset;
+static ct_profile profiles[2];
+static bool initialized[2];
 static bool gameplay;
 void CT_SetGameplay(bool active) { gameplay=active; }
 bool CT_Gameplay(void) { return gameplay; }
@@ -15,20 +17,65 @@ static unsigned sensitivity=10,nextkey;
 static double motion;
 void CT_Clear(void) { memset(keys,0,sizeof(keys));memset(buttons,0,sizeof(buttons));motion=0;CT_EndTic(); }
 void CT_EndTic(void) { memset(pressed,0,sizeof(pressed));memset(clicks,0,sizeof(clicks));nextkey=0; }
-void CT_Reset(ct_preset value)
+void CT_DefaultProfile(ct_preset value,ct_profile *profile)
 {
     static const unsigned classic[CT_ACTIONS][2]={
         {82,96},{81,90},{80,92},{79,94},{0,0},{0,0},{225,229},{226,230},
         {224,228},{44,0},{30,0},{31,0},{32,0},{33,0},{41,0}
     };
-    if(value!=CT_CLASSIC && value!=CT_MODERN) return;
-    memcpy(bindings,classic,sizeof(bindings));preset=value;mouse=value==CT_MODERN;invert=false;sensitivity=10;
+    memset(profile,0,sizeof(*profile));memcpy(profile->binding,classic,sizeof(classic));
+    profile->mouse=value==CT_MODERN;profile->sensitivity=10;
     if(value==CT_MODERN) {
-        bindings[CT_FORWARD][0]=26;bindings[CT_FORWARD][1]=82;
-        bindings[CT_BACK][0]=22;bindings[CT_BACK][1]=81;
-        bindings[CT_STRAFE_LEFT][0]=4;bindings[CT_STRAFE_RIGHT][0]=7;
+        profile->binding[CT_FORWARD][0]=26;profile->binding[CT_FORWARD][1]=82;
+        profile->binding[CT_BACK][0]=22;profile->binding[CT_BACK][1]=81;
+        profile->binding[CT_STRAFE_LEFT][0]=4;profile->binding[CT_STRAFE_RIGHT][0]=7;
     }
-    CT_Clear();
+}
+static bool ValidKey(unsigned action,unsigned key)
+{
+    return key<CT_KEYS && (!key || key>=4) &&
+        !(key==41 && action!=CT_MENU) && !(key>=58 && key<=68);
+}
+bool CT_ValidProfile(const ct_profile *profile)
+{
+    if(!profile || profile->sensitivity<1 || profile->sensitivity>40) return false;
+    bool used[CT_KEYS]={false};
+    for(unsigned a=0;a<CT_ACTIONS;++a) for(unsigned slot=0;slot<2;++slot) {
+        unsigned key=profile->binding[a][slot];
+        if(!ValidKey(a,key) || (key && used[key])) return false;
+        if(key) used[key]=true;
+    }
+    return true;
+}
+void CT_GetProfile(ct_preset value,ct_profile *profile)
+{
+    if(value==preset) {
+        memset(profile,0,sizeof(*profile));memcpy(profile->binding,bindings,sizeof(bindings));
+        profile->mouse=mouse;profile->invert=invert;profile->sensitivity=sensitivity;
+    } else if((unsigned)value<2 && initialized[value]) *profile=profiles[value];
+    else CT_DefaultProfile(value,profile);
+}
+bool CT_SetProfile(ct_preset value,const ct_profile *profile)
+{
+    if((unsigned)value>=2 || !CT_ValidProfile(profile)) return false;
+    profiles[value]=*profile;initialized[value]=true;
+    if(value==preset) {
+        memcpy(bindings,profile->binding,sizeof(bindings));mouse=profile->mouse;
+        invert=profile->invert;sensitivity=profile->sensitivity;CT_Clear();
+    }
+    return true;
+}
+void CT_SelectPreset(ct_preset value)
+{
+    if((unsigned)value>=2 || value==preset) return;
+    CT_GetProfile(preset,&profiles[preset]);initialized[preset]=true;
+    ct_profile next;CT_GetProfile(value,&next);preset=value;(void)CT_SetProfile(value,&next);
+}
+void CT_Reset(ct_preset value)
+{
+    if((unsigned)value>=2) return;
+    if(value!=preset) { CT_GetProfile(preset,&profiles[preset]);initialized[preset]=true; }
+    ct_profile defaults;CT_DefaultProfile(value,&defaults);preset=value;(void)CT_SetProfile(value,&defaults);
 }
 ct_preset CT_Preset(void) { return preset; }
 void CT_Key(unsigned key,bool down)
@@ -88,7 +135,7 @@ bool CT_Pressed(ct_action action)
 unsigned CT_Binding(ct_action action,unsigned slot) { return (unsigned)action<CT_ACTIONS && slot<2?bindings[action][slot]:0; }
 bool CT_Bind(ct_action action,unsigned slot,unsigned key)
 {
-    if((unsigned)action>=CT_ACTIONS || slot>=2 || key>=CT_KEYS) return false;
+    if((unsigned)action>=CT_ACTIONS || slot>=2 || !ValidKey((unsigned)action,key)) return false;
     /* Escape remains a safe menu/cancel key; F1-F10 are DOS panel shortcuts; F11 controls display scaling. */
     if((key==41 && action!=CT_MENU) || (key>=58 && key<=68)) return false;
     if(key) for(unsigned a=0;a<CT_ACTIONS;++a) for(unsigned s=0;s<2;++s)

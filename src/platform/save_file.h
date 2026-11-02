@@ -7,4 +7,7 @@
 FILE *SaveFile_Open(const char *path);
 bool SaveFile_Missing(const char *path);
 bool SaveFile_WriteAtomic(const char *path,const void *bytes,size_t length,bool overwrite);
+#ifdef WOLF3D_CONFIG_TEST
+void SaveFile_TestFailure(unsigned operation); /* Create/write/flush/sync/close/replace. */
+#endif
 #endif

@@ -27,6 +27,7 @@ static int quickslot=-1;
 static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_ERROR } quick_action;
 static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO; }
 ui_state DemoLoopState(void) { return state; }
+void DemoLoopPrepareExit(void) { if(state==UI_BOSS) SD_SetEnabled(boss_music,boss_effects); }
 
 static bool GameError(void)
 {

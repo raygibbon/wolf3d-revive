@@ -25,11 +25,12 @@ opens quit confirmation in the menu (Y exits, N/Escape cancels). Closing the
 window exits directly. New Game opens the episode and difficulty pages; arrows select, Enter/Space
 confirm and Escape goes back. Sound opens functional Music/Effects enable
 switches and independent volumes: Up/Down select, Enter/Space toggles a switch,
-Left/Right changes volume in 5% steps. Settings last for this session. Control opens Classic/Modern presets, mouse
+Left/Right changes volume in 5% steps. Settings persist on normal exit. Control opens Classic/Modern presets, mouse
 enable, sensitivity/invert, reset and two-key action bindings. On the binding
 page, arrows select action/alternative, Enter captures a key, Delete unbinds
 and Escape cancels. Conflicts retain the old assignment. Changing presets
-resets its bindings and mouse options. Other
+retains each profile's custom bindings and mouse options; Reset Defaults resets
+only the selected profile. Other
 unported main-menu rows stay disabled. A failed
 level load reports the reason and returns to the menu after acknowledgement.
 
@@ -52,7 +53,7 @@ left-click fires and right-click opens/uses; arrows, Ctrl, Space, Shift and 1–
 remain available. Mouse capture starts after gameplay fade-in and releases for
 menus and focus loss. Sensitivity 1–40 sets 0.05–2 degrees/count (default 10,
 0.5 degrees/count). Gameplay bindings do not change menu navigation. These
-settings last for the application session and remain current when loading a
+settings persist across normal restarts and remain current when loading a
 save. See [Milestone 6D](MILESTONE6D.md) for input timing and validation details.
 
 Change View in the main or paused menu changes the actual 3D viewport through
@@ -63,7 +64,8 @@ around the view. This is independent of SDL window or presentation size.
 Control → Display settings selects fullscreen, integer scaling and
 window sizes from 320×240 through 1600×1200 (1×–5×). Up/Down selects a row;
 Left/Right or Enter changes a setting. Reset Defaults restores a 960×720
-window with fit scaling. Settings last for the session, including across loads.
+window with fit scaling. Settings persist across normal restarts, including custom window sizes, and
+remain current across loads.
 Alt+Enter (including keypad Enter) switches borderless desktop fullscreen;
 F11 switches integer scaling. These shortcuts are consumed before gameplay
 or menu input; F1–F11 cannot be assigned to gameplay actions. Fullscreen changes
@@ -245,3 +247,13 @@ See [milestone 6 results and scope](MILESTONE6.md) for validation and remaining 
 
 Classic regression coverage and DOS comparison limits are recorded in
 [CLASSIC_FIDELITY_RESTORATION.md](CLASSIC_FIDELITY_RESTORATION.md).
+
+Preferences use `SDL_GetPrefPath(NULL,"wolf3d-revive")/config.toml`, beside but
+separate from save slots: `$XDG_DATA_HOME/wolf3d-revive/` or normally
+`~/.local/share/wolf3d-revive/` on Linux, `%APPDATA%\wolf3d-revive\` on Windows.
+See [MILESTONE6F.md](MILESTONE6F.md) for the actual schema/defaults, two preset
+profiles, fixed TOML subset, atomic writes and verified limitations. Malformed,
+unreadable or future-version files are preserved; fix or rename them to restore
+normal-exit preference saving. Check-only commands do not touch configuration.
+The configuration tests use Python 3.11+ for the independent standard-library
+`tomllib` output check; the native application has no Python dependency.

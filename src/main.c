@@ -4,6 +4,7 @@
 #include "engine/ID_VL.h"
 #include "platform/sdl_video.h"
 #include "platform/sdl_audio.h"
+#include "platform/config_file.h"
 #include "engine/ID_SD.h"
 #include "engine/WL_MAIN.h"
 #include "engine/WL_MENU.h"
@@ -29,7 +30,8 @@ static void Usage(const char *name)
 int main(int argc, char *argv[])
 {
     const char *directory = NULL, *capture = NULL;
-    bool no_audio=false;
+    bool no_audio=false,config_writable=false;
+    char *save_path=NULL;
     bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
@@ -86,8 +88,12 @@ int main(int argc, char *argv[])
     if (!no_audio && !Audio_Startup()) fprintf(stderr,"Audio unavailable: %s; continuing silently.\n",Audio_Error());
     Display_Connect(VL_DisplayGet,VL_DisplaySet);
     MainMenu[soundmenu].active=1;
-    char *save_path=SDL_GetPrefPath(NULL,"wolf3d-revive");
-    if(save_path) { (void)Save_SetDirectory(save_path);SDL_free(save_path); }
+    save_path=SDL_GetPrefPath(NULL,"wolf3d-revive");
+    if(save_path) {
+        (void)Save_SetDirectory(save_path);config_result config=Config_Load(save_path);
+        config_writable=config==CONFIG_MISSING || config==CONFIG_LOADED;
+        if(*Config_Error()) fprintf(stderr,"Configuration: %s\n",Config_Error());
+    }
     else fputs("Save storage unavailable; gameplay remains available.\n",stderr);
     uint64_t ticks = VL_GetTicks70();
     if (!DemoLoopStartup(ticks,menu)) { fprintf(stderr,"Cannot load original UI: %s\n",CA_Error()); goto video_done; }
@@ -108,6 +114,11 @@ int main(int argc, char *argv[])
     }
     status = 0;
 video_done:
+    DemoLoopPrepareExit();
+    if(save_path) {
+        if(status==0 && config_writable && !Config_Save(save_path)) fprintf(stderr,"Configuration: %s\n",Config_Error());
+        SDL_free(save_path);
+    }
     Display_Connect(NULL,NULL);
     Audio_Shutdown();
     VL_Shutdown();

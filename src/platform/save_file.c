@@ -26,8 +26,16 @@ bool SaveFile_Missing(const char *path)
 FILE *SaveFile_Open(const char *path) { return fopen(path,"rb"); }
 bool SaveFile_Missing(const char *path) { struct stat st;return lstat(path,&st)!=0 && errno==ENOENT; }
 #endif
+#ifdef WOLF3D_CONFIG_TEST
+static unsigned fault;
+void SaveFile_TestFailure(unsigned operation) { fault=operation; }
+static bool Fail(unsigned operation) { if(fault!=operation) return false;fault=0;errno=EIO;return true; }
+#else
+static bool Fail(unsigned operation) { (void)operation;return false; }
+#endif
 bool SaveFile_WriteAtomic(const char *path,const void *bytes,size_t length,bool overwrite)
 {
+    if(Fail(1)) return false;
     static unsigned sequence;
     char temp[4096];int fd=-1;
     for(unsigned attempt=0;attempt<100;++attempt) {
@@ -52,13 +60,16 @@ bool SaveFile_WriteAtomic(const char *path,const void *bytes,size_t length,bool 
 #endif
     bool ok=false;
     if(file) {
-        ok=fwrite(bytes,1,length,file)==length && fflush(file)==0;
+        if(Fail(2)) { (void)fwrite(bytes,1,length/2,file);ok=false; }
+        else ok=fwrite(bytes,1,length,file)==length;
+        if(ok) ok=fflush(file)==0 && !Fail(3);
+        if(ok && Fail(4)) ok=false;
 #ifdef _WIN32
         if(ok) ok=_commit(fd)==0;
 #else
         if(ok) ok=fsync(fd)==0;
 #endif
-        if(fclose(file)!=0) ok=false;
+        if(fclose(file)!=0 || Fail(5)) ok=false;
     } else {
 #ifdef _WIN32
         (void)_close(fd);
@@ -66,6 +77,7 @@ bool SaveFile_WriteAtomic(const char *path,const void *bytes,size_t length,bool 
         (void)close(fd);
 #endif
     }
+    if(ok && Fail(6)) ok=false;
 #ifdef _WIN32
     wchar_t source[4096],dest[4096];
     /* The temporary file exists at this point. Keep cleanup reachable even
