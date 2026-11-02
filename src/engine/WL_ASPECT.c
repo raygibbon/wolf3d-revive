@@ -26,3 +26,15 @@ bool WL_HorizontalFov(double reference,unsigned aw,unsigned ah,double *out)
     if(!(fov>0.0 && fov<180.0)) return false;
     *out=fov;return true;
 }
+
+bool WL_AutoRenderSize(unsigned display_w,unsigned display_h,unsigned *width,unsigned *height)
+{
+    if(!width || !height || display_w<320 || display_h<200) return false;
+    unsigned cap_w=display_w<1920U?display_w:1920U;
+    unsigned cap_h=display_h<1080U?display_h:1080U;
+    wl_rectangle fit;
+    if(!WL_AspectFit(cap_w,cap_h,display_w,display_h,&fit) ||
+       fit.width<320U || fit.height<200U) return false;
+    *width=fit.width;*height=fit.height;
+    return true;
+}
