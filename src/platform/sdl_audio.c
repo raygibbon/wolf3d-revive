@@ -4,6 +4,7 @@
 #include "sdl_audio.h"
 #include "engine/ID_SD.h"
 #include "engine/ID_CA.h"
+#include "engine/WL_PROFILE.h"
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,6 +72,9 @@ bool Audio_Startup(void)
 void Audio_Pump(void)
 {
     if(!stream) return;
+#ifdef WOLF3D_BENCHMARK
+    bool changed=generation!=SD_OutputGeneration();
+#endif
     if(generation!=SD_OutputGeneration()) {
         if(!SDL_ClearAudioStream(stream)) {
             (void)snprintf(error,sizeof(error),"%s",SDL_GetError());
@@ -80,6 +84,9 @@ void Audio_Pump(void)
         generation=SD_OutputGeneration();
     }
     int queued=SDL_GetAudioStreamQueued(stream);
+#ifdef WOLF3D_BENCHMARK
+    if(queued==0 && !changed) ++WL_Profile.empty_queues;
+#endif
     /* Buffer in sample frames, never render-frame timestamps. The producer
        is also serviced inside expensive presentation loops. Arbitrarily long
        OS/driver stalls can still exhaust this deliberately bounded queue. */

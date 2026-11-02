@@ -38,7 +38,7 @@ static size_t Read(char out[8192])
 static void JSON(config_result result)
 {
     unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);display_settings d;CHECK(VL_DisplayPreferences(&d));
-    printf("{\"result\":%d,\"preset\":%d,\"music\":%u,\"effects\":%u,\"music_on\":%d,\"effects_on\":%d,\"view\":%u,\"fullscreen\":%d,\"integer\":%d,\"width\":%d,\"height\":%d,\"high_resolution\":%d,\"render_auto\":%d,\"render_width\":%u,\"render_height\":%u,\"aspect\":%u,\"vsync\":%d,\"linear\":%d,\"profiles\":[",result,(int)CT_Preset(),m,e,mon,eon,ViewSize(),d.fullscreen,d.integer,d.width,d.height,d.high_resolution,d.render_auto,d.render_width,d.render_height,d.aspect,d.vsync,d.linear);
+    printf("{\"result\":%d,\"preset\":%d,\"music\":%u,\"effects\":%u,\"music_on\":%d,\"effects_on\":%d,\"view\":%u,\"fullscreen\":%d,\"integer\":%d,\"width\":%d,\"height\":%d,\"high_resolution\":%d,\"render_auto\":%d,\"render_width\":%u,\"render_height\":%u,\"aspect\":%u,\"vsync\":%d,\"linear\":%d,\"smooth\":%d,\"profiles\":[",result,(int)CT_Preset(),m,e,mon,eon,ViewSize(),d.fullscreen,d.integer,d.width,d.height,d.high_resolution,d.render_auto,d.render_width,d.render_height,d.aspect,d.vsync,d.linear,d.smooth);
     for(unsigned i=0;i<2;++i) {
         ct_profile p;CT_GetProfile((ct_preset)i,&p);printf("%s{\"mouse\":%d,\"invert\":%d,\"sensitivity\":%u,\"bindings\":[",i?",":"",p.mouse,p.invert,p.sensitivity);
         for(unsigned a=0;a<CT_ACTIONS;++a) printf("%s[%u,%u]",a?",":"",p.binding[a][0],p.binding[a][1]);
@@ -53,7 +53,7 @@ static void Seed(void)
     m.binding[CT_FORWARD][0]=22;m.binding[CT_BACK][0]=26;m.mouse=false;m.invert=true;m.sensitivity=17;
     CHECK(CT_SetProfile(CT_CLASSIC,&c) && CT_SetProfile(CT_MODERN,&m));CT_SelectPreset(CT_MODERN);
     SD_SetVolumes(23,67);SD_SetEnabled(false,true);CHECK(NewViewSize(19));
-    display_settings d;CHECK(VL_DisplayGet(&d));d.fullscreen=d.integer=true;d.scale=0;d.width=1000;d.height=600;CHECK(VL_DisplaySet(&d));
+    display_settings d;CHECK(VL_DisplayGet(&d));d.fullscreen=d.integer=d.smooth=true;d.scale=0;d.width=1000;d.height=600;CHECK(VL_DisplaySet(&d));
 }
 static void Roundtrip(void)
 {
@@ -125,6 +125,7 @@ int main(int argc,char **argv)
     CHECK(argc==4);directory=argv[1];MM_Startup();CHECK(VL_Startup());int count;SDL_Window **windows=SDL_GetWindows(&count);CHECK(windows && count==1);window=windows[0];SDL_free(windows);Reset();
     const char *mode=argv[3];
     if(!strcmp(mode,"inspect")) { config_result r=Config_Load(directory);Await();JSON(r); }
+    else if(!strcmp(mode,"migrate")) { CHECK(Config_Load(directory)==CONFIG_LOADED);CHECK(Config_Save(directory));JSON(CONFIG_LOADED); }
     else if(!strcmp(mode,"roundtrip")) Roundtrip();
     else if(!strcmp(mode,"seed")) { Seed();CHECK(Config_Save(directory));JSON(CONFIG_LOADED); }
     else if(!strcmp(mode,"atomic")) Atomic();

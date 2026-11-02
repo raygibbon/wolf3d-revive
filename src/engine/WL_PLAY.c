@@ -2,6 +2,7 @@
 /* WL_PLAY.C controls and clock: normal play uses one 70-Hz tic per update;
    original demo commands use four-tic frames. Presentation is independent. */
 #include "WL_DEF.h"
+#include "WL_PRESENT.h"
 #include "WL_DEMO.h"
 #include "WL_SAVE.h"
 #include "WL_CONTROLS.h"
@@ -60,9 +61,9 @@ bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed)
     if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop(); return false; }
     SD_StartMusic(SD_LevelMusic(map/10,map%10));
     deathphase=deathwait=0;finished=intermission=false;
-    lasttimecount=ticks;running=true; IN_ClearKeysDown(); return true;
+    lasttimecount=ticks;running=true; IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
 }
-void GameStop(void) { Demo_Stop();CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
+void GameStop(void) { WL_PresentReset(); Demo_Stop();CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and
    64000/70 candidate pixels per tic are the original values. */
@@ -132,7 +133,7 @@ bool GameStep(uint64_t ticks)
         ShutdownGameLevel();
         if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) return false;
         SD_StartMusic(SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon));
-        intermission=false;IN_ClearKeysDown();return true;
+        intermission=false;IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
     }
     if (victorypage) {
         if (victorypage==1) {
@@ -149,8 +150,8 @@ bool GameStep(uint64_t ticks)
         if (finished) break;
         demo_command demo={0};bool playback=Demo_Active();
         if(playback && !Demo_ReadTic(&demo)) break;
-        if (gamestate.died) { if (!Died(ticks-elapsed+tic+1)) return false;continue; }
-        if (DeathCameraActive()) { if (!StepDeathCamera()) return false;continue; }
+        if (gamestate.died) { if (!Died(ticks-elapsed+tic+1)) return false;WL_PresentCapture(ticks-elapsed+tic+dt);continue; }
+        if (DeathCameraActive()) { if (!StepDeathCamera()) return false;WL_PresentCapture(ticks-elapsed+tic+dt);continue; }
         if (gamestate.TimeCount<=UINT32_MAX-dt) gamestate.TimeCount+=dt;
         /* Original T_Player returns before face/input in BJ victory; T_Attack
            still updates the face, while s_deathcam has no player thinker. */
@@ -200,6 +201,7 @@ bool GameStep(uint64_t ticks)
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
         if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh() || !DrawStatus()) return false;
+        WL_PresentCapture(ticks-elapsed+tic+dt);
     }
     return true;
 }
@@ -210,10 +212,10 @@ bool GameCanSave(void)
     return GameRunning() && !Demo_Active() && CA_Map() && !intermission && !victorypage && !gamestate.died &&
         !gamestate.victoryflag && !DeathCameraActive() && playstate==ex_playing && !ActorAllocationFailed();
 }
-void GamePauseClock(uint64_t ticks) { lasttimecount=ticks; }
+void GamePauseClock(uint64_t ticks) { lasttimecount=ticks;WL_PresentReset();WL_PresentCapture(ticks); }
 void GameRestoreClock(uint64_t ticks)
 {
-    running=true;finished=intermission=false;victorypage=0;deathphase=deathwait=0;
-    lasttimecount=ticks;ResetVictory();ResetEndText();ClearPaletteShifts();
+    WL_PresentReset();running=true;finished=intermission=false;victorypage=0;deathphase=deathwait=0;
+    lasttimecount=ticks;ResetVictory();ResetEndText();ClearPaletteShifts();WL_PresentCapture(ticks);
 }
 bool GameDrawPaused(void) { InvalidateStatus();return DrawPlayScreen() && ThreeDRefreshPaused(); }

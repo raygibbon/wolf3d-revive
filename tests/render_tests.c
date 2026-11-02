@@ -22,6 +22,7 @@ static void Pump(void) { CHECK(!VL_PollQuit());CHECK(VW_UpdateScreen()); }
 /* Force long frames without stalling any individual rendering batch. The
    real dummy device drains concurrently, so servicing only once per frame
    would empty the 24-32 ms queue. */
+static bool with_audio;
 static unsigned services,empty;
 static uint64_t last_service,max_gap;
 static void ServiceAudio(void)
@@ -42,6 +43,9 @@ static void AudioStress(void)
     CHECK(short_queue==0 && safe_queue>0);
     printf("Audio 60 ms stall: 24 ms policy %d bytes, %u ms policy %d bytes remaining.\n",short_queue,policy,safe_queue);
     Audio_Pump();
+    int queued_ahead=Audio_TestQueuedBytes();CHECK(queued_ahead>0);
+    CHECK(SD_PlaySound(ATKPISTOLSND,0,0));
+    printf("Effect request: %.2f ms already queued before synthesis (device/OS latency additional).\n",(double)queued_ahead/192.0);
     uint8_t *pixels=malloc(1920*1080);int32_t depth[1920];wl_render_target t;
     CHECK(pixels && WL_TargetInit(&t,pixels,1920*1080,1920,1080,1920));
     CHECK(NewViewSize(19));last_service=SDL_GetTicksNS();uint64_t start=last_service;
@@ -73,7 +77,15 @@ static void Wide(void)
         uint64_t begin=SDL_GetTicksNS();
         for(unsigned r=0;r<5;++r) {
             for(unsigned v=4;v<=19;v+=15) { CHECK(NewViewSize(v));CHECK(GameDrawPaused());
-                CHECK(WL_RenderFrameAspect(&t,depth,4096,true,ratios[r][0],ratios[r][1],NULL)); }
+                CHECK(WL_RenderFrameAspect(&t,depth,4096,true,ratios[r][0],ratios[r][1],NULL));
+                wl_rectangle scene,ui;CHECK(WL_AspectFit(t.width,t.height,ratios[r][0],ratios[r][1],&scene));
+                CHECK(WL_AspectFit(scene.width,scene.height,4,3,&ui));ui.x+=scene.x;ui.y+=scene.y;
+                for(unsigned y=ui.height*4/5;y<ui.height;++y) for(unsigned x=0;x<scene.width;++x) {
+                    unsigned tx=scene.x+x;
+                    uint8_t expected=tx<ui.x || tx>=ui.x+ui.width?127:framebuffer[(size_t)(y*200/ui.height)*320+(tx-ui.x)*320/ui.width];
+                    CHECK(t.pixels[(size_t)(ui.y+y)*t.stride+tx]==expected);
+                }
+            }
         }
         printf("Render benchmark %ux%u: %.2f ms/frame (ten aspect/view combinations), %zu indexed bytes.\n",sizes[n][0],sizes[n][1],(double)(SDL_GetTicksNS()-begin)/10000000,count);
         for(unsigned i=0;i<16;++i) CHECK(p[count+i]==0xad);
@@ -82,7 +94,7 @@ static void Wide(void)
     CHECK(US_RndIndex()==rng);CHECK(NewViewSize(19));CHECK(GameDrawPaused());CHECK(Hash(framebuffer,VL_PIXELS)==before);
     display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=true;d.render_auto=true;d.aspect=5;d.linear=true;
     CHECK(VL_DisplaySet(&d));Pump();CHECK(VL_DisplayGet(&d) && d.render_auto && d.aspect==5 && d.linear);
-    CHECK(Config_Save(SDL_getenv("XDG_DATA_HOME")));VL_Shutdown();CHECK(VL_Startup());CHECK(Config_Load(SDL_getenv("XDG_DATA_HOME"))==CONFIG_LOADED);Pump();
+    CHECK(Config_Save(SDL_getenv("XDG_DATA_HOME")));Audio_Shutdown();VL_Shutdown();CHECK(VL_Startup());if(with_audio) CHECK(Audio_Startup());CHECK(Config_Load(SDL_getenv("XDG_DATA_HOME"))==CONFIG_LOADED);Pump();
     CHECK(VL_DisplayGet(&d) && d.render_auto && d.aspect==5 && d.linear);
     /* VSync may be unsupported by a backend. A rejected request must leave
        the preference and all other settings unchanged. */
@@ -193,7 +205,16 @@ static void Visual(void)
 }
 int main(int argc,char **argv)
 {
-    CHECK(argc==4);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(VL_Startup());
+    CHECK(argc==4);
+    const float rates[]={60,75,90,120,144,165,180,240,73,59.94f};
+    for(unsigned i=0;i<sizeof(rates)/sizeof(rates[0]);++i)
+        CHECK(fabs(VL_TestRefreshRate(rates[i],60)-rates[i])<0.00001);
+    CHECK(VL_TestRefreshRate(0,75)==75 && VL_TestRefreshRate(NAN,90)==90);
+    CHECK(VL_TestRefreshRate(INFINITY,0)==60 && VL_TestRefreshRate(-1,NAN)==60);
+    CHECK(VL_TestRefreshRate(360,60)==240 && VL_TestRefreshRate(0,500)==240);
+    CHECK(VL_MonitorRefreshRate()==60);
+    MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(VL_Startup());
+    with_audio=!strcmp(argv[3],"owned");if(with_audio) CHECK(Audio_Startup());
     Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(Save_SetDirectory(argv[2]));CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));
     CHECK(GameStep(14));VL_FadeStep(20);CHECK(Save_Write(0,"render before",true));
     unsigned rng=US_RndIndex();uint32_t frame=Hash(framebuffer,VL_PIXELS),clock=gamestate.TimeCount;
@@ -233,7 +254,7 @@ int main(int argc,char **argv)
         CHECK(Config_Save(argv[2]));d.high_resolution=false;CHECK(VL_DisplaySet(&d));Pump();
         CHECK(Config_Load(argv[2])==CONFIG_LOADED);Pump();CHECK(VL_DisplayGet(&d) && d.high_resolution && d.render_width==w);
         /* Recreate SDL completely to verify actual launch-time restoration. */
-        VL_Shutdown();CHECK(VL_Startup());CHECK(Config_Load(argv[2])==CONFIG_LOADED);Pump();
+        Audio_Shutdown();VL_Shutdown();CHECK(VL_Startup());if(with_audio) CHECK(Audio_Startup());CHECK(Config_Load(argv[2])==CONFIG_LOADED);Pump();
         CHECK(VL_DisplayGet(&d) && d.high_resolution && d.render_width==w);
         int count_windows;SDL_Window **windows=SDL_GetWindows(&count_windows);CHECK(windows && count_windows==1);
         SDL_Window *window=windows[0];SDL_free(windows);
@@ -262,6 +283,6 @@ int main(int argc,char **argv)
     Wide();DeathContinuity();
     if(!strcmp(argv[3],"synthetic")) Visual();
     else { AudioStress();OwnedLevels(); }
-    GameStop();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
+    GameStop();Audio_Shutdown();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
     puts("Native render targets, all sizes/views, HUD, isolation, persistence, switching and failure recovery passed.");return 0;
 }

@@ -55,7 +55,8 @@ int main(int argc,char **argv)
     bool high=argc==3 && !strcmp(argv[2],"--render");
     if(argc!=2 && !high) return 2;
     w3r_byte *pixels=high?malloc(1920*1080):NULL;
-    if(high && !pixels) return 2;
+    wl_present_snapshot *snapshot=high?malloc(sizeof(*snapshot)):NULL;
+    if(high && (!pixels || !snapshot)) return 2;
     MM_Startup();if(!CA_Startup(argv[1])) return 2;
     for(unsigned n=0;n<4;++n) {
         if(!NewViewSize(15) || !Demo_Start(n,0)) return 2;
@@ -68,11 +69,11 @@ int main(int argc,char **argv)
                 unsigned w=640,h=480;
                 if(p.commands_consumed%128==0) { w=1280;h=720; }
                 if(p.commands_consumed%256==0) { w=1920;h=1080; }
-                if(!WL_TargetInit(&target,pixels,1920*1080,w,h,w) || !WL_RenderFrameAspect(&target,depth,1920,true,(p.commands_consumed%5==0)?32U:16U,9,NULL)) return 2;
+                if(!WL_PresentSample(WL_TickNS(t)+7142857,snapshot) || !WL_TargetInit(&target,pixels,1920*1080,w,h,w) || !WL_RenderSnapshot(&target,depth,1920,true,(p.commands_consumed%5==0)?32U:16U,9,snapshot,NULL)) return 2;
             }
             Trace(n);
         }
         GameStop();
     }
-    free(pixels);CA_Shutdown();MM_Shutdown();return MM_TotalBytes()?2:0;
+    free(snapshot);free(pixels);CA_Shutdown();MM_Shutdown();return MM_TotalBytes()?2:0;
 }
