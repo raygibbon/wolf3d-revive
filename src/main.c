@@ -11,6 +11,8 @@
 #include "engine/WL_DEF.h"
 #include "engine/WL_SAVE.h"
 #include "engine/WL_DISPLAY.h"
+#include "engine/WL_FRAME_CLOCK.h"
+#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_filesystem.h>
 #include <errno.h>
 #include <stdio.h>
@@ -105,12 +107,29 @@ int main(int argc, char *argv[])
         (void)VL_SetPalette(saved,sizeof(saved));
         if (!captured) { fprintf(stderr,"Cannot capture screen: %s\n",VL_Error()); goto video_done; }
     }
-    for (unsigned long frame = 0; !VL_PollQuit() && DemoLoopState() != UI_DONE; ++frame) {
-        if (!DemoLoop(VL_GetTicks70())) { fprintf(stderr,"Original UI: %s\n",CA_Error()); goto video_done; }
+    uint64_t completed_tick=ticks,next_frame=0;
+    bool scheduled_before=false;unsigned long frame=0;
+    while(!VL_PollQuit() && DemoLoopState()!=UI_DONE) {
+        display_settings display={0};bool scheduled=VL_DisplayGet(&display) && display.high_resolution && display.smooth;
+        uint64_t now=SDL_GetTicksNS();
+        if(scheduled!=scheduled_before) { next_frame=0;scheduled_before=scheduled; }
+        /* Simulation uses rational 70 Hz deadlines in every display mode.
+           A bounded batch retains debt; only presentation frames may be missed. */
+        for(unsigned steps=0;steps<8 && WL_TickNext(&completed_tick,now);++steps) {
+            if(!DemoLoop(completed_tick)) { fprintf(stderr,"Original UI: %s\n",CA_Error());goto video_done; }
+        }
         Audio_Pump();
-        if (!VW_UpdateScreen()) { fprintf(stderr, "SDL3 presentation: %s\n", VL_Error()); goto video_done; }
-        if (frames && frame + 1 >= frames) break;
-        VL_Sleep(4); /* Input stays responsive; deadlines use 70 Hz monotonic ticks. */
+        if(!scheduled || now>=next_frame) {
+            if(!VW_UpdateScreen()) { fprintf(stderr,"SDL3 presentation: %s\n",VL_Error());goto video_done; }
+            ++frame;if(frames && frame>=frames) break;
+            next_frame=WL_FrameDeadline(now,display.presentation_fps);
+        }
+        if(!scheduled) VL_Sleep(4);
+        else {
+            now=SDL_GetTicksNS();uint64_t wake=WL_TickNS(completed_tick+1);
+            if(next_frame<wake) wake=next_frame;
+            if(wake>now) SDL_DelayNS(wake-now>1000000?1000000:wake-now);
+        }
     }
     status = 0;
 video_done:

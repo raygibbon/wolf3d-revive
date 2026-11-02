@@ -210,6 +210,9 @@ static void Apply(const record *records,unsigned count)
         d.render_height=Number(Find(records,count,"display","render_height"),480,480,1080);
         if(!((d.render_width==640 && d.render_height==480) || (d.render_width==1280 && d.render_height==720) || (d.render_width==1920 && d.render_height==1080))) { d.render_width=640;d.render_height=480;Warn("display","render_width/render_height"); }
         d.render_auto=Bool(Find(records,count,"display","render_auto"),false);
+        d.smooth=Bool(Find(records,count,"display","smooth_rendering"),false);
+        d.presentation_fps=Number(Find(records,count,"display","presentation_fps"),144,60,240);
+        if(d.presentation_fps!=60 && d.presentation_fps!=120 && d.presentation_fps!=144 && d.presentation_fps!=165 && d.presentation_fps!=240) { d.presentation_fps=144;Warn("display","presentation_fps"); }
         d.vsync=Bool(Find(records,count,"display","vsync"),false);
         d.linear=false;const record *filter=Find(records,count,"display","filter");
         if(filter) { if(filter->type==STRING && !strcmp(filter->text,"linear")) d.linear=true;
@@ -264,6 +267,6 @@ bool Config_Save(const char *dir)
     unsigned music,effects;bool music_on,effects_on;SD_GetSettings(&music,&effects,&music_on,&effects_on);
     if(!Append(out,&n,"\n[audio]\nmusic_volume = %u\neffects_volume = %u\nmusic_enabled = %s\neffects_enabled = %s\n\n[display]\nfullscreen = %s\ninteger_scaling = %s\nwindow_width = %d\nwindow_height = %d\nrenderer = \"%s\"\nrender_width = %u\nrender_height = %u\n",music,effects,music_on?"true":"false",effects_on?"true":"false",d.fullscreen?"true":"false",d.integer?"true":"false",d.width,d.height,d.high_resolution?"high_resolution":"original",d.render_width,d.render_height)) return Error("Configuration output overflow");
     static const char *const ratios[]={"auto","4:3","16:9","16:10","21:9","32:9"};
-    if(!Append(out,&n,"render_auto = %s\nvsync = %s\nfilter = \"%s\"\naspect_ratio = \"%s\"\n\n[classic]\nview_size = %u\n",d.render_auto?"true":"false",d.vsync?"true":"false",d.linear?"linear":"nearest",ratios[d.aspect<6?d.aspect:0],ViewSize())) return Error("Configuration output overflow");
+    if(!Append(out,&n,"render_auto = %s\nvsync = %s\nfilter = \"%s\"\naspect_ratio = \"%s\"\nsmooth_rendering = %s\npresentation_fps = %u\n\n[classic]\nview_size = %u\n",d.render_auto?"true":"false",d.vsync?"true":"false",d.linear?"linear":"nearest",ratios[d.aspect<6?d.aspect:0],d.smooth?"true":"false",d.presentation_fps,ViewSize())) return Error("Configuration output overflow");
     return SaveFile_WriteAtomic(path,out,n,true) || Error("Cannot atomically replace configuration; previous file retained");
 }

@@ -2,6 +2,7 @@
 /* WL_DR_A.ASM quadrant initialization and vertcheck/horizcheck translated
    directly to bounded C; WL_DRAW.C wall/door hits, texture flips and height. */
 #include "WL_DEF.h"
+#include "WL_RENDER.h"
 #include "WL_DEMO.h"
 #include "ID_CA.h"
 #include "ID_PM.h"
@@ -32,34 +33,40 @@ static unsigned CalcHeight(int32_t x,int32_t y)
     int32_t scale=(VIEWWIDTH/2)*(FOCALLENGTH+MINDIST)/(65536/2);
     return (unsigned)((65536*scale/64)/(nx/256));
 }
-static bool CastRay(int angle,rayhit *hit,bool mark)
+static bool CastRay(int angle,rayhit *hit,bool mark,const wl_ray_world *world)
 {
-    if (!hit || player.angle<0 || player.angle>=360) return CA_Fail("Invalid ray request");
-    SetView(); angle%=3600; if (angle<0) angle+=3600;
+    if (!hit || (!world && (player.angle<0 || player.angle>=360))) return CA_Fail("Invalid ray request");
+    if(!world) SetView();
+    int32_t rayx=world?world->x:viewx,rayy=world?world->y:viewy;
+    const w3r_byte (*tiles)[64]=world?world->scene->tiles:(const w3r_byte (*)[64])tilemap;
+    const doorobj_t *doors=world?world->scene->doors:doorobjlist;
+    unsigned door_count=world?world->scene->door_count:doornum;
+    int32_t push_offset=world?world->scene->push_offset:(int32_t)(pwallpos*1024);
+    angle%=3600; if (angle<0) angle+=3600;
     int dx,dy; int32_t xs,ys; uint16_t xp,yp;
-    uint16_t xdown=(uint16_t)((uint32_t)viewx&65535),ydown=(uint16_t)((uint32_t)viewy&65535);
+    uint16_t xdown=(uint16_t)((uint32_t)rayx&65535),ydown=(uint16_t)((uint32_t)rayy&65535);
     uint16_t xup=(uint16_t)(65536U-xdown),yup=(uint16_t)(65536U-ydown);
     if (angle<900) { dx=1;dy=-1;xs=finetangent[899-angle];ys=-finetangent[angle];xp=xup;yp=ydown; }
     else if (angle<1800) { dx=-1;dy=-1;xs=-finetangent[angle-900];ys=-finetangent[1799-angle];xp=xdown;yp=ydown; }
     else if (angle<2700) { dx=-1;dy=1;xs=-finetangent[2699-angle];ys=finetangent[angle-1800];xp=xdown;yp=yup; }
     else { dx=1;dy=1;xs=finetangent[angle-2700];ys=finetangent[3599-angle];xp=xup;yp=yup; }
-    int xtile=WL_FloorShift(viewx,16)+dx,ytile=WL_FloorShift(viewy,16)+dy;
-    int64_t yi=(int64_t)viewy+PartialStep(ys,xp),xi=(int64_t)viewx+PartialStep(xs,yp);
+    int xtile=WL_FloorShift(rayx,16)+dx,ytile=WL_FloorShift(rayy,16)+dy;
+    int64_t yi=(int64_t)rayy+PartialStep(ys,xp),xi=(int64_t)rayx+PartialStep(xs,yp);
     bool vertical=!(dy<0 ? WL_FloorShift(yi,16)<=ytile : WL_FloorShift(yi,16)>=ytile);
     for (unsigned crossings=0;crossings<256;++crossings) {
         int tx=vertical ? xtile : WL_FloorShift(xi,16);
         int ty=vertical ? WL_FloorShift(yi,16) : ytile;
         if (tx<0 || ty<0 || tx>=64 || ty>=64) return CA_Fail("Ray escaped map perimeter");
-        unsigned tile=tilemap[tx][ty]; bool pass=tile==0;
+        unsigned tile=tiles[tx][ty]; bool pass=tile==0;
         int32_t hx=0,hy=0; unsigned page=0,column=0; int side=vertical ? 1 : 0;
         if ((tile&0xc0)==0xc0) {
             /* WL_DR_A.ASM vertpushwall/horizpushwall: project the original
                0..63 partial step and pass rays that leave this tile. */
-            int64_t mid=vertical ? yi+WL_FloorShift((int64_t)ys*pwallpos,6) :
-                xi+WL_FloorShift((int64_t)xs*pwallpos,6);
+            int64_t mid=vertical ? yi+WL_FloorShift((int64_t)ys*push_offset,16) :
+                xi+WL_FloorShift((int64_t)xs*push_offset,16);
             if (WL_FloorShift(mid,16)!=(vertical ? ty : tx)) pass=true;
             else {
-                int32_t offset=(int32_t)(pwallpos<<10);
+                int32_t offset=push_offset;
                 hx=vertical ? xtile*65536+(dx<0 ? 65536-offset : offset) : (int32_t)mid;
                 hy=vertical ? (int32_t)mid : ytile*65536+(dy<0 ? 65536-offset : offset);
                 column=((uint32_t)mid>>10)&63;
@@ -69,16 +76,16 @@ static bool CastRay(int angle,rayhit *hit,bool mark)
             }
         } else if (tile&128) {
             unsigned door=tile&127;
-            if (door>=doornum) return CA_Fail("Invalid door index in ray");
+            if (door>=door_count) return CA_Fail("Invalid door index in ray");
             int64_t mid=vertical ? yi+WL_FloorShift(ys,1) : xi+WL_FloorShift(xs,1);
             int before=vertical ? ty : tx;
-            if (WL_FloorShift(mid,16)!=before || (uint16_t)mid<doorobjlist[door].position) pass=true;
+            if (WL_FloorShift(mid,16)!=before || (uint16_t)mid<doors[door].position) pass=true;
             else {
                 /* Original leading-edge test and texture offset for sliding doors. */
                 hx=vertical ? xtile*65536+32768 : (int32_t)mid;
                 hy=vertical ? (int32_t)mid : ytile*65536+32768;
-                column=((uint32_t)((uint16_t)mid-doorobjlist[door].position)>>10)&63;
-                unsigned lock=doorobjlist[door].lock;
+                column=((uint32_t)((uint16_t)mid-doors[door].position)>>10)&63;
+                unsigned lock=doors[door].lock;
                 page=PMSpriteStart-8+(lock==0 ? 0 : lock==5 ? 4 : 6)+(vertical ? 1U : 0U);
                 side=2;
             }
@@ -90,17 +97,17 @@ static bool CastRay(int angle,rayhit *hit,bool mark)
                 hx=xtile*65536+(dx<0 ? 65536 : 0); hy=(int32_t)yi;
                 column=((uint32_t)yi>>10)&63; if (dx<0) column=63-column;
                 page=wall ? (wall-1)*2+1 : 0;
-                if ((tile&64) && tx-dx>=0 && tx-dx<64 && (tilemap[tx-dx][ty]&128)) page=PMSpriteStart-8+3;
+                if ((tile&64) && tx-dx>=0 && tx-dx<64 && (tiles[tx-dx][ty]&128)) page=PMSpriteStart-8+3;
             } else {
                 hx=(int32_t)xi; hy=ytile*65536+(dy<0 ? 65536 : 0);
                 column=((uint32_t)xi>>10)&63; if (dy>0) column=63-column;
                 page=wall ? (wall-1)*2 : 0;
-                if ((tile&64) && ty-dy>=0 && ty-dy<64 && (tilemap[tx][ty-dy]&128)) page=PMSpriteStart-8+2;
+                if ((tile&64) && ty-dy>=0 && ty-dy<64 && (tiles[tx][ty-dy]&128)) page=PMSpriteStart-8+2;
             }
         }
         if (!pass) {
             if (page>=PMSpriteStart) return CA_Fail("Ray selected a non-wall texture");
-            hit->x=hx;hit->y=hy;hit->page=page;hit->column=column;hit->height=CalcHeight(hx,hy);
+            hit->x=hx;hit->y=hy;hit->page=page;hit->column=column;hit->height=world?0:CalcHeight(hx,hy);
             hit->side=side;hit->grid=side==2 ? (int)tile : vertical ? xtile : ytile;hit->tile=(int)tile;
             return true;
         }
@@ -115,8 +122,10 @@ static bool CastRay(int angle,rayhit *hit,bool mark)
     }
     return CA_Fail("Ray traversal exceeded map bounds");
 }
-bool AsmRefresh(int angle,rayhit *hit) { return CastRay(angle,hit,true); }
-bool WL_RenderRay(int angle,rayhit *hit) { return CastRay(angle,hit,false); }
+bool AsmRefresh(int angle,rayhit *hit) { return CastRay(angle,hit,true,NULL); }
+bool WL_RenderRay(int angle,rayhit *hit) { return CastRay(angle,hit,false,NULL); }
+bool WL_RenderRayWorld(int angle,rayhit *hit,const wl_ray_world *world)
+{ return world && world->scene && CastRay(angle,hit,false,world); }
 /* WL_DRAW.C vgaCeiling: episode/map-specific original ceiling palette. */
 static const w3r_byte vgaCeiling[60]={
     0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,

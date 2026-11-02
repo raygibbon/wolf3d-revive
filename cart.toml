@@ -8,7 +8,7 @@ out = "build"
 [linux]
 compiler = "gcc"
 standard = "c11"
-cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
+cflags = ["-O2", "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
 defines = []
 include_dirs = ["src"]
 lib_dirs = []
@@ -18,7 +18,7 @@ libs = ["m"]
 [windows]
 compiler = "gcc"
 standard = "c11"
-cflags = ["-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
+cflags = ["-O2", "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow"]
 defines = []
 include_dirs = ["src"]
 lib_dirs = []

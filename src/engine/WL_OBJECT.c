@@ -4,6 +4,7 @@
    Normal enemies use the original difficulty bands and hit-point tables;
    Hans, Gretel and ghosts retain their specialised original spawn rules. */
 #include "WL_DEF.h"
+#include "WL_PRESENT.h"
 #include "ID_SD.h"
 #include "ID_CA.h"
 #include "ID_US_1.h"
@@ -99,7 +100,7 @@ objtype *GetNewActor(void)
     unsigned slot=0;while (slot<MAXACTORS && allocated[slot]) ++slot;
     if (slot==MAXACTORS) { allocationfailed=true;(void)CA_Fail("Actor pool exhausted");return NULL; }
     objtype *ob=&objlist[slot];allocated[slot]=true;
-    memset(ob,0,sizeof(*ob));
+    memset(ob,0,sizeof(*ob));WL_PresentAllocated(slot);
     if (slot>=objcount) objcount=slot+1;
     objtype *tail=&player;while (tail->next) tail=tail->next;
     tail->next=ob;return ob;

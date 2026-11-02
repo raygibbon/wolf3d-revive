@@ -9,6 +9,7 @@
 #include "engine/WL_RENDER.h"
 #include "engine/WL_MAIN.h"
 #include "engine/WL_SAVE.h"
+#include "engine/WL_DEMO.h"
 #include <stdlib.h>
 #include <stdio.h>
 #define SDL_MAIN_HANDLED
@@ -23,7 +24,10 @@ static w3r_byte rgba[VL_PIXELS * 4], last_frame[VL_PIXELS], last_palette[768];
 static bool Fail(unsigned operation);
 typedef struct { SDL_Texture *texture;w3r_byte *pixels,*rgba;wl_render_target target; } high_surface;
 static high_surface high;
-static bool high_resolution,render_auto,vsync,linear;
+static bool high_resolution,render_auto,vsync,linear,smooth;
+static unsigned presentation_fps=144;
+static bool high_smooth;
+static wl_present_snapshot presentation;
 static unsigned aspect;
 static Uint64 auto_retry;
 static wl_rectangle high_scene;
@@ -141,7 +145,7 @@ bool VL_DisplayGet(display_settings *s)
     RefreshDisplay();memset(s,0,sizeof(*s));s->fullscreen=Fullscreen();s->integer=integer_scale;s->pending=pending;
     s->width=window_w;s->height=window_h;
     s->high_resolution=high_resolution;s->render_width=render_width;s->render_height=render_height;
-    s->render_auto=render_auto;s->aspect=aspect;s->vsync=vsync;s->linear=linear;
+    s->render_auto=render_auto;s->aspect=aspect;s->vsync=vsync;s->linear=linear;s->smooth=smooth;s->presentation_fps=presentation_fps;
     for(unsigned i=1;i<=5;++i) if(window_w==(int)i*320 && window_h==(int)i*240) s->scale=i;
     if(!SDL_GetRenderOutputSize(renderer,&s->pixel_width,&s->pixel_height)) return false;
     (void)SDL_strlcpy(s->error,display_error,sizeof(s->error));return true;
@@ -161,6 +165,8 @@ bool VL_DisplaySet(const display_settings *s)
         return SDL_SetError("Unsupported rendering resolution/aspect");
     unsigned actual_w=rw,actual_h=rh;
     if(s->high_resolution && !RenderSize(s->render_auto,&actual_w,&actual_h)) return DisplayError();
+    unsigned fps=s->presentation_fps?s->presentation_fps:144;
+    if(fps!=60 && fps!=120 && fps!=144 && fps!=165 && fps!=240) return SDL_SetError("Unsupported presentation FPS");
     high_surface candidate={0};
     bool replace=s->high_resolution && (!high.texture || actual_w!=high.target.width || actual_h!=high.target.height);
     if(replace && !CreateHigh(&candidate,actual_w,actual_h)) return DisplayError();
@@ -200,9 +206,9 @@ bool VL_DisplaySet(const display_settings *s)
     }
     if(replace) { FreeHigh(&high);high=candidate; }
     if(!s->high_resolution) FreeHigh(&high);
-    if(replace || high_resolution!=s->high_resolution || aspect!=s->aspect || render_auto!=s->render_auto) high_uploaded=false;
+    if(replace || high_resolution!=s->high_resolution || aspect!=s->aspect || render_auto!=s->render_auto || smooth!=s->smooth) high_uploaded=false;
     high_resolution=s->high_resolution;render_width=rw;render_height=rh;
-    aspect=s->aspect;render_auto=s->render_auto;vsync=s->vsync;linear=s->linear;auto_retry=0;
+    aspect=s->aspect;render_auto=s->render_auto;vsync=s->vsync;linear=s->linear;smooth=s->smooth;presentation_fps=fps;auto_retry=0;
     display_error[0]=0;return true;
 }
 static bool Shortcut(const SDL_KeyboardEvent *key)
@@ -234,7 +240,7 @@ const char *VL_Error(void) { return SDL_GetError(); }
 void VL_Shutdown(void)
 {
     IN_SDLFocusLost();
-    high_uploads=0;FreeHigh(&high);high_resolution=high_uploaded=render_auto=vsync=linear=false;aspect=0;high_scene=(wl_rectangle){0};render_width=640;render_height=480;
+    high_uploads=0;smooth=high_smooth=false;presentation_fps=144;FreeHigh(&high);high_resolution=high_uploaded=render_auto=vsync=linear=false;aspect=0;high_scene=(wl_rectangle){0};render_width=640;render_height=480;
     SDL_DestroyTexture(texture); texture = NULL;
     SDL_DestroyRenderer(renderer); renderer = NULL;
     SDL_DestroyWindow(window); window = NULL;
@@ -303,8 +309,10 @@ static bool VL_DrawScreen(void)
     if(!ApplyPresentation()) return false;
     uint32_t death_cursor=0;unsigned death_phase=GameDeathPresentation(&death_cursor);
     bool dying=world && gamestate.died;
-    if(high_resolution && world && (!high_uploaded || changed || world!=high_world || dying!=high_dying || (dying && (death_phase!=high_death_phase || death_cursor!=high_death_cursor)) || (world && (high_time!=gamestate.TimeCount || high_serial!=WL_RenderSerial())))) {
-        if(!WL_RenderFrameAspect(&high.target,high_depth,WL_TARGET_MAX_WIDTH,world,high_scene.width,high_scene.height,Audio_Pump)) return SDL_SetError("High-resolution scene rendering failed");
+    bool interpolate=high_resolution && smooth && world && (GameCanSave() || Demo_Active() || (dying && death_phase==1)) && (!dying || death_phase==1) && !gamestate.victoryflag;
+    bool sampled=interpolate && WL_PresentSample(SDL_GetTicksNS(),&presentation);
+    if(high_resolution && world && (!high_uploaded || changed || world!=high_world || sampled || sampled!=high_smooth || dying!=high_dying || (dying && (death_phase!=high_death_phase || death_cursor!=high_death_cursor)) || (world && (high_time!=gamestate.TimeCount || high_serial!=WL_RenderSerial())))) {
+        if(!WL_RenderSnapshot(&high.target,high_depth,WL_TARGET_MAX_WIDTH,world,high_scene.width,high_scene.height,sampled?&presentation:NULL,Audio_Pump)) return SDL_SetError("High-resolution scene rendering failed");
         w3r_byte colors[256][4];
         for(unsigned i=0;i<256;++i) {
             for(unsigned c=0;c<3;++c) { unsigned value=palette[i*3+c];colors[i][c]=(w3r_byte)((value<<2)|(value>>4)); }
@@ -318,7 +326,7 @@ static bool VL_DrawScreen(void)
             }
         }
         if(!SDL_UpdateTexture(high.texture,NULL,high.rgba,(int)high.target.width*4)) return false;
-        high_death_cursor=death_cursor;high_death_phase=death_phase;high_dying=dying;
+        high_smooth=sampled;high_death_cursor=death_cursor;high_death_phase=death_phase;high_dying=dying;
         high_uploaded=true;high_time=gamestate.TimeCount;high_world=world;high_serial=WL_RenderSerial();++high_uploads;
     }
     if (changed) {
