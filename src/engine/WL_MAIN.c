@@ -103,6 +103,18 @@ static bool StepDemoLoop(uint64_t ticks)
     }
     if (VL_Fading() || Attract()) return true;
     if (state == UI_GAME) {
+        /* Original DOS US_ControlPanel function keys: F2 save, F3 load,
+           F4 sound. Keep these distinct from the modern SDL display
+           shortcuts and consume the press before gameplay advances. */
+        if (IN_ConsumePress(0x3c) && GameCanSave() && *Save_Directory()) {
+            FinishPaletteShifts();return Transition(UI_SAVE,ticks,10);
+        }
+        if (IN_ConsumePress(0x3d) && *Save_Directory()) {
+            FinishPaletteShifts();return Transition(UI_LOAD,ticks,10);
+        }
+        if (IN_ConsumePress(0x3e)) {
+            FinishPaletteShifts();return Transition(UI_SOUND,ticks,10);
+        }
         if (GameCanSave() && (CT_Pressed(CT_MENU) || IN_ConsumePress(sc_Escape))) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
         if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
