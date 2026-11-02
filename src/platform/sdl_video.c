@@ -47,10 +47,8 @@ static bool RenderSize(bool automatic,unsigned *w,unsigned *h)
     if(!automatic) return true;
     const SDL_DisplayMode *desktop=SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(window));
     if(!desktop || desktop->w<320 || desktop->h<200) return SDL_SetError("Desktop rendering dimensions unavailable");
-    wl_rectangle fit;
-    if(!WL_AspectFit(WL_TARGET_MAX_WIDTH,WL_TARGET_MAX_HEIGHT,(unsigned)desktop->w,(unsigned)desktop->h,&fit)) return false;
-    *w=(unsigned)desktop->w;*h=(unsigned)desktop->h;
-    if(*w>fit.width || *h>fit.height) { *w=fit.width;*h=fit.height; }
+    if(!WL_AutoRenderSize((unsigned)desktop->w,(unsigned)desktop->h,w,h))
+        return SDL_SetError("Unsupported desktop aspect for automatic rendering");
     return true;
 }
 static bool CreateHigh(high_surface *s,unsigned w,unsigned h)
