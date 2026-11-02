@@ -73,7 +73,15 @@ static void Wide(void)
         uint64_t begin=SDL_GetTicksNS();
         for(unsigned r=0;r<5;++r) {
             for(unsigned v=4;v<=19;v+=15) { CHECK(NewViewSize(v));CHECK(GameDrawPaused());
-                CHECK(WL_RenderFrameAspect(&t,depth,4096,true,ratios[r][0],ratios[r][1],NULL)); }
+                CHECK(WL_RenderFrameAspect(&t,depth,4096,true,ratios[r][0],ratios[r][1],NULL));
+                wl_rectangle scene,ui;CHECK(WL_AspectFit(t.width,t.height,ratios[r][0],ratios[r][1],&scene));
+                CHECK(WL_AspectFit(scene.width,scene.height,4,3,&ui));ui.x+=scene.x;ui.y+=scene.y;
+                for(unsigned y=ui.height*4/5;y<ui.height;++y) for(unsigned x=0;x<scene.width;++x) {
+                    unsigned tx=scene.x+x;
+                    uint8_t expected=tx<ui.x || tx>=ui.x+ui.width?127:framebuffer[(size_t)(y*200/ui.height)*320+(tx-ui.x)*320/ui.width];
+                    CHECK(t.pixels[(size_t)(ui.y+y)*t.stride+tx]==expected);
+                }
+            }
         }
         printf("Render benchmark %ux%u: %.2f ms/frame (ten aspect/view combinations), %zu indexed bytes.\n",sizes[n][0],sizes[n][1],(double)(SDL_GetTicksNS()-begin)/10000000,count);
         for(unsigned i=0;i<16;++i) CHECK(p[count+i]==0xad);
@@ -193,7 +201,15 @@ static void Visual(void)
 }
 int main(int argc,char **argv)
 {
-    CHECK(argc==4);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(VL_Startup());
+    CHECK(argc==4);
+    const float rates[]={60,75,90,120,144,165,180,240,73,59.94f};
+    for(unsigned i=0;i<sizeof(rates)/sizeof(rates[0]);++i)
+        CHECK(fabs(VL_TestRefreshRate(rates[i],60)-rates[i])<0.00001);
+    CHECK(VL_TestRefreshRate(0,75)==75 && VL_TestRefreshRate(NAN,90)==90);
+    CHECK(VL_TestRefreshRate(INFINITY,0)==60 && VL_TestRefreshRate(-1,NAN)==60);
+    CHECK(VL_TestRefreshRate(360,60)==240 && VL_TestRefreshRate(0,500)==240);
+    CHECK(VL_MonitorRefreshRate()==60);
+    MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(VL_Startup());
     Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(Save_SetDirectory(argv[2]));CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));
     CHECK(GameStep(14));VL_FadeStep(20);CHECK(Save_Write(0,"render before",true));
     unsigned rng=US_RndIndex();uint32_t frame=Hash(framebuffer,VL_PIXELS),clock=gamestate.TimeCount;

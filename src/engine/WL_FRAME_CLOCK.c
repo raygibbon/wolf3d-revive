@@ -48,3 +48,14 @@ uint64_t WL_FrameDeadline(uint64_t now_ns,unsigned fps)
     uint64_t whole=frame/fps*1000000000U,part=(frame%fps*1000000000U+fps-1)/fps;
     return whole>UINT64_MAX-part?UINT64_MAX:whole+part;
 }
+
+uint64_t WL_PresentationDeadline(uint64_t start_ns,uint64_t finish_ns,double refresh,bool sync_paced)
+{
+    if(!(refresh>=1.0 && refresh<=10000.0)) refresh=60.0;
+    if(refresh>240.0 || sync_paced) refresh=240.0;
+    double period=1000000000.0/refresh;
+    uint64_t span=(uint64_t)period;
+    if((double)span<period) ++span;
+    uint64_t deadline=start_ns>UINT64_MAX-span?UINT64_MAX:start_ns+span;
+    return finish_ns>deadline?finish_ns:deadline;
+}

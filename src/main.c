@@ -108,27 +108,31 @@ int main(int argc, char *argv[])
         if (!captured) { fprintf(stderr,"Cannot capture screen: %s\n",VL_Error()); goto video_done; }
     }
     uint64_t completed_tick=ticks,next_frame=0;
-    bool scheduled_before=false;unsigned long frame=0;
+    bool scheduled_before=false;double previous_refresh=0.0;unsigned long frame=0;
     while(!VL_PollQuit() && DemoLoopState()!=UI_DONE) {
         display_settings display={0};bool scheduled=VL_DisplayGet(&display) && display.high_resolution && display.smooth;
         uint64_t now=SDL_GetTicksNS();
-        if(scheduled!=scheduled_before) { next_frame=0;scheduled_before=scheduled; }
+        double refresh=scheduled?VL_MonitorRefreshRate():60.0;
+        if(scheduled!=scheduled_before || refresh!=previous_refresh) {
+            next_frame=0;scheduled_before=scheduled;previous_refresh=refresh;
+        }
         /* Simulation uses rational 70 Hz deadlines in every display mode.
            A bounded batch retains debt; only presentation frames may be missed. */
         for(unsigned steps=0;steps<8 && WL_TickNext(&completed_tick,now);++steps) {
             if(!DemoLoop(completed_tick)) { fprintf(stderr,"Original UI: %s\n",CA_Error());goto video_done; }
         }
         Audio_Pump();
+        now=SDL_GetTicksNS();
         if(!scheduled || now>=next_frame) {
             if(!VW_UpdateScreen()) { fprintf(stderr,"SDL3 presentation: %s\n",VL_Error());goto video_done; }
             ++frame;if(frames && frame>=frames) break;
-            next_frame=WL_FrameDeadline(now,VL_MonitorFrameRate());
+            next_frame=WL_PresentationDeadline(now,SDL_GetTicksNS(),refresh,VL_VSyncPaced(refresh));
         }
         if(!scheduled) VL_Sleep(4);
         else {
             now=SDL_GetTicksNS();uint64_t wake=WL_TickNS(completed_tick+1);
             if(next_frame<wake) wake=next_frame;
-            if(wake>now) SDL_DelayNS(wake-now>1000000?1000000:wake-now);
+            if(wake>now) SDL_DelayNS(wake-now>4000000?4000000:wake-now);
         }
     }
     status = 0;

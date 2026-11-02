@@ -16,7 +16,11 @@ void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 si
 void VL_TestExpireDisplayRequest(void);
 #endif
 uint64_t VL_GetTicks70(void);
-unsigned VL_MonitorFrameRate(void); /* Current output refresh, bounded, 60 FPS fallback. */
+double VL_MonitorRefreshRate(void); /* Current output Hz, bounded, 60 Hz fallback. */
+bool VL_VSyncPaced(double refresh); /* Last present actually blocked for VSync. */
+#ifdef WOLF3D_DISPLAY_TEST
+double VL_TestRefreshRate(float current,float desktop);
+#endif
 void VL_Sleep(unsigned ms);
 uint64_t VL_TextureUploads(void);
 void VL_Shutdown(void);

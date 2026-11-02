@@ -7,6 +7,7 @@
 #include "ID_FILE.h"
 #include "ID_PM.h"
 #include "ID_VL.h"
+#include "WL_PROFILE.h"
 #include <math.h>
 #include <string.h>
 #include <limits.h>
@@ -74,7 +75,14 @@ static bool Shape(const view *v,double center,unsigned sprite,double width,int32
 typedef struct { int32_t depth;double center,width;unsigned shape; } render_sprite;
 static bool Scene(view *v)
 {
-    unsigned ceiling=WL_CeilingColor();
+    WL_PROFILE_BEGIN(ray_start);
+    unsigned ceiling=v->snapshot?v->snapshot->ceiling:WL_CeilingColor();
+    /* Clear sky/floor in contiguous rows; only wall spans need column writes. */
+    for(int y=0;y<v->h;++y) {
+        if(v->service && y%32==0) v->service();
+        memset(v->target->pixels+(size_t)(v->y+y)*v->target->stride+(unsigned)v->x,
+               y<v->h/2?(int)ceiling:0x19,(size_t)v->w);
+    }
     for(int x=0;x<v->w;++x) {
         if(v->service && x%16==0) v->service();
         /* Same field of view as the DOS viewport, sampled at each new column.
@@ -91,17 +99,16 @@ static bool Scene(view *v)
         if(end>v->h) end=v->h;
         size_t bytes;const w3r_byte *page=PM_GetPage(hit.page,&bytes);
         if(!page || bytes!=4096) return CA_Fail("Invalid high-resolution wall page");
-        for(int y=0;y<v->h;++y) {
-            unsigned color=y<v->h/2?ceiling:0x19;
-            if(y>=start && y<end) {
-                int row=(int)(((double)y-top)*64/height);
-                if(row<0) row=0;
-                if(row>63) row=63;
-                color=page[hit.column*64+(unsigned)row];
-            }
-            v->target->pixels[(size_t)(v->y+y)*v->target->stride+(unsigned)(v->x+x)]=(w3r_byte)color;
+        double texel_scale=64.0/height;
+        for(int y=start;y<end;++y) {
+            int row=(int)(((double)y-top)*texel_scale);
+            if(row<0) row=0;
+            if(row>63) row=63;
+            v->target->pixels[(size_t)(v->y+y)*v->target->stride+(unsigned)(v->x+x)]=page[hit.column*64+(unsigned)row];
         }
     }
+    WL_PROFILE_END(rays,ray_start);
+    WL_PROFILE_BEGIN(sprite_start);
     render_sprite sprites[MAXSTATS+MAXACTORS];
     unsigned count=0;
     for(unsigned i=0;i<(v->snapshot?v->snapshot->static_count:statcount);++i) {
@@ -112,7 +119,6 @@ static bool Scene(view *v)
         sprites[count].width=65536*v->focal/nx;sprites[count++].shape=(unsigned)o->shapenum;
     }
     if(v->snapshot) {
-        static const int angles[9]={0,45,90,135,180,225,270,315,360};
         for(unsigned k=0;k<v->snapshot->count;++k) {
             const wl_present_actor *o=&v->snapshot->actors[v->snapshot->order[k]];
             if(!o->shape) continue;
@@ -122,7 +128,7 @@ static bool Scene(view *v)
                 int original_scale=(VIEWWIDTH/2)*(FOCALLENGTH+MINDIST)/32768;
                 int screen=VIEWWIDTH/2-1+(int)((int64_t)ny*original_scale/nx);
                 int viewangle=(int)v->angle+(VIEWWIDTH/2-1-screen)/8;
-                int angle=(viewangle-180)-(o->kind==rocketobj?o->angle:angles[o->dir])+ANGLES/16;
+                int angle=(viewangle-180)-(int)o->facing+ANGLES/16;
                 angle%=ANGLES;if(angle<0) angle+=ANGLES;
                 shape+=o->rotate==2?4*(angle/(ANGLES/2)):angle/(ANGLES/8);
             }
@@ -151,8 +157,9 @@ static bool Scene(view *v)
     for(unsigned i=0;i<count;++i)
         if(!Shape(v,sprites[i].center,sprites[i].shape,sprites[i].width,sprites[i].depth,false)) return false;
     static const unsigned weapons[4]={SPR_KNIFEREADY,SPR_PISTOLREADY,SPR_MACHINEGUNREADY,SPR_CHAINREADY};
-    if(!gamestate.died && !gamestate.victoryflag && !Shape(v,(double)v->w/2,weapons[v->snapshot?v->snapshot->weapon:(unsigned)gamestate.weapon]+(v->snapshot?v->snapshot->weapon_frame:(unsigned)gamestate.weaponframe),(double)v->h/1.2,0,true)) return false;
-    return !Demo_Active() || Shape(v,(double)v->w/2,SPR_DEMO,(double)v->h/1.2,0,true);
+    if(!(v->snapshot?v->snapshot->died:gamestate.died) && !(v->snapshot?v->snapshot->victory:gamestate.victoryflag) && !Shape(v,(double)v->w/2,weapons[v->snapshot?v->snapshot->weapon:(unsigned)gamestate.weapon]+(v->snapshot?v->snapshot->weapon_frame:(unsigned)gamestate.weaponframe),(double)v->h/1.2,0,true)) return false;
+    bool ok=!(v->snapshot?v->snapshot->demo:Demo_Active()) || Shape(v,(double)v->w/2,SPR_DEMO,(double)v->h/1.2,0,true);
+    WL_PROFILE_END(sprites,sprite_start);return ok;
 }
 static void Bar(wl_render_target *t,int x,int y,int w,int h,w3r_byte color)
 {
@@ -189,12 +196,12 @@ bool WL_RenderSnapshot(wl_render_target *target,int32_t *depth,size_t columns,bo
     if(!WL_TargetValid(target) || !WL_RenderResolution(target->width,target->height) || !depth || columns<target->width)
         return CA_Fail("Invalid high-resolution target/depth capacity");
     if(snapshot) {
-        if(!(snapshot->camera.angle>=0 && snapshot->camera.angle<360) || snapshot->count>MAXACTORS || snapshot->static_count>MAXSTATS || snapshot->door_count>64 || snapshot->weapon>3 || snapshot->weapon_frame>4 || snapshot->camera.x<0 || snapshot->camera.y<0 || snapshot->camera.x>64*TILEGLOBAL || snapshot->camera.y>64*TILEGLOBAL || snapshot->push_offset<0 || snapshot->push_offset>65535)
+        if(!(snapshot->camera.angle>=0 && snapshot->camera.angle<360) || snapshot->count>MAXACTORS || snapshot->static_count>MAXSTATS || snapshot->door_count>64 || snapshot->ceiling>255 || snapshot->death_phase>3 || snapshot->weapon>3 || snapshot->weapon_frame>4 || snapshot->camera.x<0 || snapshot->camera.y<0 || snapshot->camera.x>64*TILEGLOBAL || snapshot->camera.y>64*TILEGLOBAL || snapshot->push_offset<0 || snapshot->push_offset>65535)
             return CA_Fail("Invalid presentation snapshot");
         for(unsigned i=0;i<snapshot->count;++i) {
             if(snapshot->order[i]>=MAXACTORS) return CA_Fail("Invalid snapshot actor slot");
             const wl_present_actor *a=&snapshot->actors[snapshot->order[i]];
-            if(a->dir<0 || a->dir>8 || a->shape<0 || a->shape>65535 || a->x< -TILEGLOBAL || a->y< -TILEGLOBAL || a->x>65*TILEGLOBAL || a->y>65*TILEGLOBAL) return CA_Fail("Invalid snapshot actor");
+            if(!(a->facing>=0 && a->facing<360) || a->dir<0 || a->dir>8 || a->shape<0 || a->shape>65535 || a->x< -TILEGLOBAL || a->y< -TILEGLOBAL || a->x>65*TILEGLOBAL || a->y>65*TILEGLOBAL) return CA_Fail("Invalid snapshot actor");
         }
     }
     if(snapshot) for(unsigned i=0;i<snapshot->static_count;++i)
@@ -204,7 +211,7 @@ bool WL_RenderSnapshot(wl_render_target *target,int32_t *depth,size_t columns,bo
        !WL_AspectFit(scene.width,scene.height,4,3,&ui)) return CA_Fail("Invalid rendering aspect");
     ui.x+=scene.x;ui.y+=scene.y;
     if(!WL_TargetClear(target,0)) return false;
-    bool scene_active=world && CA_Map() && (!gamestate.victoryflag || gamestate.died);
+    bool scene_active=world && CA_Map() && (!(snapshot?snapshot->victory:gamestate.victoryflag) || (snapshot?snapshot->died:gamestate.died));
     /* Original artwork remains centered and aspect-correct. The plain teal
        border expands around the new viewport rather than retaining an old
        4:3 bevel behind widescreen geometry. */
@@ -245,6 +252,7 @@ bool WL_RenderSnapshot(wl_render_target *target,int32_t *depth,size_t columns,bo
     Bar(target,v.x+v.w,v.y-by,bx,v.h+2*by,125);
     Bar(target,v.x-bx,v.y+v.h,bx,by,124);
     uint32_t cursor=0;unsigned phase=GameDeathPresentation(&cursor);
+    if(snapshot) { phase=snapshot->death_phase;cursor=snapshot->death_cursor; }
     if(phase!=3 && !Scene(&v)) return false;
     DeathFizzle(&v,phase,cursor);return true;
 }

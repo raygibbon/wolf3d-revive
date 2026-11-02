@@ -7,7 +7,7 @@ typedef struct {
     int32_t x,y;double angle;
 } wl_pose;
 typedef struct {
-    int32_t x,y;int shape,rotate,dir,angle,kind;uint64_t identity;
+    int32_t x,y;int shape,rotate,dir,angle,kind;uint64_t identity;double facing;
 } wl_present_actor;
 typedef struct {
     wl_pose camera;
@@ -16,6 +16,7 @@ typedef struct {
     w3r_byte tiles[64][64];doorobj_t doors[64];unsigned door_count;
     int push_x,push_y,push_dir;unsigned push_state;int32_t push_offset;
     unsigned level,view_size,weapon,weapon_frame;uint32_t simulation_clock;
+    unsigned ceiling,death_phase;uint32_t death_cursor;
     bool died,victory,demo;
 } wl_present_snapshot;
 void WL_PresentReset(void);

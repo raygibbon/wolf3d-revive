@@ -16,4 +16,7 @@ uint64_t WL_TicksFromNS(uint64_t ns);
 uint64_t WL_TickNS(uint64_t tick);
 bool WL_TickNext(uint64_t *completed,uint64_t now_ns);
 uint64_t WL_FrameDeadline(uint64_t now_ns,unsigned fps);
+/* Start-anchored pacing subtracts time already spent rendering/presenting.
+   A blocking VSync present owns monitor pacing; retain only the 240 Hz ceiling. */
+uint64_t WL_PresentationDeadline(uint64_t start_ns,uint64_t finish_ns,double refresh,bool sync_paced);
 #endif

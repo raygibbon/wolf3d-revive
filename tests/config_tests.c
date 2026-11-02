@@ -125,6 +125,7 @@ int main(int argc,char **argv)
     CHECK(argc==4);directory=argv[1];MM_Startup();CHECK(VL_Startup());int count;SDL_Window **windows=SDL_GetWindows(&count);CHECK(windows && count==1);window=windows[0];SDL_free(windows);Reset();
     const char *mode=argv[3];
     if(!strcmp(mode,"inspect")) { config_result r=Config_Load(directory);Await();JSON(r); }
+    else if(!strcmp(mode,"migrate")) { CHECK(Config_Load(directory)==CONFIG_LOADED);CHECK(Config_Save(directory));JSON(CONFIG_LOADED); }
     else if(!strcmp(mode,"roundtrip")) Roundtrip();
     else if(!strcmp(mode,"seed")) { Seed();CHECK(Config_Save(directory));JSON(CONFIG_LOADED); }
     else if(!strcmp(mode,"atomic")) Atomic();

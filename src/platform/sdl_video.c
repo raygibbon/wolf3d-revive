@@ -10,6 +10,7 @@
 #include "engine/WL_MAIN.h"
 #include "engine/WL_SAVE.h"
 #include "engine/WL_DEMO.h"
+#include "engine/WL_PROFILE.h"
 #include <stdlib.h>
 #include <stdio.h>
 #define SDL_MAIN_HANDLED
@@ -26,6 +27,7 @@ typedef struct { SDL_Texture *texture;w3r_byte *pixels,*rgba;wl_render_target ta
 static high_surface high;
 static bool high_resolution,render_auto,vsync,linear,smooth;
 
+static uint64_t present_ns;
 static bool high_smooth;
 static wl_present_snapshot presentation;
 static unsigned aspect;
@@ -238,7 +240,7 @@ const char *VL_Error(void) { return SDL_GetError(); }
 void VL_Shutdown(void)
 {
     IN_SDLFocusLost();
-    high_uploads=0;smooth=high_smooth=false;FreeHigh(&high);high_resolution=high_uploaded=render_auto=vsync=linear=false;aspect=0;high_scene=(wl_rectangle){0};render_width=640;render_height=480;
+    present_ns=0;high_uploads=0;smooth=high_smooth=false;FreeHigh(&high);high_resolution=high_uploaded=render_auto=vsync=linear=false;aspect=0;high_scene=(wl_rectangle){0};render_width=640;render_height=480;
     SDL_DestroyTexture(texture); texture = NULL;
     SDL_DestroyRenderer(renderer); renderer = NULL;
     SDL_DestroyWindow(window); window = NULL;
@@ -270,15 +272,31 @@ failed:
     (void)SDL_SetError("%s",error);
     return false;
 }
-unsigned VL_MonitorFrameRate(void)
+static double RefreshRate(float current,float desktop)
 {
-    if(!window) return 60;
+    double rate=current;
+    if(!(rate>=1.0 && rate<=10000.0)) rate=desktop;
+    if(!(rate>=1.0 && rate<=10000.0)) rate=60.0;
+    return rate>240.0?240.0:rate;
+}
+#ifdef WOLF3D_DISPLAY_TEST
+double VL_TestRefreshRate(float current,float desktop) { return RefreshRate(current,desktop); }
+#endif
+double VL_MonitorRefreshRate(void)
+{
+    if(!window) return 60.0;
     SDL_DisplayID display=SDL_GetDisplayForWindow(window);
     const SDL_DisplayMode *mode=SDL_GetCurrentDisplayMode(display);
-    if(!mode) mode=SDL_GetDesktopDisplayMode(display);
-    if(!mode || !(mode->refresh_rate>=30.0f && mode->refresh_rate<=1000.0f)) return 60;
-    unsigned fps=(unsigned)(mode->refresh_rate+0.5f);
-    return fps>240U?240U:fps;
+    float current=mode?mode->refresh_rate:0.0f;
+    if(current>=1.0f && current<=10000.0f) return RefreshRate(current,0.0f);
+    mode=SDL_GetDesktopDisplayMode(display);
+    return RefreshRate(current,mode?mode->refresh_rate:0.0f);
+}
+bool VL_VSyncPaced(double refresh)
+{
+    int interval=0;
+    return renderer && SDL_GetRenderVSync(renderer,&interval) && interval!=0 &&
+        (double)present_ns>=500000000.0/refresh;
 }
 uint64_t VL_GetTicks70(void) { return TimeCount_FromNS(SDL_GetTicksNS()); }
 void VL_Sleep(unsigned ms) { SDL_Delay(ms); }
@@ -321,6 +339,7 @@ static bool VL_DrawScreen(void)
     bool sampled=interpolate && WL_PresentSample(SDL_GetTicksNS(),&presentation);
     if(high_resolution && world && (!high_uploaded || changed || world!=high_world || sampled || sampled!=high_smooth || dying!=high_dying || (dying && (death_phase!=high_death_phase || death_cursor!=high_death_cursor)) || (world && (high_time!=gamestate.TimeCount || high_serial!=WL_RenderSerial())))) {
         if(!WL_RenderSnapshot(&high.target,high_depth,WL_TARGET_MAX_WIDTH,world,high_scene.width,high_scene.height,sampled?&presentation:NULL,Audio_Pump)) return SDL_SetError("High-resolution scene rendering failed");
+        WL_PROFILE_BEGIN(convert_start);
         w3r_byte colors[256][4];
         for(unsigned i=0;i<256;++i) {
             for(unsigned c=0;c<3;++c) { unsigned value=palette[i*3+c];colors[i][c]=(w3r_byte)((value<<2)|(value>>4)); }
@@ -333,7 +352,10 @@ static bool VL_DrawScreen(void)
                 memcpy(high.rgba+i*4,colors[high.pixels[i]],4);
             }
         }
+        WL_PROFILE_END(convert,convert_start);
+        WL_PROFILE_BEGIN(upload_start);
         if(!SDL_UpdateTexture(high.texture,NULL,high.rgba,(int)high.target.width*4)) return false;
+        WL_PROFILE_END(upload,upload_start);
         high_smooth=sampled;high_death_cursor=death_cursor;high_death_phase=death_phase;high_dying=dying;
         high_uploaded=true;high_time=gamestate.TimeCount;high_world=world;high_serial=WL_RenderSerial();++high_uploads;
     }
@@ -358,7 +380,13 @@ bool VW_UpdateScreen(void)
 {
     SyncCapture();Audio_Pump();
     if(!VL_DrawScreen()) return false;
-    Audio_Pump();return SDL_RenderPresent(renderer);
+    Audio_Pump();
+    uint64_t start=SDL_GetTicksNS();bool ok=SDL_RenderPresent(renderer);
+    present_ns=SDL_GetTicksNS()-start;
+#ifdef WOLF3D_BENCHMARK
+    WL_Profile.present+=present_ns;
+#endif
+    return ok;
 }
 
 bool VL_Capture(const char *path)

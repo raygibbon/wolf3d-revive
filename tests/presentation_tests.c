@@ -52,6 +52,29 @@ static void Snapshots(void)
     CHECK(GameStartMap(0,1,2,0));CHECK(WL_PresentSample(0,sample) && sample->level==1 && sample->camera.x==player.x);
     CHECK(GameStart(0));player.angle=0;objtype attacker=player;attacker.y-=TILEGLOBAL;TakeDamage(1000,&attacker);
     CHECK(GameStep(1) && GameStep(2));CHECK(WL_PresentSample(Half(2),sample));CHECK(fabs(sample->camera.angle-3)<0.00001);
+    /* Unmatched doors must snap, even when an index was reused. */
+    CHECK(GameStart(0));doornum=1;doorobjlist[0]=(doorobj_t){4,4,0,true,dr_opening,1000,0};
+    WL_PresentReset();WL_PresentCapture(400);
+    doornum=2;doorobjlist[1]=(doorobj_t){5,4,0,true,dr_opening,3000,0};
+    doorobjlist[0].x=6;doorobjlist[0].position=5000;WL_PresentCapture(401);
+    CHECK(WL_PresentSample(Half(401),sample));
+    CHECK(sample->doors[0].position==5000 && sample->doors[1].position==3000);
+    /* Only pushwall cells rewind; a door opening in this tick stays floor. */
+    tilemap[8][8]=128;pwallstate=127;pwallpos=63;pwallx=4;pwally=4;pwalldir=0;
+    tilemap[4][4]=0xc1;tilemap[5][4]=1;WL_PresentCapture(402);
+    tilemap[8][8]=0;pwallstate=128;pwallpos=0;pwallx=5;tilemap[4][4]=0;tilemap[5][4]=0xc1;
+    WL_PresentCapture(403);CHECK(WL_PresentSample(Half(403),sample));
+    CHECK(sample->tiles[8][8]==0 && sample->tiles[4][4]==0xc1);
+    /* Unrelated pushwalls and actor teleports never connect across space. */
+    pwallx=10;pwallpos=10;WL_PresentCapture(404);CHECK(WL_PresentSample(Half(404),sample));
+    CHECK(sample->push_x==10 && sample->push_offset==10240);
+    actor=SpawnActor(3,3,&teststand);CHECK(actor);slot=(unsigned)(actor-objlist);
+    actor->dir=7;WL_PresentCapture(405);actor->dir=0;WL_PresentCapture(406);
+    CHECK(WL_PresentSample(Half(406),sample) && fabs(sample->actors[slot].facing-337.5)<0.001);
+    actor->x+=3*TILEGLOBAL;WL_PresentCapture(407);CHECK(WL_PresentSample(Half(407),sample));
+    CHECK(sample->actors[slot].x==actor->x);
+    RemoveActor(actor);WL_PresentCapture(408);CHECK(WL_PresentSample(Half(408),sample));
+    CHECK(!sample->actors[slot].identity);
     GameStop();CHECK(!WL_PresentSample(0,sample));free(sample);
     puts("Immutable poses, angle wrap, actor reuse, doors, pushwall crossings, teleport, pause, load, level and death resets passed.");
 }
