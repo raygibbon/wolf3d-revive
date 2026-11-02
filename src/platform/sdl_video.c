@@ -270,6 +270,16 @@ failed:
     (void)SDL_SetError("%s",error);
     return false;
 }
+unsigned VL_MonitorFrameRate(void)
+{
+    if(!window) return 60;
+    SDL_DisplayID display=SDL_GetDisplayForWindow(window);
+    const SDL_DisplayMode *mode=SDL_GetCurrentDisplayMode(display);
+    if(!mode) mode=SDL_GetDesktopDisplayMode(display);
+    if(!mode || !(mode->refresh_rate>=30.0f && mode->refresh_rate<=1000.0f)) return 60;
+    unsigned fps=(unsigned)(mode->refresh_rate+0.5f);
+    return fps>240U?240U:fps;
+}
 uint64_t VL_GetTicks70(void) { return TimeCount_FromNS(SDL_GetTicksNS()); }
 void VL_Sleep(unsigned ms) { SDL_Delay(ms); }
 uint64_t VL_TextureUploads(void) { return uploads; }
