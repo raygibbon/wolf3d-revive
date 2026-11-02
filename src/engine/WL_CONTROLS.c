@@ -89,8 +89,8 @@ unsigned CT_Binding(ct_action action,unsigned slot) { return (unsigned)action<CT
 bool CT_Bind(ct_action action,unsigned slot,unsigned key)
 {
     if((unsigned)action>=CT_ACTIONS || slot>=2 || key>=CT_KEYS) return false;
-    /* Escape always remains a safe global menu/cancel key. */
-    if(key==41 && action!=CT_MENU) return false;
+    /* Escape remains a safe menu/cancel key; F11 is a display shortcut. */
+    if((key==41 && action!=CT_MENU) || key==68) return false;
     if(key) for(unsigned a=0;a<CT_ACTIONS;++a) for(unsigned s=0;s<2;++s)
         if((a!=(unsigned)action || s!=slot) && bindings[a][s]==key) return false;
     bindings[action][slot]=key;CT_Clear();return true;

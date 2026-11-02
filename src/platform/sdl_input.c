@@ -7,6 +7,8 @@
 static bool physical[SDL_SCANCODE_COUNT],mousebuttons[8],focused=true,captured,capture_failed;
 static SDL_Window *capture_window;
 static char capture_error[256];
+bool IN_SDLFocused(void) { return focused; }
+void IN_SDLDiscardInput(void) { memset(physical,0,sizeof(physical));IN_ClearKeysDown(); }
 bool IN_SDLCaptured(void) { return captured; }
 const char *IN_SDLCaptureError(void) { return capture_error; }
 void IN_SDLReset(void) { IN_SDLFocusLost();focused=true;capture_window=NULL;capture_error[0]=0; }

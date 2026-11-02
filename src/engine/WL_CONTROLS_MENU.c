@@ -43,7 +43,7 @@ static bool Draw(void)
             }
         }
         fontcolor=HIGHLIGHT;
-        if(!Text(30,153,waiting?(conflict?"Key in use; choose another.":"Press a key; Esc cancels."):"Enter binds; Delete clears.")) return false;
+        if(!Text(30,153,waiting?(conflict?"Key reserved or in use.":"Press a key; Esc cancels."):"Enter binds; Delete clears.")) return false;
         fontcolor=TEXTCOLOR;return Text(20,182,"Arrows select; Esc returns.");
     }
     static const char *const labels[]={"Preset","Mouse","Sensitivity","Invert mouse X","Reset defaults","Key bindings"};
