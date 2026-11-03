@@ -39,6 +39,20 @@ class RenderTests(unittest.TestCase):
         output=subprocess.check_output([str(binary),str(data)],text=True)
         self.assertEqual(output,(ROOT/'tests/fixtures/original_render_hashes.csv').read_text())
 
+    def test_native_framebuffer_hashes(self):
+        if not os.environ.get('WOLF3D_DATA'): self.skipTest('Owned data unavailable')
+        data=Path(os.environ['WOLF3D_DATA'])
+        identities=json.loads((ROOT/'tests/fixtures/dos_demo_hashes.json').read_text())['assets']
+        files={p.name.upper():p for p in data.iterdir()}
+        for name,identity in identities.items():
+            if name not in files or hashlib.sha256(files[name].read_bytes()).hexdigest()!=identity:
+                self.skipTest('Different original data revision')
+        binary=Path(self.build.name)/'native'
+        sources=sorted((ROOT/'src/engine').glob('*.c'))
+        subprocess.run(self.cc+self.flags+['-I'+str(ROOT/'src'),str(ROOT/'tests/render_native_hashes.c'),*map(str,sources),str(ROOT/'src/platform/data_file.c'),str(ROOT/'src/platform/save_file.c'),'-lm','-o',str(binary)],check=True)
+        output=subprocess.check_output([str(binary),str(data)],text=True)
+        self.assertEqual(output,(ROOT/'tests/fixtures/native_render_hashes.csv').read_text())
+
     def test_aspect(self):
         binary=Path(self.build.name)/'aspect'
         subprocess.run(self.cc+self.flags+['-I'+str(ROOT/'src'),str(ROOT/'tests/aspect_tests.c'),str(ROOT/'src/engine/WL_ASPECT.c'),'-lm','-o',str(binary)],check=True)

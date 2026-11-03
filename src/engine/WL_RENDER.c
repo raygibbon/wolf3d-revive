@@ -46,6 +46,11 @@ static bool Shape(const view *v,double center,unsigned sprite,double width,int32
     const w3r_byte *page=PM_GetPage(PMSpriteStart+sprite,NULL);
     int first=(int)CA_LE16(page),last=(int)CA_LE16(page+2);
     double height=width*1.2,top=((double)v->h-height)/2;
+    int row_start[64],row_end[64];
+    for(int sy=0;sy<64;++sy) {
+        int y0=(int)floor(top+sy*height/64),y1=(int)floor(top+(sy+1)*height/64);
+        row_start[sy]=y0<0?0:y0;row_end[sy]=y1>v->h?v->h:y1;
+    }
     for(int half=0;half<2;++half) {
         double cursor=center;
         int start=half?(first<32?32:first):31,stop=half?last:first;
@@ -57,15 +62,18 @@ static bool Shape(const view *v,double center,unsigned sprite,double width,int32
             if(half) cursor+=span;
             if(x0<0) x0=0;
             if(x1>v->w) x1=v->w;
-            for(int sy=0;sy<64;++sy) {
-                if(!opaque[sy*64+sx]) continue;
-                int y0=(int)floor(top+sy*height/64),y1=(int)floor(top+(sy+1)*height/64);
-                if(y0<0) y0=0;
-                if(y1>v->h) y1=v->h;
-                for(int x=x0;x<x1;++x) {
-                    if(!overlay && v->depth[x]<=distance) continue;
-                    for(int y=y0;y<y1;++y)
-                        v->target->pixels[(size_t)(v->y+y)*v->target->stride+(unsigned)(v->x+x)]=pixels[sy*64+sx];
+            /* Clip once per horizontal run, then fill texel rectangles in
+               row order. Keep the original floor/half anchoring exactly. */
+            for(int x=x0;x<x1;) {
+                while(x<x1 && !overlay && v->depth[x]<=distance) ++x;
+                int run=x;
+                while(x<x1 && (overlay || v->depth[x]>distance)) ++x;
+                if(run==x) continue;
+                for(int sy=0;sy<64;++sy) {
+                    if(!opaque[sy*64+sx]) continue;
+                    for(int y=row_start[sy];y<row_end[sy];++y)
+                        memset(v->target->pixels+(size_t)(v->y+y)*v->target->stride+
+                               (unsigned)(v->x+run),pixels[sy*64+sx],(size_t)(x-run));
                 }
             }
         }

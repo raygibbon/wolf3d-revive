@@ -56,6 +56,62 @@ static void AudioStress(void)
     printf("Audio render stress: %u services, %u empty queues, longest gap %.2f ms.\n",services,empty,(double)max_gap/1000000);
     free(pixels);Audio_Shutdown();CHECK(NewViewSize(15));
 }
+/* Synthetic desktop modes exercise the production Auto replacement path;
+   SDL's real output remains independently sized. No physical monitor claim. */
+static void AutoScaling(const char *directory)
+{
+    display_settings d;CHECK(VL_DisplayGet(&d));
+    d.high_resolution=true;d.smooth=false;d.render_auto=true;d.aspect=2;
+    d.linear=d.integer=d.vsync=false;d.scale=0;d.width=3840;d.height=2160;
+    VL_TestDesktopSize(3840,2160);CHECK(VL_DisplaySet(&d));Pump();
+    uint64_t creations=VL_TestSurfaceCreations();
+    SDL_Texture *texture=VL_TestSceneTexture();float w,h;
+    CHECK(texture && SDL_GetTextureSize(texture,&w,&h) && w==1920 && h==1080);
+    SDL_ScaleMode filter;CHECK(SDL_GetTextureScaleMode(texture,&filter) && filter==SDL_SCALEMODE_NEAREST);
+    VL_TestDesktopSize(2560,1440);Pump();CHECK(VL_TestSurfaceCreations()==creations);
+    CHECK(VL_TestSceneTexture()==texture); /* Same capped canvas, no allocation. */
+    VL_TestDesktopSize(3440,1440);VL_TestDisplayFailure(5);Pump();
+    CHECK(VL_TestSceneTexture()==texture && VL_TestSurfaceCreations()==creations);
+    Pump();CHECK(VL_TestSceneTexture()==texture); /* Retry is throttled. */
+    VL_TestDesktopSize(3440,1440);VL_TestDisplayFailure(6);Pump();
+    CHECK(VL_TestSceneTexture()==texture && VL_TestSurfaceCreations()==creations);
+    const unsigned modes[][4]={{3440,1440,1920,803},{3840,1080,1920,540},
+        {1600,1200,1440,1080},{1280,720,1280,720},{3840,2160,1920,1080}};
+    for(unsigned i=0;i<sizeof(modes)/sizeof(modes[0]);++i) {
+        VL_TestDesktopSize(modes[i][0],modes[i][1]);Pump();
+        CHECK(VL_TestSurfaceCreations()==++creations);
+        CHECK(SDL_GetTextureSize(VL_TestSceneTexture(),&w,&h) && w==modes[i][2] && h==modes[i][3]);
+        Pump();CHECK(VL_TestSurfaceCreations()==creations);
+    }
+    /* Exact RGBA oracle for the 1080p -> synthetic 4K nearest path. */
+    char path[4096];CHECK(snprintf(path,sizeof(path),"%s/auto-4k.bmp",directory)>0);
+    CHECK(VL_Capture(path));SDL_Surface *bmp=SDL_LoadBMP(path);CHECK(bmp);
+    SDL_Surface *image=SDL_ConvertSurface(bmp,SDL_PIXELFORMAT_RGBA32);SDL_DestroySurface(bmp);
+    CHECK(image);
+    bool exact_4k=image->w==3840 && image->h==2160;
+    CHECK(strcmp(SDL_GetCurrentVideoDriver(),"dummy") || exact_4k);
+    if(!exact_4k) printf("Exact 4K pixel check unavailable: capture is %dx%d (window-manager limit).\n",image->w,image->h);
+    unsigned char *pixels=malloc(1920*1080);int32_t depth[1920];wl_render_target t;
+    CHECK(pixels && WL_TargetInit(&t,pixels,1920*1080,1920,1080,1920));
+    CHECK(WL_RenderFrameAspect(&t,depth,1920,true,16,9,NULL));
+    for(unsigned y=0;exact_4k && y<2160;++y) for(unsigned x=0;x<3840;++x) {
+        unsigned index=pixels[(y/2)*1920+x/2];
+        const unsigned char *actual=(const unsigned char *)image->pixels+(size_t)y*(unsigned)image->pitch+x*4;
+        for(unsigned c=0;c<3;++c) {
+            unsigned value=palette[index*3+c];CHECK(actual[c]==((value<<2)|(value>>4)));
+        }
+        CHECK(actual[3]==255);
+    }
+    free(pixels);SDL_DestroySurface(image);
+    CHECK(VL_DisplayGet(&d));
+    if(d.pending) { VL_TestExpireDisplayRequest();Pump();CHECK(VL_DisplayGet(&d)); }
+    d.linear=true;CHECK(VL_DisplaySet(&d));Pump();
+    CHECK(VL_TestSurfaceCreations()==creations);
+    CHECK(SDL_GetTextureScaleMode(VL_TestSceneTexture(),&filter) && filter==SDL_SCALEMODE_LINEAR);
+    VL_TestDesktopSize(0,0);d.render_auto=false;d.linear=false;d.width=960;d.height=720;
+    CHECK(VL_DisplaySet(&d));Pump();
+    VL_TestExpireDisplayRequest();Pump();
+}
 static void Wide(void)
 {
     CHECK(NewViewSize(19));CHECK(GameDrawPaused());
@@ -280,7 +336,7 @@ int main(int argc,char **argv)
     CHECK(VL_DisplayGet(&d) && d.high_resolution);
     /* Switching display preference cannot consume a simulation tic or RNG. */
     for(unsigned n=0;n<30;++n) { d.high_resolution=!d.high_resolution;CHECK(VL_DisplaySet(&d));Pump();CHECK(US_RndIndex()==rng && gamestate.TimeCount==clock); }
-    Wide();DeathContinuity();
+    Wide();AutoScaling(argv[2]);DeathContinuity();
     if(!strcmp(argv[3],"synthetic")) Visual();
     else { AudioStress();OwnedLevels(); }
     GameStop();Audio_Shutdown();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());

@@ -9,6 +9,10 @@ typedef struct { unsigned x,y,width,height; } wl_rectangle;
    arithmetic. Width/height are physical/display pixel units. */
 bool WL_AspectFit(unsigned canvas_w,unsigned canvas_h,
                   unsigned aspect_w,unsigned aspect_h,wl_rectangle *out);
+/* Auto internal software-render resolution: never exceed the display size
+   or 1920x1080, preserving the display aspect. The actual window is scaled
+   separately by SDL, so a 4K output does not imply 4K CPU raycasting. */
+bool WL_AutoRenderSize(unsigned display_w,unsigned display_h,unsigned *width,unsigned *height);
 /* Horizontal camera FOV for aspect ratios when vertical framing is fixed.
    Takes the horizontal FOV of a 4:3 reference in degrees. */
 bool WL_HorizontalFov(double original_fov_deg,
