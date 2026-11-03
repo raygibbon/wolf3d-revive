@@ -181,11 +181,29 @@ static void Presentation(const char *directory)
     CHECK(DemoLoopStartup(0,false));CHECK(CA_CacheScreen(TITLEPIC));Capture(directory,"title");Geometry(1920,1200);
     CHECK(CA_CacheScreen(CREDITSPIC));Capture(directory,"credits");Geometry(3440,1440);
 }
+static void StaticGameScreens(void)
+{
+    CHECK(DemoLoopStartGame(1000) && DemoLoop(1011));
+    playstate=ex_completed;CHECK(GameStep(1012) && GameIntermission());
+    uint32_t clock=gamestate.TimeCount;unsigned rng=US_RndIndex();
+    unsigned char frame[64000];memcpy(frame,framebuffer,sizeof(frame));
+    Geometry(1920,1200);CHECK(!memcmp(frame,framebuffer,sizeof(frame)));
+    CHECK(gamestate.TimeCount==clock && US_RndIndex()==rng);
+    CHECK(DemoLoopStartGame(1100) && DemoLoop(1111));
+    playstate=ex_victorious;CHECK(GameStep(1112) && GameVictoryPresentation());
+    Geometry(1920,1200);Key(sc_Enter);CHECK(GameStep(1113));
+    CHECK(GameVictoryPresentation());memcpy(frame,framebuffer,sizeof(frame));
+    clock=gamestate.TimeCount;rng=US_RndIndex();Geometry(3440,1440);
+    CHECK(!memcmp(frame,framebuffer,sizeof(frame)) && gamestate.TimeCount==clock && US_RndIndex()==rng);
+    CHECK(DemoLoopStartGame(1200) && DemoLoop(1211) && VW_UpdateScreen());
+    SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
+    CHECK(fabs(rect.w/rect.h-16.0/9)<0.002);
+}
 int main(int argc,char **argv)
 {
     CHECK(argc==3);MM_Startup();CHECK(CA_Startup(argv[1]) && VL_SetPalette(gamepal,768) && VL_Startup());
     int n;SDL_Window **windows=SDL_GetWindows(&n);CHECK(windows && n==1);renderer=SDL_GetRenderer(windows[0]);SDL_free(windows);
-    Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(Save_SetDirectory(argv[2]));Menus(argv[2]);Presentation(argv[2]);
+    Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(Save_SetDirectory(argv[2]));Menus(argv[2]);Presentation(argv[2]);StaticGameScreens();
     Display_Connect(NULL,NULL);GameStop();VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
     puts("DOS control composition, cursor, supported sound, persistence, intro, 4:3 menus and widescreen return passed.");return 0;
 }

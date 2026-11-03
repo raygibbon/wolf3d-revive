@@ -105,13 +105,20 @@ static bool DisplayError(void)
     (void)SDL_strlcpy(display_error,SDL_GetError(),sizeof(display_error));
     SDL_Log("Display change failed: %s",display_error);return false;
 }
+static bool WorldPresentation(void)
+{
+    /* Intermission and end-text pages can live inside UI_GAME, but contain
+       the original DOS interface rather than a widescreen world. */
+    return GameRunning() && (DemoLoopState()==UI_GAME || DemoLoopState()==UI_DEMO) &&
+        !GameIntermission() && !GameVictoryPresentation();
+}
 static bool ApplyPresentation(void)
 {
     int w,h;if(!renderer || !SDL_GetRenderOutputSize(renderer,&w,&h)) return false;
     /* SDL integer mode enforces at least 1x and otherwise crops tiny windows.
        Fall back to fit below the corrected canvas's minimum drawable size. */
     int lw=320,lh=240;
-    bool world=high_resolution && GameRunning() && (DemoLoopState()==UI_GAME || DemoLoopState()==UI_DEMO);
+    bool world=high_resolution && WorldPresentation();
     if(world && high_scene.width) { lw=(int)high_scene.width;lh=(int)high_scene.height; }
     SDL_RendererLogicalPresentation mode=integer_scale && w>=lw && h>=lh?
         SDL_LOGICAL_PRESENTATION_INTEGER_SCALE:SDL_LOGICAL_PRESENTATION_LETTERBOX;
@@ -320,7 +327,7 @@ static bool VL_DrawScreen(void)
 {
     if (!renderer || !texture) return false;
     bool changed=!uploaded || memcmp(last_frame,framebuffer,VL_PIXELS) || memcmp(last_palette,palette,768);
-    bool world=GameRunning() && (DemoLoopState()==UI_GAME || DemoLoopState()==UI_DEMO);
+    bool world=WorldPresentation();
     if(high_resolution && world) {
         unsigned tw=render_width,th=render_height;
         if(!RenderSize(render_auto,&tw,&th)) { (void)DisplayError();tw=high.target.width;th=high.target.height; }
