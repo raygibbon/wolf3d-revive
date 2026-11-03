@@ -12,6 +12,9 @@ bool VL_DisplaySet(const display_settings *settings);
 #ifdef WOLF3D_DISPLAY_TEST
 /* One-shot fault injection, compiled only into the display test executable. */
 uint64_t VL_TestSceneUploads(void);
+void VL_TestDesktopSize(unsigned width,unsigned height);
+uint64_t VL_TestSurfaceCreations(void);
+struct SDL_Texture *VL_TestSceneTexture(void);
 void VL_TestDisplayFailure(unsigned operation); /* 1 fullscreen, 2 scaling, 3 size, 4 denied request, 5 allocation, 6 texture, 7 VSync, 8 filter */
 void VL_TestExpireDisplayRequest(void);
 #endif

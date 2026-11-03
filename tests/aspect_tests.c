@@ -36,7 +36,11 @@ int main(void)
     assert(WL_AutoRenderSize(1600,1200,&w,&h) && w==1440 && h==1080);
     assert(WL_AutoRenderSize(3840,1080,&w,&h) && w==1920 && h==540);
     assert(WL_AutoRenderSize(3440,1440,&w,&h) && w==1920 && h>=803 && h<=804);
-    assert(!WL_AutoRenderSize(100,100,&w,&h));
+    assert(WL_AutoRenderSize(1080,1920,&w,&h) && w==607 && h==1080);
+    assert(WL_AutoRenderSize(UINT_MAX,UINT_MAX,&w,&h) && w==1080 && h==1080);
+    unsigned old_w=w,old_h=h;
+    assert(!WL_AutoRenderSize(UINT_MAX,200,&w,&h) && w==old_w && h==old_h);
+    assert(!WL_AutoRenderSize(100,100,&w,&h) && w==old_w && h==old_h);
     assert(!WL_AutoRenderSize(3840,2160,NULL,&h));
     return 0;
 }

@@ -40,19 +40,21 @@ int main(int argc,char **argv)
     MM_Startup();CHECK(CA_Startup(argv[1]));
     CHECK(VL_SetPalette(gamepal,768) && VL_Startup() && Audio_Startup());
     CHECK(DemoLoopStartup(VL_GetTicks70(),true));
-    const unsigned sizes[][2]={{640,480},{1280,720},{1920,1080}};
+    const unsigned sizes[][2]={{640,480},{1280,720},{1920,1080},{1920,1080}};
     int window_count;SDL_Window **windows=SDL_GetWindows(&window_count);CHECK(windows && window_count==1);
     SDL_Renderer *renderer=SDL_GetRenderer(windows[0]);SDL_free(windows);
     printf("video=%s, renderer=%s, audio=%s; owned E1M1, view 19, 4 seconds/canvas\n",
            SDL_GetCurrentVideoDriver(),SDL_GetRendererName(renderer),SDL_GetCurrentAudioDriver());
-    for(unsigned n=0;n<3;++n) {
+    for(unsigned n=0;n<4;++n) {
         CHECK(DemoLoopStartGame(VL_GetTicks70()) && NewViewSize(19));
         display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=d.smooth=true;
-        d.render_width=sizes[n][0];d.render_height=sizes[n][1];d.aspect=2;d.scale=0;d.width=1280;d.height=720;
+        d.render_width=sizes[n][0];d.render_height=sizes[n][1];d.aspect=2;d.scale=0;d.width=n==3?3840:1280;d.height=n==3?2160:720;
         d.vsync=SDL_getenv("M8_VSYNC")!=NULL;CHECK(VL_DisplaySet(&d));
         /* Warm page caches, audio and texture allocation before measuring. */
         uint64_t warm_start=SDL_GetTicksNS();
         for(unsigned i=0;i<20 || SDL_GetTicksNS()-warm_start<300000000;++i) { CHECK(DemoLoop(VL_GetTicks70()) && VW_UpdateScreen());Audio_Pump(); }
+        CHECK(VL_DisplayGet(&d));
+        CHECK(n!=3 || (d.pixel_width==3840 && d.pixel_height==2160));
         uint64_t tick=VL_GetTicks70(),initial_tick=tick,start=SDL_GetTicksNS(),last=start,next=0;
         GamePauseClock(tick);uint32_t initial_clock=gamestate.TimeCount;
         double intervals[4096];unsigned count=0;clock_t cpu=clock();unsigned long initial_allocations=atomic_load(&allocations);
@@ -75,8 +77,8 @@ int main(int argc,char **argv)
         double cpu_percent=100.0*(double)(clock()-cpu)/CLOCKS_PER_SEC/seconds;
         qsort(intervals,count,sizeof(*intervals),Compare);
         double sum=0,squares=0;for(unsigned i=0;i<count;++i) { sum+=intervals[i];squares+=intervals[i]*intervals[i]; }
-        printf("%ux%u target=%.3f actual=%.2f FPS mean=%.3f p95=%.3f p99=%.3f variance=%.4f ms^2 cpu=%.1f%% ticks=%llu/%llu game=%u allocations=%lu\n",
-               sizes[n][0],sizes[n][1],argc==3?strtod(argv[2],NULL):VL_MonitorRefreshRate(),count/seconds,sum/count,
+        printf("%ux%u output=%dx%d target=%.3f actual=%.2f FPS mean=%.3f p95=%.3f p99=%.3f variance=%.4f ms^2 cpu=%.1f%% ticks=%llu/%llu game=%u allocations=%lu\n",
+               sizes[n][0],sizes[n][1],d.pixel_width,d.pixel_height,argc==3?strtod(argv[2],NULL):VL_MonitorRefreshRate(),count/seconds,sum/count,
                intervals[(count-1)*95/100],intervals[(count-1)*99/100],squares/count-(sum/count)*(sum/count),cpu_percent,
                (unsigned long long)(tick-initial_tick),(unsigned long long)(WL_TicksFromNS(finish)-initial_tick),gamestate.TimeCount-initial_clock,atomic_load(&allocations)-initial_allocations);
         printf("mean ms/present: rays+walls=%.4f sprites=%.4f capture=%.4f sample=%.4f convert=%.4f upload=%.4f present=%.4f empty_queue_observations=%llu; surface=%zu bytes\n",

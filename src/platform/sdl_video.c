@@ -42,9 +42,19 @@ static uint64_t high_serial,high_uploads;
 static bool high_world,high_uploaded;
 static void FreeHigh(high_surface *s)
 { if(s->texture) SDL_DestroyTexture(s->texture);free(s->pixels);free(s->rgba);memset(s,0,sizeof(*s)); }
+#ifdef WOLF3D_DISPLAY_TEST
+static unsigned test_desktop_w,test_desktop_h;
+static uint64_t surface_creations;
+void VL_TestDesktopSize(unsigned w,unsigned h) { test_desktop_w=w;test_desktop_h=h;auto_retry=0; }
+uint64_t VL_TestSurfaceCreations(void) { return surface_creations; }
+SDL_Texture *VL_TestSceneTexture(void) { return high.texture; }
+#endif
 static bool RenderSize(bool automatic,unsigned *w,unsigned *h)
 {
     if(!automatic) return true;
+#ifdef WOLF3D_DISPLAY_TEST
+    if(test_desktop_w && test_desktop_h) return WL_AutoRenderSize(test_desktop_w,test_desktop_h,w,h);
+#endif
     const SDL_DisplayMode *desktop=SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(window));
     if(!desktop || desktop->w<320 || desktop->h<200) return SDL_SetError("Desktop rendering dimensions unavailable");
     if(!WL_AutoRenderSize((unsigned)desktop->w,(unsigned)desktop->h,w,h))
@@ -64,6 +74,9 @@ static bool CreateHigh(high_surface *s,unsigned w,unsigned h)
     if(Fail(6)) { FreeHigh(s);return false; }
     s->texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA32,SDL_TEXTUREACCESS_STREAMING,(int)w,(int)h);
     if(!s->texture || !SDL_SetTextureScaleMode(s->texture,linear?SDL_SCALEMODE_LINEAR:SDL_SCALEMODE_NEAREST)) { FreeHigh(s);return false; }
+#ifdef WOLF3D_DISPLAY_TEST
+    ++surface_creations;
+#endif
     return true;
 }
 static bool uploaded;
@@ -238,6 +251,9 @@ const char *VL_Error(void) { return SDL_GetError(); }
 void VL_Shutdown(void)
 {
     IN_SDLFocusLost();
+#ifdef WOLF3D_DISPLAY_TEST
+    test_desktop_w=test_desktop_h=0;surface_creations=0;
+#endif
     present_ns=0;high_uploads=0;smooth=high_smooth=false;FreeHigh(&high);high_resolution=high_uploaded=render_auto=vsync=linear=false;aspect=0;high_scene=(wl_rectangle){0};render_width=640;render_height=480;
     SDL_DestroyTexture(texture); texture = NULL;
     SDL_DestroyRenderer(renderer); renderer = NULL;
@@ -338,17 +354,19 @@ static bool VL_DrawScreen(void)
     if(high_resolution && world && (!high_uploaded || changed || world!=high_world || sampled || sampled!=high_smooth || dying!=high_dying || (dying && (death_phase!=high_death_phase || death_cursor!=high_death_cursor)) || (world && (high_time!=gamestate.TimeCount || high_serial!=WL_RenderSerial())))) {
         if(!WL_RenderSnapshot(&high.target,high_depth,WL_TARGET_MAX_WIDTH,world,high_scene.width,high_scene.height,sampled?&presentation:NULL,Audio_Pump)) return SDL_SetError("High-resolution scene rendering failed");
         WL_PROFILE_BEGIN(convert_start);
-        w3r_byte colors[256][4];
+        /* Build words from RGBA bytes so the lookup is endian independent.
+           malloc gives the destination the alignment required for word stores. */
+        uint32_t colors[256];
         for(unsigned i=0;i<256;++i) {
-            for(unsigned c=0;c<3;++c) { unsigned value=palette[i*3+c];colors[i][c]=(w3r_byte)((value<<2)|(value>>4)); }
-            colors[i][3]=255;
+            w3r_byte color[4];
+            for(unsigned c=0;c<3;++c) { unsigned value=palette[i*3+c];color[c]=(w3r_byte)((value<<2)|(value>>4)); }
+            color[3]=255;memcpy(&colors[i],color,sizeof(color));
         }
         for(unsigned y=0;y<high.target.height;++y) {
             if(y%32==0) Audio_Pump();
-            for(unsigned x=0;x<high.target.width;++x) {
-                size_t i=(size_t)y*high.target.width+x;
-                memcpy(high.rgba+i*4,colors[high.pixels[i]],4);
-            }
+            const w3r_byte *source=high.pixels+(size_t)y*high.target.width;
+            uint32_t *destination=(uint32_t *)high.rgba+(size_t)y*high.target.width;
+            for(unsigned x=0;x<high.target.width;++x) destination[x]=colors[source[x]];
         }
         WL_PROFILE_END(convert,convert_start);
         WL_PROFILE_BEGIN(upload_start);
