@@ -29,7 +29,7 @@ static void Pump(void) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));Audio_Pu
 static void Geometry(int w,int h)
 {
     int aw,ah;CHECK(SDL_GetWindowSize(window,&aw,&ah));CHECK(aw==w && ah==h);
-    if(!GameLoading()) return;
+    if(!GameLoadingScreen()) return;
     SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
     CHECK(rect.w*3-rect.h*4>=-4 && rect.w*3-rect.h*4<=4);
     CHECK(rect.x>=0 && rect.y>=0);
@@ -61,7 +61,10 @@ static void Loading(bool owned)
     static const int sizes[][2]={{960,720},{1280,720},{1280,800},{1720,720}};
     display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=true;d.render_width=640;d.render_height=480;d.aspect=2;d.integer=false;d.smooth=true;CHECK(VL_DisplaySet(&d));
     for(unsigned size=0;size<4;++size) {
-        int w=sizes[size][0],h=sizes[size][1];CHECK(SDL_SetWindowSize(window,w,h));CHECK(SDL_SyncWindow(window));CHECK(!VL_PollQuit());
+        int w=sizes[size][0],h=sizes[size][1];
+        /* Include the user's Auto-aspect + integer-scaled DOS screen setup. */
+        CHECK(VL_DisplayGet(&d));d.aspect=size?0U:2U;d.integer=size!=0;CHECK(VL_DisplaySet(&d));
+        CHECK(SDL_SetWindowSize(window,w,h));CHECK(SDL_SyncWindow(window));CHECK(!VL_PollQuit());
         CHECK(DemoLoopStartGame(ticks));CHECK(GameLoading() && !GameCanSave());
         unsigned total=Uncached(),rng=US_RndIndex();uint32_t time=gamestate.TimeCount;
         w3r_byte expected[VL_PIXELS];memcpy(expected,framebuffer,sizeof(expected));
@@ -98,9 +101,23 @@ static void Loading(bool owned)
         for(unsigned n=0;n<30;++n) Pump();
         for(unsigned i=0;i<768;++i) CHECK(!palette[i]);
         CHECK(framebuffer[(VIEWY+VIEWHEIGHT)*320+VIEWX-1]==124);
-        CHECK(GameLoading());for(unsigned n=0;n<30;++n) Pump();
+        CHECK(GameLoading() && !GameCanSave());
+        /* Enhanced geometry must already be final while the palette is black;
+           showing a 4:3 level during fade-in causes a visible scale pop. */
+        int logical_w,logical_h;SDL_RendererLogicalPresentation mode;
+        CHECK(SDL_GetRenderLogicalPresentation(renderer,&logical_w,&logical_h,&mode));
+        const int world_heights[]={360,360,400,267};
+        CHECK(logical_w==640 && logical_h==world_heights[size] && mode==SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        SDL_FRect entry;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&entry));
+        for(unsigned n=0;n<30;++n) {
+            Pump();SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
+            CHECK(rect.x==entry.x && rect.y==entry.y && rect.w==entry.w && rect.h==entry.h);
+            int aw,ah;CHECK(SDL_GetWindowSize(window,&aw,&ah));CHECK(aw==w && ah==h);
+        }
         CHECK(!GameLoading() && !memcmp(palette,gamepal,768));
         CHECK(US_RndIndex()==rng && gamestate.TimeCount==time);Geometry(w,h);
+        Pump();SDL_FRect playing;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&playing));
+        CHECK(playing.x==entry.x && playing.y==entry.y && playing.w==entry.w && playing.h==entry.h);
         /* Fresh acknowledgement skips the 70-tic hold, never the page reads. */
         CHECK(StartPreloadGraphics(ticks));for(unsigned n=0;n<30;++n) Pump();
         while(Uncached()) { Pump(); }

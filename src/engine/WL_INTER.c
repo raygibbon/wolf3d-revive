@@ -228,6 +228,7 @@ static struct {
     uint64_t until;
 } preload;
 bool GameLoading(void) { return preload.phase!=0; }
+bool GameLoadingScreen(void) { return preload.phase!=0 && preload.phase<5; }
 void ResetPreloadGraphics(void) { memset(&preload,0,sizeof(preload)); }
 void PreloadUpdate(unsigned current,unsigned total)
 {
@@ -276,6 +277,7 @@ bool StepPreloadGraphics(uint64_t ticks)
     if(preload.phase==4 && ticks>=preload.until) {
         /* DOS restores the border while black before revealing the level. */
         if(!GameDrawPaused()) return false;
+        /* Select gameplay geometry while black, before its first fade frame. */
         preload.phase=5;preload.until=ticks+30;
         return VL_FadeIn(gamepal,30,ticks);
     }

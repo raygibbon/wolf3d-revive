@@ -74,6 +74,8 @@ bool GameIntermission(void);
 bool GamePreloadPending(void);
 void GamePreloadConsumed(void);
 bool GameLoading(void);
+/* DOS artwork ends while black; gameplay fade-in still blocks simulation. */
+bool GameLoadingScreen(void);
 bool StartPreloadGraphics(uint64_t ticks);
 bool StepPreloadGraphics(uint64_t ticks);
 void ResetPreloadGraphics(void);

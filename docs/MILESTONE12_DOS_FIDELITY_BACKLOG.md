@@ -328,3 +328,29 @@ and DOS executable are not. No native macOS/Android or physical display/audio
 claim is implied by dummy-driver checks.
 Private evidence remains under ignored `build/m12-loading-*.log` and
 `build/checks/get-psyched.*`; no commercial artwork is committed.
+
+### Level-entry scale transition follow-up — 2026-11-03
+
+A user reported the level visibly adjusting scale on entry. The gameplay
+fade-in was still classified as the DOS loading canvas by `GameLoading()`;
+Enhanced gameplay appeared at 4:3 for 30 tics, then switched to its final
+aspect/scaling at full brightness. A new SDL regression reproduced this in
+both synthetic and owned cases before the fix.
+
+`WL_INTER.c GameLoadingScreen` now identifies only the DOS artwork/fade-out
+phases. `sdl_video.c WorldPresentation` switches to gameplay geometry once that
+fade-out reaches black, before the first visible gameplay frame. `GameLoading`
+continues through gameplay fade-in, so simulation/input remain blocked for the
+same duration. Loading artwork and menus retain centred 4:3 presentation;
+window dimensions, configured aspect/integer scaling and game clocks are
+unchanged.
+
+`tests/loading_tests.c` asserts the final Enhanced logical dimensions while
+black, then an identical presentation rectangle throughout all 30 fade-in tics
+and the first gameplay frame. It covers 960×720, 1280×720, 1280×800 and
+1720×720 windows, including Auto aspect with integer-scaled DOS screens, and
+checks that the actual window dimensions remain fixed. The normal focused
+run passed both synthetic/owned cases (76.940 s); both also passed with
+ASan/UBSan (136.583 s), without findings. All 22 display, renderer and Classic
+regressions passed (186.895 s). Strict C11/SDL3 build and MinGW compilation
+of the changed implementation units passed. PR #16 records this follow-up.

@@ -110,7 +110,7 @@ static bool WorldPresentation(void)
     /* Intermission and end-text pages can live inside UI_GAME, but contain
        the original DOS interface rather than a widescreen world. */
     return GameRunning() && (DemoLoopState()==UI_GAME || DemoLoopState()==UI_DEMO) &&
-        !GameIntermission() && !GameVictoryPresentation() && !GameLoading();
+        !GameIntermission() && !GameVictoryPresentation() && !GameLoadingScreen();
 }
 static bool ApplyPresentation(void)
 {
