@@ -25,6 +25,31 @@ python3 scripts/extract_signon.py \
   "/path/to/owned/Wolfenstein 3D/base/SIGNON.RAW"
 ```
 
+You can also pass the Steam install directory (or its `base` directory)
+instead of the executable. To recover the image linked by the historical
+Wolf source release:
+
+```sh
+python3 scripts/extract_signon.py WOLFSRC /private/path/SIGNON.RAW
+# Also accepts WOLFSRC/OBJ/SIGNON.OBJ or the repository root directly.
+```
+
+The extractor discovers recognised files in those directories, preferring a
+supported Steam executable when available. This is an explicit local setup
+step; the game itself still reads `SIGNON.RAW` and does not run Python at launch.
+The source **C files alone do not contain the artwork**: the historical
+`OBJ/SIGNON.OBJ` asset is required. That source-release image contains a different
+publisher logo; use the Steam version for the Activision logo. The original
+pixels are preserved for either version.
+
+The source object's SHA-256 is
+`dd66c2a2c7744988ad7700c826674d6747859bde9baf817cba7399f99937b376`;
+its recovered pixels hash to
+`4fd711cdde7929645a46dd572ab61feacc8d3b79844250835b0ce87312a2c999`.
+The tool reconstructs its OMF LEDATA records, checking record lengths,
+checksums when present, segment bounds, overlapping data and complete coverage
+of all 64,000 pixels. It never modifies the object or embeds its data in code.
+
 Alternatively extract into an existing private staging directory, then copy
 `SIGNON.RAW` beside the WL6 archives. The output must be new: existing files
 are never overwritten, and the original executable is never modified or run.
@@ -58,7 +83,7 @@ used by Revive.
 
 ### Other revisions: supported manual import
 
-Only the checksum-listed executable has an automatic profile. Other releases
+Automatic profiles cover the checksum-listed Steam executable and source object. Other releases
 can supply the same RAW format if their original linked image can be identified
 reliably. Publisher logos can differ; do not substitute newly drawn artwork.
 
@@ -170,6 +195,13 @@ Sanitizer modules ran in four independent subprocesses using `SANITIZE=1`,
 binary. Every module exit status and log was checked. Full suite logs, private
 artwork and native/Wine captures are under ignored `build/checks/m11/`.
 
+The later Python-only source-object/directory extraction update passed all
+16 focused extraction/sign-on tests normally (11.609 s) and with the sanitizer
+harness/application (22.719 s), without skips or findings. These include source
+object recovery, directory detection and malformed OMF records. The full-suite
+counts above describe the completed milestone validation before that follow-up;
+the game engine and presentation code did not change in the follow-up.
+
 Focused checks cover extraction identities and output protection, invented
 LZEXE token streams, malformed references and bounds, valid/missing/truncated/
 oversized RAW images, original font composition, palette accuracy, silent
@@ -188,7 +220,7 @@ used the local SDL 3.5.0 development SDK.
 Physical ultrawide, high-DPI/mixed-DPI, multi-monitor and native Windows display
 testing were unavailable. Exact widescreen and ultrawide geometries are covered
 by SDL dummy/software tests; Wine does not establish physical Windows display
-behaviour. Extraction was verified against the owned Steam/Activision executable
-listed above; other publisher/release executables require manual import or a
-future separately verified profile. Commercial art, diagnostics and captures
+behaviour. Extraction was verified against the owned Steam/Activision executable and
+the historical source object listed above; other publisher/release executables
+require manual import or a future separately verified profile. Commercial art, diagnostics and captures
 remain in private temporary or ignored build directories.

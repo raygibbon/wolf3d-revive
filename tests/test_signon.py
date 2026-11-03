@@ -73,6 +73,31 @@ class ExtractionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'outside'): extractor.export(source, ROOT/'SIGNON.RAW')
             with self.assertRaisesRegex(ValueError, 'exceeds'): extractor.export(source, root/'SIGNON.RAW')
             self.assertFalse((root/'SIGNON.RAW').exists())
+    def test_source_object_and_directory_extraction(self):
+        source = ROOT/'WOLFSRC/OBJ/SIGNON.OBJ'
+        pixels = extractor.extract(source.read_bytes())
+        self.assertEqual(len(pixels), 64000)
+        self.assertEqual(hashlib.sha256(pixels).hexdigest(), extractor.SOURCE_SIGNON_SHA256)
+        with tempfile.TemporaryDirectory() as directory:
+            for number,path in enumerate((source, ROOT/'WOLFSRC', ROOT)):
+                output = Path(directory)/f'{number}.raw'
+                self.assertEqual(extractor.export(path, output), extractor.SOURCE_SIGNON_SHA256)
+                self.assertEqual(output.read_bytes(), pixels)
+    def test_object_bounds_checksums_and_coverage(self):
+        def record(kind, payload):
+            data = bytes([kind]) + struct.pack('<H', len(payload)+1) + payload
+            return data + bytes([-sum(data) % 256])
+        one = record(0xa0, b'\x01\x00\x00A')
+        for data,message in ((one[:-1], 'Truncated'), (one, 'Incomplete'),
+                             (one+one, 'Overlapping'), (record(0xa0, b'\x01\xff\xf9AB'), 'oversized'),
+                             (record(0x9c, b'fixup'), 'Unsupported')):
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                extractor.decode_object(data)
+        broken = bytearray(one); broken[-1] = (broken[-1]+1) % 256 or 1
+        with self.assertRaisesRegex(ValueError, 'checksum'): extractor.decode_object(broken)
+    def test_directory_without_supported_art_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, 'No supported'): extractor.select_source(Path(directory))
     def test_owned_extraction_and_overwrite_protection(self):
         data = os.environ.get('WOLF3D_DATA')
         if not data: self.skipTest('Owned DOS installation unavailable')
@@ -80,6 +105,8 @@ class ExtractionTests(unittest.TestCase):
         if source is None: self.skipTest('Owned DOS executable unavailable')
         before = source.read_bytes()
         if hashlib.sha256(before).hexdigest() != extractor.EXE_SHA256: self.skipTest('Different owned DOS executable revision')
+        self.assertEqual(extractor.select_source(source.parent), source)
+        self.assertEqual(extractor.select_source(source.parent.parent), source)
         self.assertIn(original_palette(), extractor.decode_stream(before, 32, extractor.LOAD_SIZE))
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory)/'SIGNON.RAW'
