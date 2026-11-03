@@ -23,7 +23,9 @@
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s)\n",__LINE__,#x,CA_Error());exit(1); } } while(0)
 #include "finish_loading.h"
 static uint64_t ticks;
-static void Step(unsigned n) { while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));if(GameLoading()) TestFinishLoading(ticks);CHECK(VW_UpdateScreen()); } }
+/* Check before the legacy helper can drain an unintended loading screen. */
+static bool forbid_loading;
+static void Step(unsigned n) { while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));CHECK(!forbid_loading || (!GameLoading() && !GamePreloadPending()));if(GameLoading()) TestFinishLoading(ticks);CHECK(VW_UpdateScreen()); } }
 static void Tap(SDL_Scancode key) { SDL_Event e={0};e.type=SDL_EVENT_KEY_DOWN;e.key.scancode=key;CHECK(SDL_PushEvent(&e));e.type=SDL_EVENT_KEY_UP;CHECK(SDL_PushEvent(&e));Step(1); }
 static void Start(void) { CHECK(NewViewSize(15));CHECK(DemoLoopStartup(ticks,true));CHECK(DemoLoopStartGame(ticks));Step(10);CHECK(DemoLoopState()==UI_GAME); }
 static void FKey(SDL_Scancode key,ui_state state) { Tap(key);Step(20);CHECK(DemoLoopState()==state); }
@@ -125,7 +127,7 @@ static void Keys(const char *slots)
     Start();FKey(SDL_SCANCODE_F8,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(22);CHECK(DemoLoopState()==UI_GAME);
     gamestate.ammo=3;Tap(SDL_SCANCODE_F8);CHECK(DemoLoopState()==UI_DISK);Step(2);CHECK(DemoLoopState()==UI_GAME);
     gamestate.ammo=7;Tap(SDL_SCANCODE_F9);CHECK(DemoLoopState()==UI_QUICK);Tap(SDL_SCANCODE_N);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==7);
-    Tap(SDL_SCANCODE_F9);Tap(SDL_SCANCODE_Y);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);
+    Tap(SDL_SCANCODE_F9);forbid_loading=true;Tap(SDL_SCANCODE_Y);Step(20);forbid_loading=false;CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);
     /* Revalidate on confirmation: corrupting the selected file must retain game. */
     Tap(SDL_SCANCODE_F9);char path[4096];(void)snprintf(path,sizeof(path),"%s/slot1.w3s",slots);FILE *f=fopen(path,"wb");CHECK(f);CHECK(fclose(f)==0);
     Tap(SDL_SCANCODE_Y);Step(1);CHECK(DemoLoopState()==UI_QUICK && GameRunning());Tap(SDL_SCANCODE_SPACE);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);

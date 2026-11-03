@@ -444,6 +444,9 @@ static bool StepDemoLoop(uint64_t ticks)
         if(!DrawSaveActivity(disk_saving,true)) return false;
         bool ok=disk_saving?Save_Write((unsigned)quickslot,disk_name,true):Save_Load((unsigned)quickslot,ticks);
         if(!ok) { state=UI_GAME;return QuickDialog(QUICK_ERROR,ticks); }
+        /* DOS CP_LoadGame(1) clears loadedgame and resumes the existing
+           PlayLoop; only an ordinary load re-enters GameLoop/PreloadGraphics. */
+        if(!disk_saving) GamePreloadConsumed();
         disk_done=true;disk_at=ticks+1;IN_ClearKeysDown();
     } else if(state==UI_JUKEBOX) {
         bool redraw=TickMenuCursor(ticks);int direction=MenuNavigation();
