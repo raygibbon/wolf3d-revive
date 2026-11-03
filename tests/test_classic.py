@@ -53,7 +53,11 @@ class ClassicTests(unittest.TestCase):
             else: classic_files(data, mode)
             env = dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_RENDER_DRIVER='software', SDL_AUDIODRIVER='dummy')
             subprocess.run([str(self.binary), str(data), str(slots), mode], env=env, check=True)
+            if mode == 'scores':
+                subprocess.run([str(self.binary), str(data), str(slots), 'scores-read'], env=env, check=True)
             if mode == 'view': self.assertEqual((slots / 'slot1.w3s').read_bytes()[96:], (slots / 'slot2.w3s').read_bytes()[96:])
+
+    def test_high_scores(self): self.run_display('scores')
 
     def test_view_sizes(self): self.run_display('view')
     def test_function_keys(self): self.run_display('keys')

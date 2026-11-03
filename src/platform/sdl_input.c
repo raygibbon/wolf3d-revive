@@ -55,6 +55,8 @@ unsigned IN_MapSDLScancode(unsigned code)
         case SDL_SCANCODE_RIGHT: case SDL_SCANCODE_KP_6: return sc_RightArrow;
         case SDL_SCANCODE_BACKSPACE: return 0x0e;
         case SDL_SCANCODE_TAB: return 0x0f;
+        case SDL_SCANCODE_HOME: return 0x47;
+        case SDL_SCANCODE_END: return 0x4f;
         case SDL_SCANCODE_DELETE: return 0x53;
         case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: return 0x1d;
         case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT: return 0x38;

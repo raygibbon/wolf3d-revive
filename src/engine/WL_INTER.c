@@ -1,25 +1,30 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_INTER.C DrawHighScores: original default table from ID_US_1.C.
-   No save/config import or score-entry gameplay has been ported. */
+   Native scores keep original qualification and fixed-width number glyphs. */
 #include "WL_MENU.h"
 #include "ID_VH.h"
 #include "ID_CA.h"
 #include "ID_US_1.h"
+#include "WL_HIGHSCORES.h"
+#include <stdio.h>
 bool DrawHighScores(void)
 {
-    static const char *names[] = {"id software-'92", "Adrian Carmack", "John Carmack", "Kevin Cloud", "Tom Hall", "John Romero", "Jay Wilbur"};
-    const char level[] = {(char)130,0};
-    const char score[] = {(char)130,(char)129,(char)129,(char)129,(char)129,0};
+    const high_score *scores=HighScores_Table();
     ClearMScreen(); DrawStripes(10);
     if (!VWB_DrawPic(48,0,HIGHSCORESPIC) || !VWB_DrawPic(32,68,C_NAMEPIC) ||
         !VWB_DrawPic(160,68,C_LEVELPIC) || !VWB_DrawPic(224,68,C_SCOREPIC)) return false;
     fontnumber = 0; fontcolor = 15;
     for (int i = 0; i < 7; ++i) {
-        int width, height;
+        int width, height;char level[16],score[16],episode[16];
+        (void)snprintf(level,sizeof(level),"%u",scores[i].completed);
+        (void)snprintf(score,sizeof(score),"%u",scores[i].score);
+        (void)snprintf(episode,sizeof(episode),"E%u/L",scores[i].episode+1);
+        for(char *p=level;*p;++p) *p=(char)((unsigned char)*p+129U-'0');
+        for(char *p=score;*p;++p) *p=(char)((unsigned char)*p+129U-'0');
         PrintX = 32; PrintY = 76 + 16*i;
-        if (!US_Print(names[i]) || !VW_MeasurePropString(level,&width,&height)) return false;
+        if (!US_Print(scores[i].name) || !VW_MeasurePropString(level,&width,&height)) return false;
         PrintX = 22*8-width-6;
-        if (!US_Print("E1/L") || !US_Print(level) || !VW_MeasurePropString(score,&width,&height)) return false;
+        if (!US_Print(episode) || !US_Print(level) || !VW_MeasurePropString(score,&width,&height)) return false;
         PrintX = 34*8-8-width;
         if (!US_Print(score)) return false;
     }

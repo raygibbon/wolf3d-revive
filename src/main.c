@@ -10,6 +10,7 @@
 #include "engine/WL_MENU.h"
 #include "engine/WL_DEF.h"
 #include "engine/WL_SAVE.h"
+#include "engine/WL_HIGHSCORES.h"
 #include "engine/WL_DISPLAY.h"
 #include "engine/WL_FRAME_CLOCK.h"
 #include <SDL3/SDL_timer.h>
@@ -92,6 +93,7 @@ int main(int argc, char *argv[])
     MainMenu[soundmenu].active=1;
     save_path=SDL_GetPrefPath(NULL,"wolf3d-revive");
     if(save_path) {
+        if(!HighScores_Load(save_path)) fprintf(stderr,"High scores: %s\n",CA_Error());
         (void)Save_SetDirectory(save_path);config_result config=Config_Load(save_path);
         config_writable=config==CONFIG_MISSING || config==CONFIG_LOADED;
         if(*Config_Error()) fprintf(stderr,"Configuration: %s\n",Config_Error());

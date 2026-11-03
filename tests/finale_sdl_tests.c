@@ -120,8 +120,10 @@ static void Episode(bool owned)
     Tap(SDL_SCANCODE_RETURN);Capture("ending-page1");
     Tap(SDL_SCANCODE_RIGHT);Capture("ending-page2");
     Tap(SDL_SCANCODE_LEFT);Tap(SDL_SCANCODE_ESCAPE);Steps(21);
-    CHECK(DemoLoopState()==UI_SCORES && !CA_Map() && !player.next);
-    Tap(SDL_SCANCODE_RETURN);Steps(21);CHECK(DemoLoopState()==UI_MENU);
+    CHECK(DemoLoopState()==UI_RESULTS && !CA_Map() && !player.next);
+    Tap(SDL_SCANCODE_ESCAPE);Steps(21);
+    if(DemoLoopState()==UI_RESULTS) { Tap(SDL_SCANCODE_SPACE);Steps(21); }
+    CHECK(DemoLoopState()==UI_TITLE);
     printf("E%u controlled %s weapon fight, finale, two article pages and menu return passed.\n",ep+1,owned ? "owned" : "synthetic");
 }
 int main(int argc,char **argv)

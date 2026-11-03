@@ -22,11 +22,28 @@ regression verification and physical DOS comparison.
 
 ## Batch B — high scores and completion
 
-- [ ] DOS seven-entry defaults, score/floor tie qualification and episode display.
-- [ ] Editable player names, bounded original font width, Enter/Escape behavior.
-- [ ] Portable atomic score persistence independent of saves/configuration.
-- [ ] Final death and victory → qualification → name entry/timeout → attract.
-- [ ] Explicit End Game behavior compared against historical CP_EndGame.
+- [x] DOS seven-entry defaults, strict score/floor tie qualification and episode
+  display (`ID_US_1.C Scores`, `WL_INTER.C CheckHighScore/DrawHighScores` →
+  `WL_HIGHSCORES.c`, `WL_INTER.c`). Exact ties preserve existing ordering.
+- [x] Editable names with original 57-character/100-pixel pre-insertion limits,
+  I-bar cursor, arrows/Home/End/Backspace/Delete, Enter accepts, Escape retains
+  the inserted blank name (`US_LineInput` → `HandleHighScoreEntry`).
+- [x] Portable atomic `highscores.w3h` persistence, independent of saves/config.
+  Seven explicit little-endian records, version/count and checksum validation.
+  Invalid/future files are preserved; write errors keep session rankings and
+  show a readable message. No DOS CONFIG.WL6 import.
+- [x] Final death and victory → qualification → name entry or 500-tic wait →
+  title/attract (`WL_GAME.C GameLoop` → `UI_RESULTS`). Historical source has
+  **no separate Game Over card** in these paths; do not invent one.
+- [x] Explicit End Game sets zero lives and enters the existing death sequence,
+  then qualifies the score (`CP_EndGame` → `QUICK_END`).
+
+Verification: strict application compilation passed. `test_classic.py`: all
+nine synthetic/owned tests passed (34.935 s), including a second process reading
+persisted rankings, exact ties, edit insertion, cancellation, corrupt-file
+protection, final End Game path and unchanged RNG. Full engine/finale regression
+validation is running; Batch E records its final outcome. Shifted punctuation
+and exhaustive text-entry parity remain in Batch D.
 
 ## Batch C — startup and hidden features
 
@@ -62,5 +79,5 @@ Batch A: `test_classic.py` passed all eight synthetic/owned cases (33.981 s),
 strict C11 warnings as errors. Tests cover nine sayings, confirmation blink and
 release gating, Pause clock/RNG isolation, new-game confirmation, F1–F10,
 all viewport sizes and four full demo durations. Exhaustive audio and save
-overwrite parity remain unchecked above. Continue with Batch B. Private logs belong under ignored `build/`; owned data
+overwrite parity remain unchecked above. Batch B focused checks passed; continue with Batch C. Private logs belong under ignored `build/`; owned data
 is available locally but must never be committed. No commercial assets added.

@@ -265,9 +265,9 @@ static void TestGameOverMenu(void)
     CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(10));gamestate.lives=0;TakeDamage(100,Guard());
     uint64_t ticks=10;
     while(DemoLoopState()==UI_GAME && ticks<600) CHECK(DemoLoop(++ticks));
-    CHECK(DemoLoopState()==UI_SCORES && !CA_Map() && !ChunksInFile);
+    CHECK(DemoLoopState()==UI_RESULTS && !CA_Map() && !ChunksInFile);
     CHECK(DemoLoop(ticks+10));IN_KeyEvent(sc_Enter,true);IN_KeyEvent(sc_Enter,false);
-    CHECK(DemoLoop(ticks+11) && DemoLoop(ticks+21) && DemoLoopState()==UI_MENU);
+    CHECK(DemoLoop(ticks+11) && DemoLoop(ticks+21) && DemoLoopState()==UI_TITLE);
 }
 static void TestOwnedCombat(void)
 {

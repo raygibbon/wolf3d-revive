@@ -4,6 +4,7 @@
 #include "engine/WL_MAIN.h"
 #include "engine/WL_MENU.h"
 #include "engine/WL_SAVE.h"
+#include "engine/WL_HIGHSCORES.h"
 #include "engine/WL_CONTROLS.h"
 #include "engine/WL_DISPLAY.h"
 #include "engine/ID_CA.h"
@@ -127,7 +128,9 @@ static void Keys(const char *slots)
     Tap(SDL_SCANCODE_Y);CHECK(DemoLoopState()==UI_QUICK && GameRunning());Tap(SDL_SCANCODE_SPACE);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);
     Tap(SDL_SCANCODE_F7);CHECK(DemoLoopState()==UI_QUICK);Tap(SDL_SCANCODE_N);Step(20);CHECK(GameRunning() && DemoLoopState()==UI_GAME);
     Tap(SDL_SCANCODE_F10);CHECK(DemoLoopState()==UI_QUICK);Tap(SDL_SCANCODE_ESCAPE);Step(20);CHECK(GameRunning() && DemoLoopState()==UI_GAME);
-    Tap(SDL_SCANCODE_F7);Tap(SDL_SCANCODE_Y);Step(20);CHECK(!GameRunning() && DemoLoopState()==UI_HIGHSCORES);
+    Tap(SDL_SCANCODE_F7);Tap(SDL_SCANCODE_Y);Step(20);CHECK(gamestate.died && gamestate.lives==0);
+    for(unsigned i=0;i<600 && DemoLoopState()==UI_GAME;++i) Step(1);
+    CHECK(!GameRunning() && DemoLoopState()==UI_RESULTS);
     Start();Tap(SDL_SCANCODE_F10);Tap(SDL_SCANCODE_Y);Step(20);CHECK(DemoLoopState()==UI_DONE);
     GameStop();puts("F1-F10 panels, direct return, pause, Change View accept/cancel, GOODTIMES boss key, quicksave/load/errors and end/quit passed.");
 }
@@ -177,10 +180,49 @@ static void Demos(void)
     focus.type=SDL_EVENT_WINDOW_FOCUS_GAINED;CHECK(SDL_PushEvent(&focus));Mouse(false);Mouse(true);Mouse(false);Step(60);CHECK(DemoLoopState()==UI_MENU && !Demo_Active());
     puts("Original demo decoding, bounds, duration, deterministic cadence, input isolation and attract abort passed.");
 }
+static void Scores(const char *directory,bool reading)
+{
+    CHECK(HighScores_Load(directory));
+    if(reading) {
+        const high_score *t=HighScores_Table();
+        CHECK(t[0].score==123456 && !strcmp(t[0].name,"acb") && t[0].episode==5 && t[0].completed==9);
+        puts("High scores survived a process restart.");return;
+    }
+    unsigned rng=US_RndIndex();
+    CHECK(HighScores_Insert(9999,10,0)==-1 && HighScores_Insert(10000,1,0)==-1);
+    CHECK(HighScores_Insert(10000,2,3)==0 && HighScores_Table()[0].episode==3);
+    CHECK(HighScores_Insert(10000,2,2)==1); /* Exact ties do not displace. */
+    CHECK(HighScores_Insert(UINT32_MAX,11,0)==-1 && HighScores_Insert(1,1,6)==-1);
+    HighScores_Reset();CHECK(HighScores_Insert(123456,9,5)==0);
+    CHECK(BeginHighScoreEntry(0,0));
+    IN_KeyEvent(0x1e,true);IN_KeyEvent(0x1e,false); /* a */
+    IN_KeyEvent(0x30,true);IN_KeyEvent(0x30,false); /* b */
+    CHECK(HandleHighScoreEntry(1)==0);
+    IN_KeyEvent(sc_LeftArrow,true);IN_KeyEvent(sc_LeftArrow,false);CHECK(HandleHighScoreEntry(2)==0);
+    IN_KeyEvent(0x2e,true);IN_KeyEvent(0x2e,false);CHECK(HandleHighScoreEntry(3)==0);
+    IN_KeyEvent(sc_Enter,true);IN_KeyEvent(sc_Enter,false);CHECK(HandleHighScoreEntry(4)==1);
+    CHECK(!strcmp(HighScores_Table()[0].name,"acb") && US_RndIndex()==rng);
+    CHECK(HighScores_Save() && HighScores_Load(directory));
+    CHECK(!strcmp(HighScores_Table()[0].name,"acb"));
+    CHECK(BeginHighScoreEntry(1,0));IN_KeyEvent(0x1e,true);IN_KeyEvent(0x1e,false);CHECK(HandleHighScoreEntry(1)==0);
+    IN_KeyEvent(sc_Escape,true);IN_KeyEvent(sc_Escape,false);CHECK(HandleHighScoreEntry(2)==1);
+    CHECK(!strcmp(HighScores_Table()[1].name,"id software-'92")); /* Escape retains original buffer. */
+    char file[4096];(void)snprintf(file,sizeof(file),"%s/highscores.w3h",directory);
+    FILE *f=fopen(file,"r+b");CHECK(f);CHECK(fputc('X',f)!=EOF && fclose(f)==0);
+    CHECK(!HighScores_Load(directory) && !HighScores_Save());
+    f=fopen(file,"rb");CHECK(f);CHECK(fgetc(f)=='X' && fclose(f)==0);CHECK(remove(file)==0);
+    CHECK(HighScores_Load(directory));CHECK(HighScores_Insert(123456,9,5)==0);
+    CHECK(BeginHighScoreEntry(0,0));
+    IN_KeyEvent(0x1e,true);IN_KeyEvent(0x1e,false);IN_KeyEvent(0x2e,true);IN_KeyEvent(0x2e,false);IN_KeyEvent(0x30,true);IN_KeyEvent(0x30,false);
+    CHECK(HandleHighScoreEntry(1)==0);IN_KeyEvent(sc_Enter,true);IN_KeyEvent(sc_Enter,false);CHECK(HandleHighScoreEntry(2)==1);
+    CHECK(HighScores_Save());
+    puts("DOS score qualification/ties, names, editing, escape, persistence, corrupt-file protection and RNG isolation passed.");
+}
 int main(int argc,char **argv)
 {
     CHECK(argc==4);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_Startup());CHECK(VL_SetPalette(gamepal,768));Display_Connect(VL_DisplayGet,VL_DisplaySet);
-    if(!strcmp(argv[3],"keys")) Keys(argv[2]);
+    if(!strcmp(argv[3],"scores") || !strcmp(argv[3],"scores-read")) Scores(argv[2],!strcmp(argv[3],"scores-read"));
+    else if(!strcmp(argv[3],"keys")) Keys(argv[2]);
     else { CHECK(Save_SetDirectory(argv[2]));if(!strcmp(argv[3],"view")) Views();else if(!strcmp(argv[3],"missing") || !strcmp(argv[3],"corrupt")) Missing();else Demos(); }
     GameStop();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());return 0;
 }
