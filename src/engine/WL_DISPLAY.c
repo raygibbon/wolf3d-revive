@@ -61,7 +61,7 @@ static bool Draw(const display_settings *s)
 bool BeginDisplayMenu(void)
 {
     if(!Display_Available() || !Get(&previous)) return false;
-    IN_ClearKeysDown();return Draw(&previous);
+    selected=0;IN_ClearKeysDown();return Draw(&previous);
 }
 int HandleDisplayMenu(void)
 {
