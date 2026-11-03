@@ -197,3 +197,16 @@ Known fidelity differences are tracked in
 high-DPI/multi-monitor or physical DOS/VGA parity is claimed. Reused SDL's
 static library is not sanitizer-instrumented. Campaign coverage remains all
 map/difficulty combinations and controlled finales, not full human playthroughs.
+
+## Milestone 12 continuation
+
+The later completion branch restores quit personality, shared confirmations,
+Pause, new-game replacement confirmation, high-score entry/persistence,
+completion transitions, jukebox, MLI/BAT, portable debugging, sign-on capability
+lights, mouse navigation, editor repeats and disk activity artwork. It retains
+these viewport/demo protections and the native save/configuration formats.
+See [the complete source/verification matrix](MILESTONE12_DOS_FIDELITY_BACKLOG.md).
+The actual historical executable now supplies a private 20-frame pixel oracle
+for all quit sayings at both DOS dialog heights and Saving/Loading windows.
+Hardware diagnostics, other editions and physical audio/CRT comparison remain
+explicitly outside the verified result.

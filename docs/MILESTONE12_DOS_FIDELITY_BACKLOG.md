@@ -116,22 +116,38 @@ Synthetic fixtures gained invented disk chunks; no commercial assets added.
 
 ## Batch E — verification matrix
 
-- [ ] Full strict C11 regression suite, owned-data tests, no unexpected skips.
-- [ ] ASan/UBSan application and regressions.
-- [ ] All four original demos/5386 reference commands, Classic and Enhanced.
-- [ ] 320×200 UI / aspect-correct 4:3 in widescreen output.
-- [ ] Enhanced independence, save/config compatibility and 70 Hz/RNG checks.
-- [ ] Physical DOS visual/audio comparisons (do not claim from synthetic tests).
-- [ ] Final limitations and edition matrix, source tree/Git safety checks.
+- [x] Full strict C11 regression suite, owned-data tests, no unexpected skips.
+- [x] ASan/UBSan application and regressions.
+- [x] All four original demos/5386 reference commands, Classic and Enhanced.
+- [x] 320×200 UI / aspect-correct 4:3 in widescreen output.
+- [x] Enhanced independence, save/config compatibility and 70 Hz/RNG checks.
+- [x] Executed-DOS visual comparison: 20 exact dialog frames under DOSBox.
+- [ ] Physical DOS audio/CRT comparison and exhaustive remaining UI states.
+- [x] Final limitations and edition matrix, source tree/Git safety checks.
 
-## Resume notes
+## Remaining scope and resume point
 
-Batch A: `test_classic.py` passed all eight synthetic/owned cases (33.981 s),
-strict C11 warnings as errors. Tests cover nine sayings, confirmation blink and
-release gating, Pause clock/RNG isolation, new-game confirmation, F1–F10,
-all viewport sizes and four full demo durations. Exhaustive audio and save
-overwrite parity remain unchecked above. Batch B focused checks passed; Batch D focused checks passed; full normal/sanitizer suites running. Private logs belong under ignored `build/`; owned data
-is available locally but must never be committed. No commercial assets added.
+Portable registered GOODTIMES WL6 work in Batches A–D is implemented and
+regression-tested within the limits above. The next unchecked work is physical
+DOS audio/CRT comparison, followed by edition-specific layouts when matching
+owned data/reference executables are available. Do not reintroduce a Game Over
+card: this source's GameLoop transitions directly to CheckHighScore.
+
+| Area | Verified result / remaining difference |
+| --- | --- |
+| DOS visual oracle | Original DOS executable under DOSBox; 20 full frames, zero differing pixels. This covers quit and Loading/Saving dialogs, not every UI state. |
+| DOS audio | Native original music/effect decoding, 700/140 Hz schedules, priorities, all 27 loop durations and RNG isolation covered. Exact physical DAC/OPL output and enabled-DOS menu timing remain unverified. |
+| Hardware startup | Original artwork and real runtime capability lights; no fabricated DOS memory totals, EMS/XMS, ISA, gameport or Sound Source detection. |
+| Input | Original keyboard/mouse behavior plus native editor repeats. No joystick/gamepad input implementation or non-US text/IME. Disabled device rows remain disabled. |
+| Debug tools | Portable G/H/I/E/F/C/P/Q/W/X supported after original unlock. DOS page-cache/EMS/XMS/address viewers, VGA border registers and timing debuggers are not simulated. |
+| Jukebox | All 18 songs and three banks; monotonic bank choice and title return replace DOS time/startup plumbing. Exhaustive selected/playing visual/audio comparison remains open. |
+| Saves/preferences | Existing six slots, save version 1, atomic native storage, TOML settings and binding/display controls retained. No DOS ten-slot/config import. Scores have a separate versioned file. |
+| Editions | GOODTIMES registered WL6 reference. Shareware/SPEAR/JAPAN/SPANISH/help layouts require matching assets and independent validation. |
+| Video | Original 320×200 UI with 4:3 aspect correction; Enhanced rendering remains independent. Safe edge clipping remains; physical CRT, native Windows, ultrawide/high-DPI hardware testing is not established. |
+
+All commercial art/captures/reference executables remain private in temporary
+or ignored build directories. WOLFSRC is unchanged; commits are confined to the
+requested feature branch. No push or merge is part of this work.
 
 ### Source-review follow-ups
 
@@ -172,3 +188,45 @@ original distinction. After this source correction, all 41 engine tests passed
 (232.644 s), including six episode finales and final death, and all 11 Classic
 cases passed (67.539 s). Final strict native/MinGW builds, Wine interaction and
 the sanitized application UI/menu/level smoke checks also passed.
+
+## Final validation — 2026-11-03
+
+| Check | Result |
+| --- | --- |
+| Final full normal suite | **146 passed**, no skips/failures, 550.678 s |
+| Full ASan/UBSan suite | **146 passed**, no skips/findings, 1381.710 s |
+| Final completion timing follow-up | 41 engine and 11 Classic cases passed; final sanitized Classic rerun: 11 passed, 77.738 s |
+| Executed original DOS visual oracle | 20 frames / 1,280,000 indexed pixels identical, including both WindowH values and Loading/Saving |
+| Original demo synchronization | All four recordings / 5386 commands, every traced frame, Classic and Enhanced, reference view size 15 / DOS sound off |
+| Strict C11 | GCC 14.2 and MinGW GCC 14, conversion/shadow/pedantic warnings as errors; CART SDL build passed |
+| Latest sanitized application | UI validation and finite menu/E1M1 smoke checks passed |
+| Windows executable under Wine | UI validation, mouse/text, hidden features, high-score persistence/restart and F1–F10 save/load/end/quit paths passed |
+| Native Linux X11/OpenGL | 1920×1200 output: 1600×1200 corrected canvas, 160-pixel black side borders, every 5×6 source texel equal; capture visually inspected |
+| Display/render compatibility | Synthetic/owned geometry, widescreen/ultrawide, all view sizes, HUD/death effects, snapshots, saves/preferences, fixed 70 Hz and RNG isolation passed |
+| Git/reference protection | WOLFSRC unchanged, no commercial assets added, feature-branch-only commits, no merge or master commits |
+
+The full normal pass above ran after the final completion-fade correction.
+The full sanitizer run was supplemented by the final Classic rerun and latest
+instrumented application smoke checks. Native C tests and application were
+instrumented; the reused SDL static SDK and original DOS executable were not.
+Wine/dummy-driver checks do not establish physical native-Windows behavior.
+
+Reproduce the normal suite after the standard CART build:
+
+```sh
+WOLF3D_DATA=/path/to/owned/WL6 \
+WOLF3D_BINARY="$PWD/build/cart-sdl/linux/wolf3d-revive" CC='gcc -O1' \
+python3 -m unittest discover -s tests -v
+```
+
+Use the sanitizer build in [BUILD.md](BUILD.md#tests), then set `SANITIZE=1`,
+`UBSAN_OPTIONS=halt_on_error=1` and `WOLF3D_BINARY` to that instrumented binary.
+The original-DOS pixel test additionally needs DOSBox and GNU binutils; it skips
+explicitly when owned data or DOSBox is absent. No skip occurred in these runs.
+
+Private evidence: `build/m12-final-head-full.log`, `build/m12-frozen-sanitize.log`,
+`build/m12-final-head-classic-sanitize.log`, `build/m12-completion-engine.log`,
+`build/m12-native.log`, `build/m12-final-app-sanitize.log`,
+`build/m12-wine-final.log` and `build/m12-cart-final.log`. These remain ignored.
+Physical audio/CRT comparison and the explicitly unsupported edition/hardware
+features above remain open; this milestone does not claim universal DOS parity.
