@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,CA_Error(),SDL_GetError());exit(1); } } while(0)
+#include "finish_loading.h"
 static uint64_t ticks;
 static void Arena(void)
 {
@@ -88,7 +89,7 @@ static void Event(SDL_EventType type)
 { SDL_Event e={0};e.type=type;CHECK(SDL_PushEvent(&e)); }
 static void Key(SDL_Scancode code,bool down)
 { SDL_Event e={0};e.type=down?SDL_EVENT_KEY_DOWN:SDL_EVENT_KEY_UP;e.key.scancode=code;CHECK(SDL_PushEvent(&e)); }
-static void Step(unsigned n) { while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));CHECK(VW_UpdateScreen()); } }
+static void Step(unsigned n) { while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));if(GameLoading()) TestFinishLoading(ticks);CHECK(VW_UpdateScreen()); } }
 static void Tap(SDL_Scancode key) { Key(key,true);Key(key,false);Step(1); }
 static void Mouse(unsigned button,bool down)
 { SDL_Event e={0};e.type=down?SDL_EVENT_MOUSE_BUTTON_DOWN:SDL_EVENT_MOUSE_BUTTON_UP;e.button.button=(uint8_t)button;CHECK(SDL_PushEvent(&e)); }

@@ -13,6 +13,7 @@
 #include <math.h>
 #define CHECK(x) do { if (!(x)) { fprintf(stderr,"%d: %s (%s)\n",__LINE__,#x,CA_Error());exit(1); } } while (0)
 extern statetype s_grdstand,s_grdpath1,s_grdchase1,s_grdshoot1,s_grdshoot2,s_grdpain,s_grdpain1,s_grddie1,s_grddie4,s_dogjump1,s_dogjump2;
+#include "finish_loading.h"
 static objtype *Guard(void) { for (unsigned i=0;i<objcount;++i) if (objlist[i].obclass==guardobj) return &objlist[i];return NULL; }
 static void TestRandom(void)
 {
@@ -262,7 +263,7 @@ static void TestMalformedSprites(void)
 }
 static void TestGameOverMenu(void)
 {
-    CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(10));gamestate.lives=0;TakeDamage(100,Guard());
+    CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(10));TestFinishLoading(10);gamestate.lives=0;TakeDamage(100,Guard());
     uint64_t ticks=10;
     while(DemoLoopState()==UI_GAME && ticks<600) CHECK(DemoLoop(++ticks));
     CHECK(DemoLoopState()==UI_RESULTS && !CA_Map() && !ChunksInFile);

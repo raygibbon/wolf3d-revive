@@ -12,8 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,CA_Error(),Audio_Error());exit(1); } } while(0)
+#include "finish_loading.h"
 static uint64_t ticks;
-static void Step(void) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));Audio_Pump();CHECK(VW_UpdateScreen()); }
+static void Step(void) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));if(GameLoading()) TestFinishLoading(ticks);Audio_Pump();CHECK(VW_UpdateScreen()); }
 static void Steps(unsigned n) { while(n--) Step(); }
 static void Tap(SDL_Scancode code)
 {

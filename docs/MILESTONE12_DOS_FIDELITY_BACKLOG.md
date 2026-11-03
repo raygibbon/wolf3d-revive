@@ -147,7 +147,8 @@ card: this source's GameLoop transitions directly to CheckHighScore.
 
 All commercial art/captures/reference executables remain private in temporary
 or ignored build directories. WOLFSRC is unchanged; commits are confined to the
-requested feature branch. No push or merge is part of this work.
+requested feature branch. That earlier validation pass did not include a push
+or merge; the PR #16 follow-up below records the subsequently requested push.
 
 ### Source-review follow-ups
 
@@ -230,3 +231,100 @@ Private evidence: `build/m12-final-head-full.log`, `build/m12-frozen-sanitize.lo
 `build/m12-wine-final.log` and `build/m12-cart-final.log`. These remain ignored.
 Physical audio/CRT comparison and the explicitly unsupported edition/hardware
 features above remain open; this milestone does not claim universal DOS parity.
+
+## Restored entries DOS-036 and DOS-037 — PR #16 follow-up
+
+- [x] **DOS-036: Original Get Psyched! loading screen and progress behaviour.**
+  Reference: `WOLFSRC/WL_INTER.C PreloadGraphics/PreloadUpdate`,
+  `WOLFSRC/ID_PM.C PM_Preload`, `WOLFSRC/WL_GAME.C GameLoop` and
+  `WOLFSRC/ID_VL.C VL_FadeIn/VL_FadeOut`.
+  Implementation: `src/engine/WL_INTER.c` resumes the original drawing/waits;
+  `ID_PM.c/.h` exposes cache residency; `WL_PLAY.c` requests presentation after
+  new games, floor changes, save restoration and debug warps; `WL_MAIN.c`
+  consumes those requests without blocking SDL. `src/platform/sdl_video.c`
+  treats loading as an original DOS interface, including in Enhanced mode.
+  The owned `GETPSYCHEDPIC` is decoded directly from VGAGRAPH at (48,56), with
+  index 127 above the retained 40-pixel HUD. The progress rectangle is
+  (53,101), 214×2: black remainder, index 0x37 fill and 0x32 top highlight
+  excluding its last column. Only successfully cached, previously uncached,
+  non-sparse VSWAP pages advance it. Already resident pages are omitted, and
+  an empty preload leaves the original artwork untouched, as DOS does.
+  At most 32 reads run per frontend update; there is no artificial percentage
+  or minimum preload duration. The 30-tic black/gamepal fades and fresh-input
+  or 70-tic acknowledgement precede border restoration and gameplay reveal.
+  Death restarts do not request this screen. Simulation time, actors and RNG
+  do not advance during loading; no save/config format changes are involved.
+  Tests: `tests/loading_tests.c`, `tests/test_loading.py`; existing campaign,
+  save, display, menu, controls and finale SDL regressions use
+  `tests/finish_loading.h` to finish the new presentation before their existing
+  input scenarios. The dedicated test runs the actual frontend clock and SDL
+  event loop, independently unplanes every artwork pixel, checks exact bar
+  pixels/DAC palette, real page counts, 30/70/30-tic boundaries, early fresh
+  acknowledgement, restored bevel and freeze of RNG/simulation. Owned-data
+  tests cover normal progression, secret entry/return and save restoration.
+  960×720, 1280×720, 1280×800 and 1720×720 windows stay unchanged, with a
+  centred 4:3 loading canvas and Enhanced gameplay restored afterward.
+  Verification: focused synthetic and owned tests passed (65.035 s, including Enhanced
+  smooth death rendering and intermediate fade/bar checks); an owned
+  loading capture was visually inspected. Full-run results are recorded below.
+  Limitations: native heap capacity replaces DOS main/EMS/XMS limits and disk
+  speed, so page totals/duration depend on actual native cache residency.
+  The existing level-entry reveal uses palette fading rather than adding a
+  separate DOS gameplay-entry fizzle. Physical CRT/DAC and native Windows,
+  macOS and Android display timing are not established by SDL dummy tests.
+
+- [x] **DOS-037: Original death-turn animation fidelity.**
+  Reference: `WOLFSRC/WL_GAME.C Died` (`DEATHROTATE=2`) and
+  `WOLFSRC/ID_VH.C FizzleFade`.
+  Implementation: retain the resumed `src/engine/WL_PLAY.c Died` state machine;
+  explicitly set the original weapon sentinel before `PLAYERDEATHSND`, match
+  the original float intermediate in the attacker-angle calculation, and enter
+  the red-fizzle phase on the tic that reaches the target. The existing
+  normalized shortest-arc rule already matches DOS: exactly 180 degrees chooses
+  the negative direction. Each elapsed 70-Hz tic turns at most two degrees,
+  clamped at the final angle. `WL_COMBAT.c DrawStatus` retains the last HUD
+  weapon icon while the held weapon is absent. `WL_PRESENT.c` normalizes the
+  hidden weapon to a valid snapshot index, preserving Enhanced smooth-render
+  validation while the authoritative DOS sentinel remains -1. The existing copied killer
+  position survives actor removal/reuse. Input collected during the turn/fizzle
+  is discarded before the original fresh-input/100-tic death acknowledgement.
+  The existing lives, entry-score restoration, pistol/ammo/health restart,
+  final-score path, red index 4 and 17-bit fizzle polynomial are preserved.
+  Tests: `tests/loading_tests.c` checks ten attacker/start combinations at
+  every Classic view size 4–19, for both synthetic and owned archives: front,
+  back, left, right, both 180-degree ties, single-degree wrap and oblique turns
+  through zero in both directions. One- and three-tic updates verify speed and
+  final angle; killer-position reuse, weapon sentinel, smooth Enhanced rendering
+  during the turn/fizzle, sound start, the first
+  914 fizzle candidates, full red viewport, 100-tic wait, lives and restart
+  without Get Psyched are asserted. Existing combat, Classic viewport and
+  finale tests cover final death, rendering and subsequent lives.
+  Verification: the focused synthetic/owned run above passed all 320 death
+  scenarios. Full-run/sanitizer results follow below.
+  Limitations: the existing safe fizzle clips to the viewport instead of
+  reproducing the DOS `x>width/y>height` border overdraw. Physical audio/DAC
+  latency is not measured; scheduling is checked through the native engine.
+
+Final follow-up regression results:
+
+| Check | Result |
+| --- | --- |
+| Full normal suite | **148 passed**, no skips/failures, 596.994 s |
+| Full ASan/UBSan suite | **148 passed**, no skips/findings, 1365.250 s |
+| Focused loading/death | Both synthetic/owned cases passed, 65.035 s; all 320 death scenarios, intermediate fades and partial bars |
+| Latest Classic follow-up | 11 passed, 53.845 s, including quicksave/load, debug warp and all viewport sizes |
+| Strict C11 / SDL3 | CART application build and GCC warnings-as-errors sanitizer build passed; all 50 application units passed strict MinGW C11 compilation |
+| Original demos | All four recordings passed frame/duration synchronization in Classic and Enhanced (5386 commands), as part of the normal suite |
+| DOS executable pixel oracle | Existing 20 menu/disk-dialog frames remain identical; new loading pixels separately checked against the owned planar artwork and DOS bar geometry |
+| SDL application | Normal and sanitized UI checks and 240-frame level/loading smoke tests passed |
+| Window/aspect | 4:3, 16:9, 16:10 and ultrawide loading windows remain unchanged; loading/menus are centred 4:3, Enhanced gameplay remains wide |
+
+Both follow-up full runs used `CC='gcc -O1'` with owned WL6 data; the
+sanitizer run used `SANITIZE=1`, `UBSAN_OPTIONS=halt_on_error=1` and the
+instrumented application via `WOLF3D_BINARY`.
+
+Native C harnesses/application are instrumented; the reused SDL static archive
+and DOS executable are not. No native macOS/Android or physical display/audio
+claim is implied by dummy-driver checks.
+Private evidence remains under ignored `build/m12-loading-*.log` and
+`build/checks/get-psyched.*`; no commercial artwork is committed.

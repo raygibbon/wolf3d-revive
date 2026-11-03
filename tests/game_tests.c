@@ -12,6 +12,7 @@
 #include <string.h>
 #include <limits.h>
 #define CHECK(x) do { if (!(x)) { fprintf(stderr,"%d: %s (%s)\n",__LINE__,#x,CA_Error()); exit(1); } } while (0)
+#include "finish_loading.h"
 static void TestExpand(void)
 {
     uint16_t out[12]; memset(out,0xcc,sizeof(out));
@@ -230,7 +231,7 @@ static void TestMenuGame(void)
     CHECK(DemoLoop(11) && DemoLoop(31) && DemoLoopState()==UI_EPISODE);
     Key(sc_Enter);CHECK(DemoLoop(32) && DemoLoop(52) && DemoLoopState()==UI_DIFFICULTY);
     Key(sc_Enter);CHECK(DemoLoop(53) && DemoLoop(73) && DemoLoopState()==UI_GAME);
-    Key(sc_UpArrow); CHECK(DemoLoop(74));
+    TestFinishLoading(73);Key(sc_UpArrow); CHECK(DemoLoop(74));
     Key(sc_Escape); CHECK(DemoLoop(75) && DemoLoop(95) && DemoLoopState()==UI_MENU);
     CHECK(CA_Map() && ChunksInFile && GameRunning());
     GameStop();

@@ -92,7 +92,7 @@ bool DrawStatus(void)
     if (statusvalid && gotgatgun==lastgatgun && memcmp(&laststatus,&gamestate,sizeof(gamestate))==0) return true;
     if (!LatchNumber(2,16,2,gamestate.mapon+1) || !LatchNumber(14,16,1,gamestate.lives) ||
         !LatchNumber(6,16,6,gamestate.score) || !LatchNumber(21,16,3,gamestate.health) ||
-        !LatchNumber(27,16,2,gamestate.ammo) || !StatusDrawPic(32,8,KNIFEPIC+gamestate.weapon) ||
+        !LatchNumber(27,16,2,gamestate.ammo) || (gamestate.weapon>=0 && !StatusDrawPic(32,8,KNIFEPIC+gamestate.weapon)) ||
         !StatusDrawPic(30,4,(gamestate.keys&1)?GOLDKEYPIC:NOKEYPIC) ||
         !StatusDrawPic(30,20,(gamestate.keys&2)?SILVERKEYPIC:NOKEYPIC) ||
         !StatusDrawPic(17,4,gotgatgun ? GOTGATLINGPIC : gamestate.health ? FACE1APIC+3*((100-gamestate.health)/16)+gamestate.faceframe : FACE8APIC)) return false;

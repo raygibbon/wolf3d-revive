@@ -11,4 +11,5 @@ void PM_Shutdown(void);
 const w3r_byte *PM_GetPage(unsigned page,size_t *length);
 bool PM_DecodeSprite(unsigned sprite,w3r_byte pixels[4096],w3r_byte opaque[4096]);
 bool PM_PagePresent(unsigned page);
+bool PM_PageCached(unsigned page);
 #endif

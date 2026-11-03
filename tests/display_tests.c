@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,SDL_GetError(),CA_Error());exit(1); } } while(0)
+#include "finish_loading.h"
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static uint64_t ticks;
@@ -117,7 +118,7 @@ static void Geometry(void)
     puts("Display geometry, black bars, scaling, tiny windows, fullscreen, shortcuts and failures passed.");
 }
 static void Step(unsigned n)
-{ while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));CHECK(VW_UpdateScreen()); } }
+{ while(n--) { CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));if(GameLoading()) TestFinishLoading(ticks);CHECK(VW_UpdateScreen()); } }
 static void Tap(SDL_Scancode code) { Key(code,true,SDL_KMOD_NONE);Key(code,false,SDL_KMOD_NONE);Step(1);AwaitDisplay(); }
 static void Capture(const char *name)
 {

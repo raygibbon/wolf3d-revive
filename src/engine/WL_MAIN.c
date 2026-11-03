@@ -87,6 +87,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
             if(audio.music!=song) SD_StartMusic(song); }
         else ok=GameStartSelected(ticks+10,episode,difficulty);
         if(!ok) return GameError() && VL_FadeIn(gamepal,10,ticks);
+        if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
     }
     if ((screen==UI_SAVE || screen==UI_LOAD) && !BeginSaveMenu(screen==UI_SAVE)) return false;
     if (screen == UI_TITLE || (screen==UI_RATING && previous==UI_SIGNON)) SD_StartMusic(7);
@@ -328,6 +329,7 @@ static bool StepDemoLoop(uint64_t ticks)
         }
         break;
     }
+    if(state==UI_GAME && GameLoading()) return StepPreloadGraphics(ticks) || GameError();
     if(VL_Fading()) return true;
     if(state==UI_DEMO) {
         if(!GameStep(ticks) || Demo_Finished()) { GameStop();return Transition(UI_TITLE,ticks,30); }
@@ -341,6 +343,7 @@ static bool StepDemoLoop(uint64_t ticks)
     if((state==UI_MENU || state==UI_SOUND || state==UI_CONTROLS || state==UI_DISPLAY || state==UI_VIEW || state==UI_EPISODE || state==UI_DIFFICULTY) && IN_ConsumePress(sc_Pause))
         SD_SetMusicPaused(!SD_MusicPaused());
     if (state == UI_GAME) {
+        if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */
         if(GameCanSave()) {
@@ -371,6 +374,7 @@ static bool StepDemoLoop(uint64_t ticks)
         }
         if (GameCanSave() && (CT_Pressed(CT_MENU) || IN_ConsumePress(sc_Escape))) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
+        if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
         if (GameFinished()) {
             score_rank=HighScores_Insert((uint32_t)gamestate.score,(unsigned)gamestate.mapon+1,(unsigned)gamestate.episode);
             GameStop();return Transition(UI_RESULTS,ticks,30);
@@ -433,7 +437,9 @@ static bool StepDemoLoop(uint64_t ticks)
     } else if(state==UI_DISK) {
         if(ticks<disk_at) return true;
         if(disk_done) {
-            IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused();
+            IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;
+            if(!GameDrawPaused()) return GameError();
+            return !GamePreloadPending() || StartPreloadGraphics(ticks) || GameError();
         }
         if(!DrawSaveActivity(disk_saving,true)) return false;
         bool ok=disk_saving?Save_Write((unsigned)quickslot,disk_name,true):Save_Load((unsigned)quickslot,ticks);
@@ -454,7 +460,9 @@ static bool StepDemoLoop(uint64_t ticks)
             unsigned floor=0;for(const char *p=warp_input;*p;++p) floor=floor*10U+(unsigned)(*p-'0');
             if(floor>=1 && floor<=10) { if(!GameWarp(ticks,floor)) return GameError(); }
             else { IN_ClearKeysDown();GamePauseClock(ticks); }
-            state=UI_GAME;return GameDrawPaused();
+            state=UI_GAME;
+            if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
+            return GameDrawPaused();
         }
         size_t n=strlen(warp_input);bool redraw=false;
         if(IN_ConsumePress(0x0e) && n) { warp_input[--n]=0;redraw=true; }

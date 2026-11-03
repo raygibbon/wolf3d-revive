@@ -217,3 +217,70 @@ bool StepLevelIntermission(uint64_t ticks,bool acknowledge,bool *leave)
     }
     return true;
 }
+
+/* WL_INTER.C PreloadGraphics/PreloadUpdate, resumed by the frontend so SDL
+   keeps polling events. Native heap caching replaces DOS main/EMS/XMS limits.
+   Count only present, uncached VSWAP pages, just as PM_Preload does. */
+#include "ID_PM.h"
+#include "WL_SAVE.h"
+static struct {
+    unsigned phase,page,current,total;
+    uint64_t until;
+} preload;
+bool GameLoading(void) { return preload.phase!=0; }
+void ResetPreloadGraphics(void) { memset(&preload,0,sizeof(preload)); }
+void PreloadUpdate(unsigned current,unsigned total)
+{
+    unsigned w=total?(unsigned)(UINT64_C(214)*current/total):0;
+    VWB_Bar(53,101,214,2,0);
+    if(w) {
+        VWB_Bar(53,101,(int)w,2,0x37);
+        VWB_Bar(53,101,(int)w-1,1,0x32);
+    }
+}
+bool StartPreloadGraphics(uint64_t ticks)
+{
+    ResetPreloadGraphics();GamePreloadConsumed();
+    VWB_Bar(0,0,320,160,127);
+    if(!VWB_DrawPic(48,56,GETPSYCHEDPIC)) return false;
+    for(unsigned p=0;p<ChunksInFile;++p)
+        if(PM_PagePresent(p) && !PM_PageCached(p)) ++preload.total;
+    preload.phase=1;preload.until=ticks+30;IN_ClearKeysDown();
+    return VL_FadeOut(0,0,0,0,ticks) && VL_FadeIn(gamepal,30,ticks);
+}
+bool StepPreloadGraphics(uint64_t ticks)
+{
+    VL_FadeStep(ticks);
+    if(preload.phase==1) {
+        if(ticks<preload.until) return true;
+        preload.phase=2;
+    }
+    if(preload.phase==2) {
+        /* At most 32 actual page reads per frontend update. No invented
+           percentage or artificial minimum loading duration. */
+        unsigned loaded=0;
+        while(preload.page<ChunksInFile && loaded<32) {
+            unsigned p=preload.page++;
+            if(!PM_PagePresent(p) || PM_PageCached(p)) continue;
+            if(!PM_GetPage(p,NULL)) return false;
+            ++loaded;++preload.current;PreloadUpdate(preload.current,preload.total);
+        }
+        if(preload.page<ChunksInFile) return true;
+        preload.phase=3;preload.until=ticks+70;IN_ClearKeysDown();
+    }
+    if(preload.phase==3) {
+        if(ticks<preload.until && !IN_AnyPressed()) return true;
+        IN_ClearKeysDown();preload.phase=4;preload.until=ticks+30;
+        return VL_FadeOut(0,0,0,30,ticks);
+    }
+    if(preload.phase==4 && ticks>=preload.until) {
+        /* DOS restores the border while black before revealing the level. */
+        if(!GameDrawPaused()) return false;
+        preload.phase=5;preload.until=ticks+30;
+        return VL_FadeIn(gamepal,30,ticks);
+    }
+    if(preload.phase==5 && ticks>=preload.until) {
+        ResetPreloadGraphics();IN_ClearKeysDown();GamePauseClock(ticks);
+    }
+    return true;
+}
