@@ -120,7 +120,9 @@ static bool ApplyPresentation(void)
     int lw=320,lh=240;
     bool world=high_resolution && WorldPresentation();
     if(world && high_scene.width) { lw=(int)high_scene.width;lh=(int)high_scene.height; }
-    SDL_RendererLogicalPresentation mode=integer_scale && w>=lw && h>=lh?
+    /* Integer scaling belongs to the DOS canvas. Enhanced scenes fit the
+       output independently, even when the menu uses integer scaling. */
+    SDL_RendererLogicalPresentation mode=!world && integer_scale && w>=lw && h>=lh?
         SDL_LOGICAL_PRESENTATION_INTEGER_SCALE:SDL_LOGICAL_PRESENTATION_LETTERBOX;
     if(applied_mode==mode && applied_w==lw && applied_h==lh) return true;
     if(Fail(2) || !SDL_SetRenderLogicalPresentation(renderer,lw,lh,mode)) return false;

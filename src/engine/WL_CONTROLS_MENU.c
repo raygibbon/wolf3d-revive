@@ -66,7 +66,7 @@ static bool DrawOptions(void)
     fontcolor=TEXTCOLOR;return VWB_DrawPic(112,184,C_MOUSELBACKPIC);
 }
 static bool ControlActive(unsigned item)
-{ return item==0 || item==5 || (item==4 && CT_MouseEnabled()); }
+{ return item==0 || item==5 || (item==4 && CT_MouseEnabled()) || (item==6 && Display_Available()); }
 static bool Draw(void)
 {
     if(page==CONTROL_OPTIONS) return DrawOptions();
@@ -84,10 +84,10 @@ static bool Draw(void)
     }
     DrawStripes(10);
     if(!VWB_DrawPic(80,0,C_CONTROLPIC)) return false;
-    DrawWindow(16,65,284,84,BKGDCOLOR);
+    DrawWindow(16,62,284,102,BKGDCOLOR);
     static const char *const labels[]={"Mouse Enabled","Joystick Enabled","Use joystick port 2",
-        "Gravis GamePad Enabled","Mouse Sensitivity","Customize controls"};
-    for(unsigned i=0;i<6;++i) {
+        "Gravis GamePad Enabled","Mouse Sensitivity","Customize controls","Display settings"};
+    for(unsigned i=0;i<7;++i) {
         fontcolor=ControlActive(i)?(i==control_row?HIGHLIGHT:TEXTCOLOR):DEACTIVE;
         if(!Text(80,70+(int)i*13,labels[i])) return false;
         if(i<4 && !VWB_DrawPic(56,73+(int)i*13,i==0 && CT_MouseEnabled()?C_SELECTEDPIC:C_NOTSELECTEDPIC)) return false;
@@ -169,11 +169,12 @@ int HandleControlsMenu(void)
         CT_SetSensitivity(value);
         if(enter) page=CONTROL_ROOT;
     } else {
-        if(up || down) do { control_row=(control_row+(up?5U:1U))%6; } while(!ControlActive(control_row));
+        if(up || down) do { control_row=(control_row+(up?6U:1U))%7; } while(!ControlActive(control_row));
         if(left || right || enter) {
             if(control_row==0) CT_SetMouse(!CT_MouseEnabled());
             else if(control_row==4 && enter) page=CONTROL_SENSITIVITY;
             else if(control_row==5 && enter) { page=CONTROL_OPTIONS;row=0; }
+            else if(control_row==6 && enter && Display_Available()) return 2;
         }
     }
     return !(up || down || left || right || enter) || Draw()?0:-3;
