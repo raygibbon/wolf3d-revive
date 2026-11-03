@@ -365,7 +365,7 @@
       "artwork": "Episode artwork and six rows.",
       "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
       "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
-      "sound": "Menu selection sound. ",
+      "sound": "Menu selection sound.",
       "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
       "evidence": [
         "classic"
@@ -1138,7 +1138,7 @@
       "implementation": [
         "src/engine/WL_MAIN.c:StepDemoLoop"
       ],
-      "artwork": "Restore gameplay. ",
+      "artwork": "Restore gameplay.",
       "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
       "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
       "sound": "Level track.",
@@ -2133,7 +2133,7 @@
       "implementation": [
         "src/engine/WL_MAIN.c:StepDemoLoop"
       ],
-      "artwork": "Title. ",
+      "artwork": "Title.",
       "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
       "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
       "sound": "Title music.",
@@ -2722,7 +2722,7 @@
       "implementation": [
         "src/engine/WL_MAIN.c:StepDemoLoop"
       ],
-      "artwork": "Restore gameplay. ",
+      "artwork": "Restore gameplay.",
       "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
       "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
       "sound": "Level track.",

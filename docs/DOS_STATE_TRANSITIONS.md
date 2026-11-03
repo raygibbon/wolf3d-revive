@@ -282,7 +282,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **Timing:** 10-tic menu dark-red fade (43,0,0); simulation frozen.
 - **Palette:** Original gamepal indices; VGA-style DAC interpolation where faded.
 - **Artwork/layout:** Episode artwork and six rows.
-- **Sound/music:** Menu selection sound. 
+- **Sound/music:** Menu selection sound.
 - **Input/state:** Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.
 - **Revive:** [StepDemoLoop](../src/engine/WL_MAIN.c#L301); [DrawNewSelection](../src/engine/WL_MENU.c#L160)
 - **Regression evidence:** [classic](#classic). Open findings: presentation.
@@ -664,7 +664,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **DOS source:** [CP_CheckQuick](../WOLFSRC/WL_MENU.C#L338)
 - **Timing:** 10-tic menu dark-red fade (43,0,0); simulation frozen.
 - **Palette:** Original gamepal indices; VGA-style DAC interpolation where faded.
-- **Artwork/layout:** Restore gameplay. 
+- **Artwork/layout:** Restore gameplay.
 - **Sound/music:** Level track.
 - **Input/state:** Preserve active game.
 - **Revive:** [StepDemoLoop](../src/engine/WL_MAIN.c#L301)
@@ -1172,7 +1172,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **DOS source:** [DoJukebox](../WOLFSRC/WL_MAIN.C#L1015)
 - **Timing:** 10-tic menu dark-red fade (43,0,0); simulation frozen.
 - **Palette:** Original gamepal indices; VGA-style DAC interpolation where faded.
-- **Artwork/layout:** Title. 
+- **Artwork/layout:** Title.
 - **Sound/music:** Title music.
 - **Input/state:** Clear input.
 - **Revive:** [StepDemoLoop](../src/engine/WL_MAIN.c#L301)
@@ -1485,7 +1485,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **DOS source:** [CP_CheckQuick](../WOLFSRC/WL_MENU.C#L338)
 - **Timing:** 10-tic menu dark-red fade (43,0,0); simulation frozen.
 - **Palette:** Original gamepal indices; VGA-style DAC interpolation where faded.
-- **Artwork/layout:** Restore gameplay. 
+- **Artwork/layout:** Restore gameplay.
 - **Sound/music:** Level track.
 - **Input/state:** Preserve active game.
 - **Revive:** [StepDemoLoop](../src/engine/WL_MAIN.c#L301)
