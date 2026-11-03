@@ -100,6 +100,16 @@ int main(int argc, char *argv[])
     uint64_t ticks = VL_GetTicks70();
     if (!DemoLoopStartup(ticks,menu)) { fprintf(stderr,"Cannot load original UI: %s\n",CA_Error()); goto video_done; }
     if(!menu && !level && !DemoLoopIntro(ticks)) { fprintf(stderr,"Startup artwork: %s\n",CA_Error());goto video_done; }
+    if(!menu && !level) {
+        char signon_path[4096];
+        int n=snprintf(signon_path,sizeof(signon_path),"%s/SIGNON.RAW",directory);
+        if(n<0 || (size_t)n>=sizeof(signon_path)) {
+            fputs("Sign-on artwork path is too long.\n",stderr);goto video_done;
+        }
+        if(!DemoLoopSignon(signon_path,ticks)) {
+            fprintf(stderr,"Sign-on artwork: %s\n",CA_Error());goto video_done;
+        }
+    }
     if (level && !DemoLoopStartGame(ticks)) { fprintf(stderr,"E1M1: %s\n",CA_Error()); goto video_done; }
     if (capture) {
         w3r_byte saved[768]; memcpy(saved,palette,sizeof(saved));
