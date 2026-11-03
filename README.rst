@@ -1,299 +1,105 @@
-Wolf3D Revive development
-=======================
+Wolf3D Revive
+=============
 
-This working tree preserves the original id Software source and history while
-preparing a faithful C11 / CART / SDL3 source port for Linux and Windows.
-Milestone 6A implements original enemies and bosses, boss projectiles,
-weapons, pickups, secrets, progression and all six episode endings. All 60
-owned maps load/render/simulate at four difficulties; controlled SDL weapon
-fights verify all six finale paths. Full navigated episode playthroughs and
-DOS equivalence are not claimed. Milestone 6B adds live AdLib music, original
-voices/effects and native SDL3 audio directly from WL6 archives, plus working
-music/effects volume and mute controls. No converted soundtrack or audio cache
-is created. Milestone 6C adds six named save slots, portable atomic saves in the user-data
-directory, pause/resume, deterministic restoration and animated intermission
-counters with original sound sequencing. Milestone 6D adds selectable
-Classic/Modern controls, configurable key bindings and SDL3 relative mouse input.
-Milestone 6E adds borderless desktop fullscreen, resizable windows, corrected
-4:3 presentation, integer/fit scaling and an original-font Display menu.
-Alt+Enter switches fullscreen; F11 switches integer scaling. Classic restoration
-adds original view sizes 4–19, teal borders, Change View and F1–F10 actions.
-Milestone 6G matches all four original attract demos against instrumented DOS
-traces at the verified default view size and silent reference settings. Milestone 6F persists controls,
-both custom preset profiles, audio, display and Classic view settings in atomic
-TOML preferences. Milestone 7 adds native high-resolution rendering, horizontal
-widescreen expansion through 32:9, independent centred HUD composition, desktop
-resolution selection, VSync, presentation filtering and F12 BMP screenshots.
-Milestone 8 adds optional Smooth Rendering with immutable interpolation and
-monitor refresh detection (60 FPS fallback, 240 FPS ceiling), independent of
-the original 70 Hz simulation. Actual performance and hardware limits are
-recorded in the milestone report. Original rendering remains the default;
-there is no separate gameplay mode.
-Detailed cross-device DOS listening comparisons remain later work.
+**A faithful, modern C11 port of the original Wolfenstein 3D for Windows and
+Linux, built with SDL3 and CART.**
 
-* `Milestone 8 frame pacing, benchmarks and verification <docs/MILESTONE8.md>`_
-* `Milestone 7 visual settings, verification and limits <docs/MILESTONE7_VISUAL.md>`_
-* `Milestone 6G DOS demo traces, synchronization and limits <docs/MILESTONE6G.md>`_
-* `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
-* `Classic restoration and verification <docs/CLASSIC_FIDELITY_RESTORATION.md>`_
-* `Milestone 6F configuration schema, defaults and verification <docs/MILESTONE6F.md>`_
-* `Build and validation <docs/BUILD.md>`_
-* `Milestone 6E display settings and verification <docs/MILESTONE6E.md>`_
-* `Milestone 6D controls and verification <docs/MILESTONE6D.md>`_
-* `Milestone 6C save/load, format and intermissions <docs/MILESTONE6C.md>`_
-* `Milestone 6B native audio, licensing and fidelity <docs/MILESTONE6B.md>`_
-* `Milestone 6A actor progress and remaining campaign work <docs/MILESTONE6A.md>`_
-* `Milestone 6 progress and remaining work <docs/MILESTONE6.md>`_
-* `Milestone 5 combat slice <docs/MILESTONE5.md>`_
-* `Milestone 4 results and controls <docs/MILESTONE4.md>`_
-* `Milestone 3 results and controls <docs/MILESTONE3.md>`_
-* `Milestone 2 results and scope <docs/MILESTONE2.md>`_
-* `Source inventory and incremental plan <docs/PORTING.md>`_
-* `Git safeguards <docs/GIT-SAFETY.md>`_
-* `Source licensing and game-data separation <docs/LICENSING.md>`_
+Wolf3D Revive aims to preserve the original game's look, timing and behaviour,
+while making it comfortable to play on modern systems. It is a preservation-
+focused source port, **not** a remake or a new game engine.
 
-
-Preferences are loaded at startup and saved on normal exit in
-``~/.local/share/wolf3d-revive/config.toml`` on Linux (respecting
-``XDG_DATA_HOME``), or ``%APPDATA%\wolf3d-revive\config.toml`` on Windows,
-using SDL_GetPrefPath. Defaults are Classic controls, mouse disabled (Modern:
-enabled), sensitivity 10, no inversion, music/effects 70/85 and enabled,
-windowed fit at 960x720, Original renderer, 640x480 internal resolution,
-Auto aspect, VSync off, nearest filtering, Smooth Rendering off, and Classic view size 15.
-High Resolution offers Auto desktop, 640x480, 1280x720 and 1920x1080; aspect
-choices are Auto, 4:3, 16:9, 16:10, 21:9 and 32:9. Auto rendering is bounded at
-4096x2160. F12 saves a BMP screenshot alongside config.toml. Switching presets retains
-custom bindings and mouse options; Reset Defaults resets the selected profile.
-
-Schema version 1 has ``[controls] preset``, ``[classic_controls]`` and
-``[modern_controls]`` mouse options and ``bind_<action>_<slot>`` scancodes,
-``[audio]`` volumes/enables, ``[display]`` fullscreen/integer flags and exact
-window width/height, ``renderer``, ``render_width``, ``render_height``,
-``render_auto``, ``aspect_ratio``, ``vsync``, ``filter`` and ``smooth_rendering``, and
-``[classic] view_size``. The fixed-schema TOML subset,
-all keys/binding IDs, migration rules and limits are documented in
-`MILESTONE6F <docs/MILESTONE6F.md>`_. Missing files use defaults. Malformed or
-future-version files are preserved and not overwritten on exit; repair or
-rename them to re-enable saving. Original game files and game-save formats
-remain unchanged.
-
-The historical upstream README follows unchanged.
-
-Wolfenstein 3D
-==============
-
-The original source release was made using the ``DEICE.EXE``
-installer (DeIce) in the root directory.  (Basically a way to
-split self-extracting zip files over multiple floppy disks.)
-After execution, that installer will create the contents of
-the ``WOLFSRC`` directory.  In the "installed" directory, the
-the ``README.TXT``, ``RELEASE.TXT``, and ``LICENCE.DOC`` reside
-in the ``README`` directory.  They are duplicated below.
-
-Travis "Ash" Bradshaw <travis.bradshaw@idsoftware.com>
-
-February 6, 2012
-
-RELEASE.TXT
------------
-
-::
-
-  We are releasing this code for the entertainment of the 
-  user community.  We don't guarentee that anything even 
-  builds in here.  Projects just seem to rot when you leave 
-  them alone for long periods of time.
-
-  This is all the source we have relating to the original 
-  PC wolfenstein 3D project.  We haven't looked at this 
-  stuff in years, and I would probably be horribly embarassed 
-  to dig through my old code, so please don't ask any questions 
-  about it. The original project was built in borland c++ 3.0.  
-  I think some minor changes were required for later versions.
-
-  You will need the data from a released version of wolf or spear 
-  to use the exe built from this code.  You can just use a 
-  shareware version if you are really cheap.
-
-
-  Some coding comments in retrospect:
-
-  The ray casting refresh architecture is still reasonably 
-  appropriate for the game.  A BSP based texture mapper could 
-  go faster, but ray casting was a lot simpler to do at the time.
-
-  The dynamically compiled scaling routines are now a Bad Thing.  
-  On uncached machines (the original target) they are the fastest 
-  possible way to scale walls, but on modern processors you just 
-  wind up thrashing the code cash and wrecking performance.  
-  A simple looping texture mapper would be faster on 486+ machines.
-
-  The whole page manager caching scheme is unecessarily complex.
-
-  Way too many #ifdefs in the code!
-
-
-  Some project ideas with this code:
-
-  Add new monsters or weapons.
-
-  Add taller walls and vertical motion.   This should only be 
-  done if the texture mapper is rewritten.
-
-  Convert to a 32 bit compiler.  This would be a fair amount 
-  of work, but I would hate to even mess with crusty old 16 
-  bit code.  The code would get a LOT smaller.
-
-  Make a multi-player game that runs on DOOM sersetup / ipxsetup drivers.
-
-
-  Have fun...
-
-  John Carmack
-  Technical Director
-  Id Software
-
-README.TXT
+What works
 ----------
 
-NOTES:
+* The original six-episode campaign systems: enemies, bosses, weapons, pickups,
+  doors, secrets, intermissions and endings.
+* Original-style AdLib music, sound effects and digitised audio read from game
+  archives, without converting the soundtrack.
+* Classic keyboard controls or optional modern WASD and mouse controls.
+* Six named save slots, configurable key bindings and persistent settings.
+* Original 320x200 presentation with correct 4:3 display proportions, view
+  sizes, HUD and palette.
+* Optional high-resolution software rendering, expanded widescreen views,
+  fullscreen, display scaling, VSync and screenshots.
+* Optional **Smooth Rendering**: interpolated presentation at the display's
+  refresh rate while keeping the original **70 Hz game simulation**.
 
-This version will compile under BORLAND C++ 3.0/3.1 and compiled perfectly
-before it was uploaded. 
+The original renderer remains the default. High-resolution rendering is an
+optional presentation mode, not a different game. The active main branch
+supports automatic high-resolution render targets up to 4096x2160; further
+4K performance work is being developed separately.
 
-Please do not send your questions to id Software.
+Getting started
+---------------
 
-LICENCE.DOC
------------
+You must provide your own legally obtained **Wolfenstein 3D WL6 game data**.
+The repository does not distribute commercial game assets. A Steam installation
+is one possible data source.
 
- :: 
-  	LIMITED USE SOFTWARE LICENSE AGREEMENT
+The project uses CART and SDL3. Once your local CART/SDL3 environment is set up,
+a typical Linux build and launch is::
 
-  	This Limited Use Software License Agreement (the "Agreement") 
-  is a legal agreement between you, the end-user, and Id Software, Inc. 
-  ("ID").  By continuing the downloading of this Wolfenstein 3D 
-  (the "Trademark") software material, which includes source code 
-  (the "Source Code"), artwork data, music and software tools 
-  (collectively, the "Software"), you are agreeing to be bound by the 
-  terms of this Agreement.  If you do not agree to the terms of this 
-  Agreement, promptly destroy the Software you may have downloaded.  
+    ./build/tools/cart build --profile cart-sdl --verbose
+    ./build/tools/cart run --profile cart-sdl -- --data "/absolute/path/to/WL6"
 
-  ID SOFTWARE LICENSE
+The ``cart-sdl`` profile expects the SDL3 SDK in the sibling CART checkout.
+There is no automatic game-data download. For Windows builds, alternative SDK
+layouts and troubleshooting, see `Build instructions <docs/BUILD.md>`_.
 
-  	Grant of License.  ID grants to you the right to use one (1) 
-  copy of the Software on a single computer.  You have no ownership or 
-  proprietary rights in or to the Software, or the Trademark.  For purposes 
-  of this section, "use" means loading the Software into RAM, as well as 
-  installation on a hard disk or other storage device.  The Software, 
-  together with any archive copy thereof, shall be destroyed when no longer 
-  used in accordance with this Agreement, or when the right to use the 
-  Software is terminated.  You agree that the Software will not be shipped, 
-  transferred or exported into any country in violation of the U.S. 
-  Export Administration Act (or any other law governing such matters) and 
-  that you will not utilize, in any other manner, the Software in violation 
-  of any applicable law.
+Controls
+--------
 
-  	Permitted Uses.  For educational purposes only, you, the end-user, 
-  may use portions of the Source Code, such as particular routines, to 
-  develop your own software, but may not duplicate the Source Code, except 
-  as noted in paragraph 4.  The limited right referenced in the preceding 
-  sentence is hereinafter referred to as "Educational Use."  By so exercising 
-  the Educational Use right you shall not obtain any ownership, copyright,
-  proprietary or other interest in or to the Source Code, or any portion of
-  the Source Code.  You may dispose of your own software in your sole
-  discretion.  With the exception of the Educational Use right, you may not
-  otherwise use the Software, or an portion of the Software, which includes
-  the Source Code, for commercial gain.
+Classic controls are the default: arrow keys move/turn, Ctrl fires, Space
+operates doors, Shift runs, and number keys select weapons. Select **Modern**
+in the Control menu for WASD movement and mouse aiming.
 
-  	Prohibited Uses:  Under no circumstances shall you, the end-user, 
-  be permitted, allowed or authorized to commercially exploit the Software.
-  Neither you nor anyone at your direction shall do any of the following acts
-  with regard to the Software, or any portion thereof:
+Useful shortcuts:
 
-  	Rent;
+* **Alt+Enter:** toggle fullscreen.
+* **F11:** toggle integer display scaling.
+* **F12:** save a BMP screenshot.
+* **Escape:** open the in-game menu or pause.
 
-  	Sell;
+Controls, audio, display choices and view settings are configurable in-game.
+The configuration and save files live in the platform's SDL user-data directory.
 
-  	Lease;
+Fidelity and project scope
+--------------------------
 
-  	Offer on a pay-per-play basis;
+The project retains the original DOS source in ``WOLFSRC/`` without modifying
+it. The maintained port lives in ``src/``.
 
-  	Distribute for money or any other consideration; or
+All 60 original maps have been exercised in automated load/render/simulation
+coverage at four difficulties. The four attract-mode demos match an instrumented
+DOS reference under documented test settings. These results **do not** claim
+that full human-played episode runs or every audio/device combination have
+been verified.
 
-  	In any other manner and through any medium whatsoever commercially 
-  exploit or use for any commercial purpose.
+The goal is to preserve gameplay and DOS compatibility while improving the
+platform and presentation layers. Modding frameworks, replacement art and
+major gameplay redesigns are outside the current scope.
 
-  Notwithstanding the foregoing prohibitions, you may commercially exploit the
-  software you develop by exercising the Educational Use right, referenced in
-  paragraph 2. hereinabove. 
+Documentation
+-------------
 
-  	Copyright.  The Software and all copyrights related thereto 
-  (including all characters and other images generated by the Software 
-  or depicted in the Software) are owned by ID and is protected by 
-  United States copyright laws and international treaty provisions.  
-  Id shall retain exclusive ownership and copyright in and to the Software 
-  and all portions of the Software and you shall have no ownership or other 
-  proprietary interest in such materials. You must treat the Software like 
-  any other copyrighted material, except that you may either (a) make one 
-  copy of the Software solely for back-up or archival purposes, or (b) 
-  transfer the Software to a single hard disk provided you keep the original 
-  solely for back-up or archival purposes.  You may not otherwise reproduce, 
-  copy or disclose to others, in whole or in any part, the Software.  You 
-  may not copy the written materials accompanying the Software.  You agree 
-  to use your best efforts to see that any user of the Software licensed 
-  hereunder complies with this Agreement.
+* `Build, run and controls <docs/BUILD.md>`_
+* `Milestone 8: frame pacing and benchmarks <docs/MILESTONE8.md>`_
+* `Milestone 7: widescreen and high-resolution rendering <docs/MILESTONE7_VISUAL.md>`_
+* `DOS demo synchronization <docs/MILESTONE6G.md>`_
+* `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
+* `Configuration details <docs/MILESTONE6F.md>`_
+* `Porting notes and progress <docs/PORTING.md>`_
+* `Licensing and data ownership <docs/LICENSING.md>`_
+* `Historical source-release README <docs/HISTORICAL_README.rst>`_
 
-  	NO WARRANTIES.  ID DISCLAIMS ALL WARRANTIES, BOTH EXPRESS IMPLIED,
-  INCLUDING BUT NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND
-  FITNESS FOR A PARTICULAR PURPOSE WITH RESPECT TO THE SOFTWARE.  THIS LIMITED
-  WARRANTY GIVES YOU SPECIFIC LEGAL RIGHTS.  YOU MAY HAVE OTHER RIGHTS WHICH
-  VARY FROM JURISDICTION TO JURISDICTION.  ID DOES NOT WARRANT THAT THE
-  OPERATION OF THE SOFTWARE WILL BE UNINTERRUPTED, ERROR FREE OR MEET YOUR
-  SPECIFIC REQUIREMENTS.  THE WARRANTY SET FORTH ABOVE IS IN LIEU OF ALL OTHER
-  EXPRESS WARRANTIES WHETHER ORAL OR WRITTEN.  THE AGENTS, EMPLOYEES,
-  DISTRIBUTORS, AND DEALERS OF ID ARE NOT AUTHORIZED TO MAKE MODIFICATIONS TO
-  THIS WARRANTY, OR ADDITIONAL WARRANTIES ON BEHALF OF ID. 
+License and attribution
+-----------------------
 
-  	Exclusive Remedies.  The Software is being offered to you free of any
-  charge.  You agree that you have no remedy against ID, its affiliates,
-  contractors, suppliers, and agents for loss or damage caused by any defect
-  or failure in the Software regardless of the form of action, whether in
-  contract, tort, includinegligence, strict liability or otherwise, with
-  regard to the Software.  This Agreement shall be construed in accordance
-  with and governed by the laws of the State of Texas.  Copyright and other
-  proprietary matters will be governed by United States laws and international
-  treaties.  IN ANY CASE, ID SHALL NOT BE LIABLE FOR LOSS OF DATA, LOSS OF
-  PROFITS, LOST SAVINGS, SPECIAL, INCIDENTAL, CONSEQUENTIAL, INDIRECT OR OTHER
-  SIMILAR DAMAGES ARISING FROM BREACH OF WARRANTY, BREACH OF CONTRACT,
-  NEGLIGENCE, OR OTHER LEGAL THEORY EVEN IF ID OR ITS AGENT HAS BEEN ADVISED
-  OF THE POSSIBILITY OF SUCH DAMAGES, OR FOR ANY CLAIM BY ANY OTHER PARTY.
-  Some jurisdictions do not allow the exclusion or limitation of incidental or
-  consequential damages, so the above limitation or exclusion may not apply to
-  you.
+The active port's new C engine code is licensed under **GPL-2.0-only**; see
+`COPYING <COPYING>`_ and `docs/LICENSING.md <docs/LICENSING.md>`_ for
+provenance, third-party notices and the distinction between engine source
+and copyrighted game data. Original game assets and trademarks remain their
+respective owners' property.
 
-  	General Provisions.  Neither this Agreement nor any part or portion 
-  hereof shall be assigned, sublicensed or otherwise transferred by you.  
-  Should any provision of this Agreement be held to be void, invalid, 
-  unenforceable or illegal by a court, the validity and enforceability of the 
-  other provisions shall not be affected thereby.  If any provision is 
-  determined to be unenforceable, you agree to a modification of such 
-  provision to provide for enforcement of the provision's intent, to the 
-  extent permitted by applicable law.  Failure of a party to enforce any 
-  provision of this Agreement shall not constitute or be construed as a 
-  waiver of such provision or of the right to enforce such provision.  If 
-  you fail to comply with any terms of this Agreement, YOUR LICENSE IS 
-  AUTOMATICALLY TERMINATED and you agree to the issuance of an injunction 
-  against you in favor of Id.  You agree that Id shall not have to post 
-  bond or other security to obtain an injunction against you to prohibit 
-  you from violating Id's rights.
-
-  	YOU ACKNOWLEDGE THAT YOU HAVE READ THIS AGREEMENT, THAT YOU 
-  UNDERSTAND THIS AGREEMENT, AND UNDERSTAND THAT BY CONTINUING THE 
-  DOWNLOADING OF THE SOFTWARE, YOU AGREE TO BE BOUND BY THIS AGREEMENT'S 
-  TERMS AND CONDITIONS. YOU FURTHER AGREE THAT, EXCEPT FOR WRITTEN SEPARATE 
-  AGREEMENTS BETWEEN ID AND YOU, THIS AGREEMENT IS A COMPLETE AND EXCLUSIVE 
-  STATEMENT OF THE RIGHTS AND LIABILITIES OF THE PARTIES.  THIS AGREEMENT 
-  SUPERSEDES ALL PRIOR ORAL AGREEMENTS, PROPOSALS OR UNDERSTANDINGS, AND 
-  ANY OTHER COMMUNICATIONS BETWEEN ID AND YOU RELATING TO THE SUBJECT MATTER 
-  OF THIS AGREEMENT 
-  
+This project is an independent preservation effort, not an official id Software
+release.
