@@ -21,6 +21,24 @@ CP_itemtype MainMenu[MENU_COUNT] = {
 static int shape = C_CURSOR1PIC;
 static uint64_t gun_next, move_next;
 static bool gun_first;
+int MenuCursorPicture(void) { return shape; }
+void MenuCursorMoved(void) { shape=C_CURSOR1PIC; }
+void ResetMenuCursor(uint64_t ticks)
+{ shape=C_CURSOR1PIC;gun_first=true;gun_next=ticks+9; }
+bool TickMenuCursor(uint64_t ticks)
+{
+    if (ticks >= gun_next) {
+        /* Original first 8-tic blink, then alternate 8/70-tic intervals. */
+        if (gun_first) { shape = C_CURSOR2PIC; gun_next += 9; gun_first = false; }
+        if (ticks >= gun_next) gun_next += ((ticks-gun_next)/80)*80;
+        while (ticks >= gun_next) {
+            if (shape == C_CURSOR2PIC) { shape = C_CURSOR1PIC; gun_next += 71; }
+            else { shape = C_CURSOR2PIC; gun_next += 9; }
+        }
+        return true;
+    }
+    return false;
+}
 void ClearMScreen(void) { VWB_Bar(0, 0, 320, 200, BORDCOLOR); }
 void DrawStripes(int y) { VWB_Bar(0, y, 320, 24, 0); VWB_Hlin(0, 319, y + 22, STRIPE); }
 static void DrawOutline(int x, int y, int w, int h, w3r_byte color1, w3r_byte color2)
@@ -56,7 +74,7 @@ bool SetupControlPanel(uint64_t ticks)
     MainMenu[viewscores].string=GameRunning()?"End Game":"View Scores";
     MainMenu[backtodemo].string=GameRunning()?"Back to Game":"Back to Demo";
     if (MainItems.curpos < 0 || MainItems.curpos >= MENU_COUNT || !MainMenu[MainItems.curpos].active) MainItems.curpos = viewscores;
-    shape = C_CURSOR1PIC; gun_first = true; gun_next = ticks + 9; move_next = ticks;
+    ResetMenuCursor(ticks);move_next=ticks;
     return DrawMainMenu();
 }
 static void MoveGun(int direction)
@@ -91,16 +109,7 @@ int HandleMenu(uint64_t ticks)
             }
         }
     }
-    if (ticks >= gun_next) {
-        /* Original first 8-tic blink, then alternate 8/70-tic intervals. */
-        if (gun_first) { shape = C_CURSOR2PIC; gun_next += 9; gun_first = false; }
-        if (ticks >= gun_next) gun_next += ((ticks-gun_next)/80)*80;
-        while (ticks >= gun_next) {
-            if (shape == C_CURSOR2PIC) { shape = C_CURSOR1PIC; gun_next += 71; }
-            else { shape = C_CURSOR2PIC; gun_next += 9; }
-        }
-        redraw = true;
-    }
+    if(TickMenuCursor(ticks)) redraw=true;
     if (redraw && !DrawMainMenu()) return -3;
     bool escape=IN_ConsumePress(sc_Escape);
     bool enter=IN_ConsumePress(sc_Enter), space=IN_ConsumePress(sc_Space);
@@ -178,44 +187,84 @@ int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice)
     return 0;
 }
 
-/* Minimal functional settings within the existing control-panel renderer. */
-static unsigned sound_choice;
+/* Original DrawSoundMenu panels and graphics; Revive exposes supported
+   synthesis/effects settings, not obsolete physical-device selections. */
+static unsigned sound_choice,volume_choice;
+static bool volume_page;
 bool DrawSoundSettings(void)
 {
     unsigned music,effects;bool mon,eon;SD_GetSettings(&music,&effects,&mon,&eon);
-    ClearMScreen();DrawWindow(36,32,248,132,BKGDCOLOR);
-    fontnumber=1;fontcolor=TEXTCOLOR;PrintX=112;PrintY=12;
-    if(!US_Print("Sound")) return false;
-    char text[4][64];
-    (void)snprintf(text[0],sizeof(text[0]),"Music: %s",mon?"On":"Off");
-    (void)snprintf(text[1],sizeof(text[1]),"Effects: %s",eon?"On":"Off");
-    (void)snprintf(text[2],sizeof(text[2]),"Music volume: %u%%",music);
-    (void)snprintf(text[3],sizeof(text[3]),"Effects volume: %u%%",effects);
-    for(unsigned i=0;i<4;++i) {
-        fontcolor=i==sound_choice?HIGHLIGHT:TEXTCOLOR;PrintX=62;PrintY=48+(int)i*24;
-        if(!US_Print(text[i])) return false;
+    ClearMScreen();fontnumber=1;fontcolor=TEXTCOLOR;
+    if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
+    if(volume_page) {
+        DrawStripes(10);DrawWindow(40,65,240,80,BKGDCOLOR);
+        int w,h;if(!VW_MeasurePropString("Volume",&w,&h)) return false;
+        PrintX=(320-w)/2;PrintY=14;if(!US_Print("Volume")) return false;
+        for(unsigned i=0;i<2;++i) {
+            char text[48];(void)snprintf(text,sizeof(text),"%s: %u%%",i?"Effects":"Music",i?effects:music);
+            fontcolor=i==volume_choice?HIGHLIGHT:TEXTCOLOR;PrintX=80;PrintY=80+(int)i*26;
+            if(!US_Print(text)) return false;
+        }
+        return VWB_DrawPic(48,78+(int)volume_choice*26,MenuCursorPicture());
     }
-    fontcolor=TEXTCOLOR;PrintX=40;PrintY=176;
-    return US_Print("Arrows adjust; Esc returns");
+    DrawWindow(40,17,250,45,BKGDCOLOR);
+    DrawWindow(40,82,250,45,BKGDCOLOR);
+    DrawWindow(40,147,250,32,BKGDCOLOR);
+    if(!VWB_DrawPic(100,0,C_FXTITLEPIC) || !VWB_DrawPic(100,65,C_DIGITITLEPIC) ||
+       !VWB_DrawPic(100,130,C_MUSICTITLEPIC)) return false;
+    static const int ys[]={20,33,46,150,163};
+    static const char *const labels[]={"None","AdLib effects","Adjust volumes","None","AdLib music"};
+    for(unsigned i=0;i<5;++i) {
+        fontcolor=i==sound_choice?HIGHLIGHT:TEXTCOLOR;PrintX=100;PrintY=ys[i];
+        if(!US_Print(labels[i])) return false;
+        if(i!=2) {
+            bool on=i==0?!eon:i==1?eon:i==3?!mon:mon;
+            if(!VWB_DrawPic(72,ys[i]+2,on?C_SELECTEDPIC:C_NOTSELECTEDPIC)) return false;
+        }
+    }
+    /* Digitized playback shares the existing effects enable/volume setting.
+       This is a status panel, not a second independently persisted device. */
+    fontcolor=TEXTCOLOR;PrintX=100;PrintY=85;
+    if(!US_Print("With sound effects") || !VWB_DrawPic(72,87,eon && SD_DigitizedMode()?C_SELECTEDPIC:C_NOTSELECTEDPIC)) return false;
+    fontnumber=0;PrintX=80;PrintY=108;
+    if(!US_Print("Original digitized samples")) return false;
+    return VWB_DrawPic(48,ys[sound_choice]-2,MenuCursorPicture());
 }
+bool BeginSoundSettings(void)
+{ sound_choice=volume_choice=0;volume_page=false;MenuCursorMoved();IN_ClearKeysDown();return DrawSoundSettings(); }
 int HandleSoundSettings(void)
 {
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
-    bool enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
-    if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
-    if(up || down) sound_choice=(sound_choice+(up?3U:1U))%4;
-    if(left || right || enter || space) {
+    bool enter=IN_ConsumePress(sc_Enter)|IN_ConsumePress(sc_Space);
+    if(IN_ConsumePress(sc_Escape)) {
+        (void)SD_PlaySound(ESCPRESSEDSND,0,0);
+        if(!volume_page) return -1;
+        volume_page=false;return DrawSoundSettings()?0:-3;
+    }
+    if(up || down) {
+        MenuCursorMoved();
+        if(volume_page) volume_choice^=1U;
+        else sound_choice=(sound_choice+(up?4U:1U))%5;
+        (void)SD_PlaySound(MOVEGUN1SND,0,0);
+    }
+    if(left || right || enter) {
         unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);
-        if(sound_choice==0) mon=!mon;
-        else if(sound_choice==1) eon=!eon;
-        else {
-            unsigned *v=sound_choice==2?&m:&e;
+        if(volume_page) {
+            unsigned *v=volume_choice?&e:&m;
             if(left) *v=*v>=5?*v-5:0;
             else *v=*v<=95?*v+5:100;
+            SD_SetVolumes(m,e);
+        } else {
+            if(sound_choice==0) eon=false;
+            else if(sound_choice==1) eon=true;
+            else if(sound_choice==2 && enter) { volume_page=true;volume_choice=0; }
+            else if(sound_choice==3) mon=false;
+            else if(sound_choice==4) mon=true;
+            SD_SetEnabled(mon,eon);
         }
-        SD_SetVolumes(m,e);SD_SetEnabled(mon,eon);
+        (void)SD_PlaySound(SHOOTSND,0,0);
     }
-    if((up || down || left || right || enter || space) && !DrawSoundSettings()) return -3;
+    if((up || down || left || right || enter) && !DrawSoundSettings()) return -3;
     return 0;
 }

@@ -44,6 +44,7 @@ static bool GameError(void)
 }
 static bool ChangeScreen(ui_state screen, uint64_t ticks)
 {
+    ui_state previous=state;
     state = screen; leaving = false;
     IN_ClearKeysDown();
     if (screen == UI_DONE) return true;
@@ -70,9 +71,10 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_TITLE) SD_StartMusic(7);
     if (screen == UI_MENU) SD_StartMusic(14);
     if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
+    if(screen==UI_CONTROLS || screen==UI_SOUND) ResetMenuCursor(ticks);
     if(screen==UI_DISPLAY && !BeginDisplayMenu()) return false;
-    if(screen==UI_CONTROLS && !BeginControlsMenu()) return false;
-    if (screen == UI_SOUND && !DrawSoundSettings()) return false;
+    if(screen==UI_CONTROLS && !(previous==UI_DISPLAY?ResumeControlsMenu():BeginControlsMenu())) return false;
+    if (screen == UI_SOUND && !BeginSoundSettings()) return false;
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
@@ -154,6 +156,9 @@ static bool StepDemoLoop(uint64_t ticks)
         return true;
     }
     if(Attract()) return true;
+    if((state==UI_CONTROLS || state==UI_SOUND) && TickMenuCursor(ticks)) {
+        if(!(state==UI_CONTROLS?DrawControlsMenu():DrawSoundSettings())) return false;
+    }
     if (state == UI_GAME) {
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */

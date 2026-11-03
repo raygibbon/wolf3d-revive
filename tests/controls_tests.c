@@ -101,11 +101,12 @@ static void SDLControls(void)
 {
     CHECK(VL_Startup());CT_Reset(CT_CLASSIC);CHECK(DemoLoopStartup(ticks,true));Step(11);CHECK(!IN_SDLCaptured());
     MainItems.curpos=control;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_CONTROLS);Capture("controls-classic");
+    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN); /* Customize, skipping disabled devices/sensitivity. */
     Tap(SDL_SCANCODE_RETURN);CHECK(CT_Preset()==CT_MODERN && CT_MouseEnabled());Capture("controls-modern");
     for(unsigned i=0;i<5;++i) Tap(SDL_SCANCODE_DOWN);
     Tap(SDL_SCANCODE_RETURN);Capture("controls-bindings");Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_S);
     CHECK(CT_Binding(CT_FORWARD,0)==SDL_SCANCODE_W);Capture("controls-conflict");Tap(SDL_SCANCODE_E);
-    CHECK(CT_Binding(CT_FORWARD,0)==SDL_SCANCODE_E);Tap(SDL_SCANCODE_ESCAPE);Tap(SDL_SCANCODE_ESCAPE);Step(21);
+    CHECK(CT_Binding(CT_FORWARD,0)==SDL_SCANCODE_E);Tap(SDL_SCANCODE_ESCAPE);Tap(SDL_SCANCODE_ESCAPE);Tap(SDL_SCANCODE_ESCAPE);Step(21);
     CHECK(DemoLoopState()==UI_MENU);Mouse(1,true);Step(1);CHECK(!IN_SDLCaptured());
     CHECK(DemoLoopStartGame(ticks));Step(11);Arena();CHECK(IN_SDLCaptured());
     CHECK(!CT_Down(CT_FIRE));
