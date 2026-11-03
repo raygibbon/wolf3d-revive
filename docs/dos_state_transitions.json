@@ -1,0 +1,3998 @@
+{
+  "schema": 1,
+  "introduction": [
+    "Scope: registered GOODTIMES WL6 historical source and native SDL3 engine. This is a reviewed directed-route inventory, not an exhaustive enumeration of every branch/input combination.",
+    "Evidence records distinguish source review, native regression assertions and execution of the checksum-verified original DOS executable. Current run results are in [Milestone 13](MILESTONE13_FINAL_FIDELITY.md)."
+  ],
+  "states": [
+    "article",
+    "attract-scores",
+    "boss",
+    "boss-replay",
+    "completion",
+    "controls",
+    "credits",
+    "death-ack",
+    "death-turn",
+    "demo",
+    "difficulty",
+    "disk",
+    "display",
+    "end-confirm",
+    "episode",
+    "error",
+    "exit",
+    "gameplay",
+    "jukebox",
+    "load",
+    "menu",
+    "message",
+    "name-entry",
+    "pause",
+    "process",
+    "psyched",
+    "qualification",
+    "quick-confirm",
+    "quick-disk",
+    "quit-confirm",
+    "rating",
+    "red-fizzle",
+    "replace-confirm",
+    "restart",
+    "results",
+    "reveal",
+    "save",
+    "scores",
+    "secret-completion",
+    "setup",
+    "signon",
+    "sound",
+    "title",
+    "victory",
+    "view",
+    "warp"
+  ],
+  "transitions": [
+    {
+      "id": "startup",
+      "group": "Startup",
+      "from": "process",
+      "to": "signon",
+      "trigger": "Initialize subsystems and optional SIGNON.RAW",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:InitGame",
+        "WOLFSRC/WL_MENU.C:IntroScreen"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:DemoLoopStartupDevices",
+        "src/engine/WL_MAIN.c:DemoLoopSignon"
+      ],
+      "artwork": "Owned 320\u00d7200 sign-on; actual mouse/audio capability lights.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Native initialization; optional sign-on 10-tic fade.",
+      "sound": "Silent sign-on.",
+      "input": "Fresh key acknowledges; M enters jukebox.",
+      "evidence": [
+        "signon"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware",
+        "presentation"
+      ]
+    },
+    {
+      "id": "signon-ack",
+      "group": "Startup",
+      "from": "signon",
+      "to": "rating",
+      "trigger": "FinishSignon acknowledgement",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:FinishSignon",
+        "WOLFSRC/WL_INTER.C:PG13"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:SignonPrompt",
+        "src/engine/WL_MAIN.c:DemoLoopIntro"
+      ],
+      "artwork": "Original Working prompt then PG13 at (216,110).",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Title music 7 begins on rating/title boundary.",
+      "input": "Clear acknowledging input.",
+      "evidence": [
+        "signon"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "rating-title",
+      "group": "Attract",
+      "from": "rating",
+      "to": "title",
+      "trigger": "Seven seconds or fresh input",
+      "source": [
+        "WOLFSRC/WL_INTER.C:PG13",
+        "WOLFSRC/WL_MAIN.C:DemoLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "PG13 to TITLEPIC.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "7\u00d770-tic hold, 30-tic black fade.",
+      "sound": "Track 7.",
+      "input": "Fresh input skips rating.",
+      "evidence": [
+        "signon"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "title-credits",
+      "group": "Attract",
+      "from": "title",
+      "to": "credits",
+      "trigger": "Attract deadline",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_GAME.C:PlayDemo"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen",
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "TITLEPIC \u2192 CREDITSPIC",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "15\u00d770 tics plus 30-tic black fades.",
+      "sound": "Title/score/level tracks selected at boundaries.",
+      "input": "Any fresh key/click opens menu.",
+      "evidence": [
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "credits-scores",
+      "group": "Attract",
+      "from": "credits",
+      "to": "attract-scores",
+      "trigger": "Attract deadline",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_GAME.C:PlayDemo"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen",
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "CREDITSPIC \u2192 HIGHSCORESPIC",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10\u00d770 tics plus 30-tic black fades.",
+      "sound": "Title/score/level tracks selected at boundaries.",
+      "input": "Any fresh key/click opens menu.",
+      "evidence": [
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "scores-demo",
+      "group": "Attract",
+      "from": "attract-scores",
+      "to": "demo",
+      "trigger": "Attract deadline",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_GAME.C:PlayDemo"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen",
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Scores \u2192 original demo overlay",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10\u00d770 tics plus 30-tic black fades.",
+      "sound": "Title/score/level tracks selected at boundaries.",
+      "input": "Any fresh key/click opens menu.",
+      "evidence": [
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "demo-title",
+      "group": "Attract",
+      "from": "demo",
+      "to": "title",
+      "trigger": "Demo ends/dies/exits or cannot start",
+      "source": [
+        "WOLFSRC/WL_GAME.C:PlayDemo",
+        "WOLFSRC/WL_MAIN.C:DemoLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Game \u2192 TITLEPIC.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Stop level music; title music.",
+      "input": "Demo commands isolated from live bindings.",
+      "evidence": [
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "title-menu",
+      "group": "Attract",
+      "from": "title",
+      "to": "menu",
+      "trigger": "Fresh key or mouse",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original control-panel artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Menu track 14.",
+      "input": "Abort demo and release its game resources.",
+      "evidence": [
+        "classic",
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "credits-menu",
+      "group": "Attract",
+      "from": "credits",
+      "to": "menu",
+      "trigger": "Fresh key or mouse",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original control-panel artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Menu track 14.",
+      "input": "Abort demo and release its game resources.",
+      "evidence": [
+        "classic",
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "attract-scores-menu",
+      "group": "Attract",
+      "from": "attract-scores",
+      "to": "menu",
+      "trigger": "Fresh key or mouse",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original control-panel artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Menu track 14.",
+      "input": "Abort demo and release its game resources.",
+      "evidence": [
+        "classic",
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "demo-menu",
+      "group": "Attract",
+      "from": "demo",
+      "to": "menu",
+      "trigger": "Fresh key or mouse",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DemoLoop",
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original control-panel artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Menu track 14.",
+      "input": "Abort demo and release its game resources.",
+      "evidence": [
+        "classic",
+        "demo"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "menu-episode",
+      "group": "New game",
+      "from": "menu",
+      "to": "episode",
+      "trigger": "Choose New Game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop",
+        "src/engine/WL_MENU.c:DrawNewSelection"
+      ],
+      "artwork": "Episode artwork and six rows.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu selection sound. ",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "episode-difficulty",
+      "group": "New game",
+      "from": "episode",
+      "to": "difficulty",
+      "trigger": "Accept episode without active game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Difficulty artwork/BJ faces.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu sounds.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "episode-replace",
+      "group": "New game",
+      "from": "episode",
+      "to": "replace-confirm",
+      "trigger": "Accept episode while game active",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "CURGAME message and blinking cursor.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "20-tic cursor blink; answer release.",
+      "sound": "ESCPRESSEDSND / SHOOTSND by confirmation.",
+      "input": "Y/N/Escape; gameplay frozen.",
+      "evidence": [
+        "classic",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "replace-yes",
+      "group": "New game",
+      "from": "replace-confirm",
+      "to": "difficulty",
+      "trigger": "Y released",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame",
+        "WOLFSRC/WL_MENU.C:Confirm"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore destination selection.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Confirmation sounds.",
+      "input": "Keep quick slot until difficulty accepted.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "replace-no",
+      "group": "New game",
+      "from": "replace-confirm",
+      "to": "menu",
+      "trigger": "N/Escape",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame",
+        "WOLFSRC/WL_MENU.C:Confirm"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore destination selection.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Confirmation sounds.",
+      "input": "Keep quick slot until difficulty accepted.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "difficulty-setup",
+      "group": "New game",
+      "from": "difficulty",
+      "to": "setup",
+      "trigger": "Accept difficulty",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame",
+        "WOLFSRC/WL_GAME.C:SetupGameLevel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen",
+        "src/engine/WL_PLAY.c:GameStartSelected"
+      ],
+      "artwork": "Play border, status bar, first floor.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Setup while simulation blocked.",
+      "sound": "Start level music.",
+      "input": "Reset quick slot and input.",
+      "evidence": [
+        "campaign",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "episode-back",
+      "group": "New game",
+      "from": "episode",
+      "to": "menu",
+      "trigger": "Escape",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore parent artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Escape sound.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "difficulty-back",
+      "group": "New game",
+      "from": "difficulty",
+      "to": "episode",
+      "trigger": "Escape",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_NewGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore parent artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Escape sound.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "setup-psyched",
+      "group": "Loading",
+      "from": "setup",
+      "to": "psyched",
+      "trigger": "New level, ordinary load, warp or secret routing",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop",
+        "WOLFSRC/WL_INTER.C:PreloadGraphics"
+      ],
+      "implementation": [
+        "src/engine/WL_INTER.c:StartPreloadGraphics"
+      ],
+      "artwork": "GETPSYCHEDPIC (48,56), index 127 background; retained HUD.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic fade in, real uncached page reads (\u226432 per frontend update).",
+      "sound": "Level music continues.",
+      "input": "Block simulation and input.",
+      "evidence": [
+        "loading",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "cache",
+        "presentation"
+      ]
+    },
+    {
+      "id": "psyched-progress",
+      "group": "Loading",
+      "from": "psyched",
+      "to": "psyched",
+      "trigger": "Each successfully cached non-sparse page",
+      "source": [
+        "WOLFSRC/WL_INTER.C:PreloadUpdate",
+        "WOLFSRC/ID_PM.C:PM_Preload"
+      ],
+      "implementation": [
+        "src/engine/WL_INTER.c:PreloadUpdate",
+        "src/engine/WL_INTER.c:StepPreloadGraphics"
+      ],
+      "artwork": "214\u00d72 bar (53,101); black remainder, 0x37 fill, 0x32 highlight except last column.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Only actual uncached pages advance; no artificial minimum.",
+      "sound": "Level track.",
+      "input": "No Escape cancellation in DOS callback.",
+      "evidence": [
+        "loading",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "cache",
+        "presentation"
+      ]
+    },
+    {
+      "id": "psyched-reveal",
+      "group": "Loading",
+      "from": "psyched",
+      "to": "reveal",
+      "trigger": "Cache complete then fresh acknowledgement or timeout",
+      "source": [
+        "WOLFSRC/WL_INTER.C:PreloadGraphics"
+      ],
+      "implementation": [
+        "src/engine/WL_INTER.c:StepPreloadGraphics"
+      ],
+      "artwork": "Restore bevel and game view while black.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "70-tic wait, 30-tic fade out; gameplay geometry selected while black.",
+      "sound": "Level track.",
+      "input": "Discard earlier presses; require fresh acknowledgement.",
+      "evidence": [
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "cache",
+        "entry-fizzle",
+        "presentation"
+      ]
+    },
+    {
+      "id": "reveal-game",
+      "group": "Loading",
+      "from": "reveal",
+      "to": "gameplay",
+      "trigger": "Reveal completes",
+      "source": [
+        "WOLFSRC/WL_PLAY.C:PlayLoop",
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_INTER.c:StepPreloadGraphics",
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Current viewport/HUD, Enhanced geometry fixed before visible frame.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Native 30-tic palette reveal replaces DOS entry fizzle.",
+      "sound": "Level track.",
+      "input": "Clear keys; reset simulation clock before control capture.",
+      "evidence": [
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "entry-fizzle",
+        "presentation"
+      ]
+    },
+    {
+      "id": "game-pause",
+      "group": "Pause",
+      "from": "gameplay",
+      "to": "pause",
+      "trigger": "Pause key",
+      "source": [
+        "WOLFSRC/WL_PLAY.C:CheckKeys"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "PAUSEDPIC at (128,64) over game.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Immediate picture; freeze simulation.",
+      "sound": "SD_MusicOff; native preserves stream position.",
+      "input": "Fresh acknowledgement only.",
+      "evidence": [
+        "classic",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "pause-game",
+      "group": "Pause",
+      "from": "pause",
+      "to": "gameplay",
+      "trigger": "Fresh key",
+      "source": [
+        "WOLFSRC/WL_PLAY.C:CheckKeys"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Redraw game without overlay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Clock rebased; no catch-up.",
+      "sound": "Restore prior paused state.",
+      "input": "Clear ack and held input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "game-menu",
+      "group": "Pause",
+      "from": "gameplay",
+      "to": "menu",
+      "trigger": "Escape",
+      "source": [
+        "WOLFSRC/WL_PLAY.C:CheckKeys",
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:Transition"
+      ],
+      "artwork": "Original menu on 4:3 interface canvas.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu track.",
+      "input": "Freeze gameplay; clear input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "menu-game",
+      "group": "Pause",
+      "from": "menu",
+      "to": "gameplay",
+      "trigger": "Back to Game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen"
+      ],
+      "artwork": "Restore viewport/HUD.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore level track.",
+      "input": "Reset simulation clock.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "save-panel",
+      "group": "Storage",
+      "from": "gameplay",
+      "to": "save",
+      "trigger": "F2 or menu Save",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original Saving/Loading slot artwork with six portable slots.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu music/cursor sounds.",
+      "input": "Saving restricted to living playable game.",
+      "evidence": [
+        "save",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "load-panel",
+      "group": "Storage",
+      "from": "gameplay",
+      "to": "load",
+      "trigger": "F3 or menu Load",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original Saving/Loading slot artwork with six portable slots.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu music/cursor sounds.",
+      "input": "Saving restricted to living playable game.",
+      "evidence": [
+        "save",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "menu-save",
+      "group": "Storage",
+      "from": "menu",
+      "to": "save",
+      "trigger": "Save row",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original Saving/Loading slot artwork with six portable slots.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu music/cursor sounds.",
+      "input": "Saving restricted to living playable game.",
+      "evidence": [
+        "save",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "menu-load",
+      "group": "Storage",
+      "from": "menu",
+      "to": "load",
+      "trigger": "Load row",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Original Saving/Loading slot artwork with six portable slots.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu music/cursor sounds.",
+      "input": "Saving restricted to living playable game.",
+      "evidence": [
+        "save",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "save-work",
+      "group": "Storage",
+      "from": "save",
+      "to": "disk",
+      "trigger": "Accept slot; edit/overwrite confirmation for save",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame",
+        "WOLFSRC/WL_MENU.C:DrawLSAction"
+      ],
+      "implementation": [
+        "src/engine/WL_SAVE_MENU.c:HandleSaveMenu"
+      ],
+      "artwork": "Original disk window and alternating disk pictures.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Nonblocking presentation phases around synchronous atomic I/O.",
+      "sound": "Menu effects; loading restores level music.",
+      "input": "Confirmation answer release; validation errors preserve active game.",
+      "evidence": [
+        "save",
+        "interface",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "load-work",
+      "group": "Storage",
+      "from": "load",
+      "to": "disk",
+      "trigger": "Accept slot; edit/overwrite confirmation for save",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame",
+        "WOLFSRC/WL_MENU.C:DrawLSAction"
+      ],
+      "implementation": [
+        "src/engine/WL_SAVE_MENU.c:HandleSaveMenu"
+      ],
+      "artwork": "Original disk window and alternating disk pictures.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Nonblocking presentation phases around synchronous atomic I/O.",
+      "sound": "Menu effects; loading restores level music.",
+      "input": "Confirmation answer release; validation errors preserve active game.",
+      "evidence": [
+        "save",
+        "interface",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "ordinary-load-setup",
+      "group": "Storage",
+      "from": "disk",
+      "to": "setup",
+      "trigger": "Ordinary load succeeds",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame",
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop",
+        "src/engine/WL_PLAY.c:GameRestoreClock"
+      ],
+      "artwork": "Retain saved game and current display settings.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Ordinary load requests Get Psyched.",
+      "sound": "Restore saved logical digi mode and level track.",
+      "input": "Clear input; no gameplay advance.",
+      "evidence": [
+        "save",
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "save-return",
+      "group": "Storage",
+      "from": "disk",
+      "to": "gameplay",
+      "trigger": "Save succeeds",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Redraw game and border.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Finish disk phase; resume clock.",
+      "sound": "Level track.",
+      "input": "No reused save key.",
+      "evidence": [
+        "save",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "save-cancel",
+      "group": "Storage",
+      "from": "save",
+      "to": "menu",
+      "trigger": "Escape from ordinary menu operation",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller; F-key caller returns directly to gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Escape sound.",
+      "input": "No slot established on cancel.",
+      "evidence": [
+        "classic",
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "load-cancel",
+      "group": "Storage",
+      "from": "load",
+      "to": "menu",
+      "trigger": "Escape from ordinary menu operation",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller; F-key caller returns directly to gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Escape sound.",
+      "input": "No slot established on cancel.",
+      "evidence": [
+        "classic",
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quicksave",
+      "group": "Storage",
+      "from": "gameplay",
+      "to": "quick-disk",
+      "trigger": "F8 with established valid slot",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickSave"
+      ],
+      "artwork": "Saving activity window.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Start/work/finish phases; no confirmation.",
+      "sound": "Effects; no gameplay advancement.",
+      "input": "First-use F8 opens ordinary selection instead.",
+      "evidence": [
+        "classic",
+        "interface"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quickload-confirm",
+      "group": "Storage",
+      "from": "gameplay",
+      "to": "quick-confirm",
+      "trigger": "F9 established slot",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "Named quickload message in 160-pixel area.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Blink/release confirmation.",
+      "sound": "Confirmation effects.",
+      "input": "Y/N/Escape; invalid slot opens ordinary selection.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quickload-yes",
+      "group": "Storage",
+      "from": "quick-confirm",
+      "to": "quick-disk",
+      "trigger": "Y released",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickActivity"
+      ],
+      "artwork": "Loading disk artwork.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Synchronous validated load during work phase.",
+      "sound": "Restore level music.",
+      "input": "Revalidate file at load time.",
+      "evidence": [
+        "classic",
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quickload-no",
+      "group": "Storage",
+      "from": "quick-confirm",
+      "to": "gameplay",
+      "trigger": "N/Escape",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore gameplay. ",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Level track.",
+      "input": "Preserve active game.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "quick-resume",
+      "group": "Storage",
+      "from": "quick-disk",
+      "to": "gameplay",
+      "trigger": "Established quick operation succeeds",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame",
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:GamePreloadConsumed"
+      ],
+      "artwork": "Restore border/game; no Get Psyched.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Direct play-loop return, clock reset.",
+      "sound": "Level track.",
+      "input": "No simulation during disk phases.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "storage-error",
+      "group": "Storage",
+      "from": "quick-disk",
+      "to": "message",
+      "trigger": "Load/write fails validation or I/O",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "Native explanatory error message.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Wait for acknowledgement.",
+      "sound": "No new game sound.",
+      "input": "Retain active game, file and rankings where supported.",
+      "evidence": [
+        "save",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage"
+      ]
+    },
+    {
+      "id": "message-return",
+      "group": "Storage",
+      "from": "message",
+      "to": "gameplay",
+      "trigger": "Fresh key",
+      "source": [
+        "WOLFSRC/WL_PLAY.C:CheckKeys"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Redraw game.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Clock rebase.",
+      "sound": "Restore level track.",
+      "input": "Consume acknowledgement.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "death-turn",
+      "group": "Death",
+      "from": "gameplay",
+      "to": "death-turn",
+      "trigger": "Health reaches zero or End Game",
+      "source": [
+        "WOLFSRC/WL_GAME.C:Died"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:Died"
+      ],
+      "artwork": "Held weapon sentinel -1; retain HUD weapon icon.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "2 degrees/tic; shortest arc; 180\u00b0 chooses negative; float intermediate atan2.",
+      "sound": "Stop music; PLAYERDEATHSND.",
+      "input": "Turn/fizzle input discarded.",
+      "evidence": [
+        "death",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "death-fizzle",
+      "group": "Death",
+      "from": "death-turn",
+      "to": "red-fizzle",
+      "trigger": "Attacker angle reached",
+      "source": [
+        "WOLFSRC/WL_GAME.C:Died",
+        "WOLFSRC/ID_VH.C:FizzleFade"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:Died"
+      ],
+      "artwork": "Index 4 with 17-bit polynomial.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Enter fizzle on final turn tic; 64000/70 candidates per tic.",
+      "sound": "Death sound continues.",
+      "input": "Unabortable fizzle.",
+      "evidence": [
+        "death"
+      ],
+      "status": "partial",
+      "gaps": [
+        "fizzle-clip",
+        "presentation"
+      ]
+    },
+    {
+      "id": "death-ack",
+      "group": "Death",
+      "from": "red-fizzle",
+      "to": "death-ack",
+      "trigger": "Polynomial completes",
+      "source": [
+        "WOLFSRC/WL_GAME.C:Died"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:Died"
+      ],
+      "artwork": "Red viewport/HUD retained.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "100-tic wait or fresh ack; native logical sound wait.",
+      "sound": "Wait for death effect.",
+      "input": "Clear turn/fizzle presses.",
+      "evidence": [
+        "death"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "death-restart",
+      "group": "Death",
+      "from": "death-ack",
+      "to": "restart",
+      "trigger": "Lives remain",
+      "source": [
+        "WOLFSRC/WL_GAME.C:Died",
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:Died"
+      ],
+      "artwork": "Pistol, 100 health, STARTAMMO, no keys; entry score.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Rebuild same level; skip Get Psyched.",
+      "sound": "Restart level track.",
+      "input": "Clear held/ack input.",
+      "evidence": [
+        "death",
+        "campaign"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "restart-reveal",
+      "group": "Death",
+      "from": "restart",
+      "to": "reveal",
+      "trigger": "Level rebuild succeeds",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:Died"
+      ],
+      "artwork": "Original play border/HUD.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Native palette reveal.",
+      "sound": "Level track.",
+      "input": "Rebase clock.",
+      "evidence": [
+        "death"
+      ],
+      "status": "partial",
+      "gaps": [
+        "entry-fizzle",
+        "presentation"
+      ]
+    },
+    {
+      "id": "death-final",
+      "group": "Death",
+      "from": "death-ack",
+      "to": "qualification",
+      "trigger": "Lives become negative",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop",
+        "WOLFSRC/WL_INTER.C:CheckHighScore"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:HighScores_Insert"
+      ],
+      "artwork": "No Game Over card in this DOS source.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Score music 23.",
+      "input": "Clear input.",
+      "evidence": [
+        "classic",
+        "scores"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "exit-completion",
+      "group": "Progression",
+      "from": "gameplay",
+      "to": "completion",
+      "trigger": "Normal elevator exit",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop",
+        "WOLFSRC/WL_INTER.C:LevelCompleted"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:GameStep",
+        "src/engine/WL_INTER.c:StartLevelIntermission"
+      ],
+      "artwork": "Original floor completed, ratios, bonus and BJ breathing.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Source-based counters, sound waits and 30-VBL boundaries.",
+      "sound": "Completion music/effects.",
+      "input": "First press skips counts; separate press continues.",
+      "evidence": [
+        "campaign"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "secret-completion",
+      "group": "Progression",
+      "from": "gameplay",
+      "to": "secret-completion",
+      "trigger": "Secret elevator exit",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:GameStep"
+      ],
+      "artwork": "Normal-floor completion before secret routing.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Intermission counters/ack.",
+      "sound": "Completion music/effects.",
+      "input": "Separate continuation acknowledgement.",
+      "evidence": [
+        "campaign",
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "next-setup",
+      "group": "Progression",
+      "from": "completion",
+      "to": "setup",
+      "trigger": "Intermission acknowledged",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:GameStep"
+      ],
+      "artwork": "Next floor; retain inventory, reset keys.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "oldscore updated; setup/preload.",
+      "sound": "Next floor music.",
+      "input": "Clear ack.",
+      "evidence": [
+        "campaign",
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "secret-entry",
+      "group": "Progression",
+      "from": "secret-completion",
+      "to": "setup",
+      "trigger": "Intermission acknowledged",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:GameStep"
+      ],
+      "artwork": "Route to floor 9 (zero based).",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Ordinary setup/preload.",
+      "sound": "Secret floor track.",
+      "input": "No input carry.",
+      "evidence": [
+        "campaign",
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "secret-return",
+      "group": "Progression",
+      "from": "completion",
+      "to": "setup",
+      "trigger": "Leaving mapon 9",
+      "source": [
+        "WOLFSRC/WL_GAME.C:ElevatorBackTo",
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:GameStep"
+      ],
+      "artwork": "Secret floor completed card and 15000 bonus.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Episode-specific ElevatorBackTo; ordinary preload.",
+      "sound": "Destination track.",
+      "input": "Separate acknowledgement.",
+      "evidence": [
+        "campaign",
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "boss-victory",
+      "group": "Victory",
+      "from": "gameplay",
+      "to": "boss-replay",
+      "trigger": "Boss dies / victory tile",
+      "source": [
+        "WOLFSRC/WL_ACT2.C:A_StartDeathCam",
+        "WOLFSRC/WL_INTER.C:Victory"
+      ],
+      "implementation": [
+        "src/engine/WL_VICTORY.c:DeathCameraActive",
+        "src/engine/WL_PLAY.c:GameStep"
+      ],
+      "artwork": "BJ run/jump or boss death-camera/replay by episode.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Original actor states; logical digi death delay 140 versus 5 tics.",
+      "sound": "Boss effects and victory track.",
+      "input": "No save during cinematic.",
+      "evidence": [
+        "finale"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "victory-stats",
+      "group": "Victory",
+      "from": "boss-replay",
+      "to": "victory",
+      "trigger": "Cinematic finishes",
+      "source": [
+        "WOLFSRC/WL_INTER.C:Victory"
+      ],
+      "implementation": [
+        "src/engine/WL_INTER.c:DrawVictory",
+        "src/engine/WL_PLAY.c:GameStep"
+      ],
+      "artwork": "YOU WIN, eight-floor averages/time/code and HUD.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Victory track.",
+      "input": "Fresh acknowledgement.",
+      "evidence": [
+        "finale"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "victory-article",
+      "group": "Victory",
+      "from": "victory",
+      "to": "article",
+      "trigger": "Acknowledge victory statistics",
+      "source": [
+        "WOLFSRC/WL_INTER.C:Victory",
+        "WOLFSRC/WL_TEXT.C:EndText"
+      ],
+      "implementation": [
+        "src/engine/WL_TEXT.c:StartEndText"
+      ],
+      "artwork": "Original ending article text/pictures.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Native page state; DOS layout commands retained.",
+      "sound": "Ending music.",
+      "input": "Arrows/Enter/PageUp/Down; Escape exits.",
+      "evidence": [
+        "finale"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "article-scores",
+      "group": "Victory",
+      "from": "article",
+      "to": "qualification",
+      "trigger": "Last page/escape",
+      "source": [
+        "WOLFSRC/WL_TEXT.C:EndText",
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_TEXT.c:StepEndText",
+        "src/engine/WL_MAIN.c:HighScores_Insert"
+      ],
+      "artwork": "Original high-score panel.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Score music 23.",
+      "input": "Clear article input.",
+      "evidence": [
+        "finale",
+        "scores"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "qualify",
+      "group": "High scores",
+      "from": "qualification",
+      "to": "name-entry",
+      "trigger": "Strict score/floor qualification",
+      "source": [
+        "WOLFSRC/WL_INTER.C:CheckHighScore",
+        "WOLFSRC/ID_US_1.C:US_LineInput"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen",
+        "src/engine/WL_HIGHSCORES.c:HighScores_Insert"
+      ],
+      "artwork": "Seven-entry table, blank inserted name and I-bar.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic reveal; source editor limits.",
+      "sound": "Score track.",
+      "input": "57-character / 100-pixel pre-insertion limits; Enter/Escape.",
+      "evidence": [
+        "scores"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "not-qualified",
+      "group": "High scores",
+      "from": "qualification",
+      "to": "results",
+      "trigger": "No rank",
+      "source": [
+        "WOLFSRC/WL_INTER.C:CheckHighScore"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen"
+      ],
+      "artwork": "Seven-entry table.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "500-tic hold after 30-tic reveal.",
+      "sound": "Score track.",
+      "input": "Any fresh key continues.",
+      "evidence": [
+        "scores",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "name-save",
+      "group": "High scores",
+      "from": "name-entry",
+      "to": "title",
+      "trigger": "Enter or Escape finishes editor",
+      "source": [
+        "WOLFSRC/WL_INTER.C:CheckHighScore"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop",
+        "src/engine/WL_HIGHSCORES.c:HighScores_Save"
+      ],
+      "artwork": "Title after entry; Escape keeps inserted blank name.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Title track.",
+      "input": "Atomic native persistence; failure retains session rankings and reports message.",
+      "evidence": [
+        "scores"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "results-title",
+      "group": "High scores",
+      "from": "results",
+      "to": "title",
+      "trigger": "Timeout/fresh key",
+      "source": [
+        "WOLFSRC/WL_INTER.C:CheckHighScore",
+        "WOLFSRC/WL_MAIN.C:DemoLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Title/attract cycle.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "30-tic black fade with original gamepal reveal; simulation frozen.",
+      "sound": "Title track.",
+      "input": "Consume acknowledgement.",
+      "evidence": [
+        "scores",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "quit-menu",
+      "group": "Quit",
+      "from": "menu",
+      "to": "quit-confirm",
+      "trigger": "Quit row/Escape or F10",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Quit",
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuitMessage",
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "Nine original sayings; WindowH 200 menu / 160 gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "20-tic cursor blink; wait for answer release.",
+      "sound": "Confirmation sound.",
+      "input": "Y/N/Escape, keyboard only; separate UI entropy protects gameplay RNG.",
+      "evidence": [
+        "classic",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "ui-rng",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quit-game",
+      "group": "Quit",
+      "from": "gameplay",
+      "to": "quit-confirm",
+      "trigger": "Quit row/Escape or F10",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Quit",
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuitMessage",
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "Nine original sayings; WindowH 200 menu / 160 gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "20-tic cursor blink; wait for answer release.",
+      "sound": "Confirmation sound.",
+      "input": "Y/N/Escape, keyboard only; separate UI entropy protects gameplay RNG.",
+      "evidence": [
+        "classic",
+        "dos-pixels"
+      ],
+      "status": "partial",
+      "gaps": [
+        "ui-rng",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quit-no",
+      "group": "Quit",
+      "from": "quit-confirm",
+      "to": "menu",
+      "trigger": "N/Escape from menu",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Quit"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore menu; F10 caller restores gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Menu redraw/return fade.",
+      "sound": "Menu or level track.",
+      "input": "Consume answer.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "quit-yes",
+      "group": "Quit",
+      "from": "quit-confirm",
+      "to": "exit",
+      "trigger": "Y released",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Quit"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:Transition"
+      ],
+      "artwork": "Menu dark-red fade then SDL shutdown.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic fade; portable resource teardown.",
+      "sound": "Stop music and sound before fade.",
+      "input": "No reused key; window close exits directly.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware",
+        "presentation"
+      ]
+    },
+    {
+      "id": "panel-sound",
+      "group": "Other panels",
+      "from": "menu",
+      "to": "sound",
+      "trigger": "Menu selection or corresponding F key",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Sound"
+      ],
+      "implementation": [
+        "src/engine/WL_MENU.c:BeginSoundSettings"
+      ],
+      "artwork": "Original sound labels plus independent native volumes",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "audio"
+      ],
+      "status": "partial",
+      "gaps": [
+        "audio",
+        "presentation"
+      ]
+    },
+    {
+      "id": "return-sound",
+      "group": "Other panels",
+      "from": "sound",
+      "to": "menu",
+      "trigger": "Escape/accept; direct F-key caller returns to game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Sound"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "audio"
+      ],
+      "status": "partial",
+      "gaps": [
+        "audio",
+        "presentation"
+      ]
+    },
+    {
+      "id": "panel-controls",
+      "group": "Other panels",
+      "from": "menu",
+      "to": "controls",
+      "trigger": "Menu selection or corresponding F key",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Control"
+      ],
+      "implementation": [
+        "src/engine/WL_CONTROLS_MENU.c:BeginControlsMenu"
+      ],
+      "artwork": "Classic/Modern bindings and mouse settings",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "interface"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "return-controls",
+      "group": "Other panels",
+      "from": "controls",
+      "to": "menu",
+      "trigger": "Escape/accept; direct F-key caller returns to game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Control"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "interface"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "panel-display",
+      "group": "Other panels",
+      "from": "controls",
+      "to": "display",
+      "trigger": "Select native Display settings in Controls",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ChangeView"
+      ],
+      "implementation": [
+        "src/engine/WL_DISPLAY.c:BeginDisplayMenu"
+      ],
+      "artwork": "Native output settings, no DOS equivalent",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "return-display",
+      "group": "Other panels",
+      "from": "display",
+      "to": "controls",
+      "trigger": "Escape to Controls",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ChangeView"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "panel-view",
+      "group": "Other panels",
+      "from": "menu",
+      "to": "view",
+      "trigger": "Menu selection or corresponding F key",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ChangeView"
+      ],
+      "implementation": [
+        "src/engine/WL_VIEW.c:BeginViewMenu"
+      ],
+      "artwork": "Original sizes 4\u201319 and border preview",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "return-view",
+      "group": "Other panels",
+      "from": "view",
+      "to": "menu",
+      "trigger": "Escape/accept; direct F-key caller returns to game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ChangeView"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "panel-boss",
+      "group": "Other panels",
+      "from": "menu",
+      "to": "boss",
+      "trigger": "Menu selection or corresponding F key",
+      "source": [
+        "WOLFSRC/WL_MENU.C:BossKey"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen"
+      ],
+      "artwork": "GOODTIMES C> rendered using game font",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "return-boss",
+      "group": "Other panels",
+      "from": "boss",
+      "to": "menu",
+      "trigger": "Escape/accept; direct F-key caller returns to game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:BossKey"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "jukebox",
+      "group": "Optional routes",
+      "from": "signon",
+      "to": "jukebox",
+      "trigger": "M held at startup/sign-on or --jukebox",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DoJukebox"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:DemoLoopJukebox"
+      ],
+      "artwork": "Robert\u2019s Jukebox, three six-song banks.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "18 original track indices.",
+      "input": "Monotonic bank choice replaces DOS time.",
+      "evidence": [
+        "hidden"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware",
+        "presentation"
+      ]
+    },
+    {
+      "id": "jukebox-return",
+      "group": "Optional routes",
+      "from": "jukebox",
+      "to": "title",
+      "trigger": "Escape",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:DoJukebox"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Title. ",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Title music.",
+      "input": "Clear input.",
+      "evidence": [
+        "hidden"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "debug-warp",
+      "group": "Optional routes",
+      "from": "gameplay",
+      "to": "warp",
+      "trigger": "Unlocked Tab-W",
+      "source": [
+        "WOLFSRC/WL_DEBUG.C:DebugKeys"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:HiddenKeys"
+      ],
+      "artwork": "Original warp prompt.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Freeze while editing.",
+      "sound": "Current level track.",
+      "input": "Validate floors 1\u201310; Escape cancels.",
+      "evidence": [
+        "hidden"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "warp-setup",
+      "group": "Optional routes",
+      "from": "warp",
+      "to": "setup",
+      "trigger": "Valid floor entered",
+      "source": [
+        "WOLFSRC/WL_GAME.C:GameLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:GameWarp"
+      ],
+      "artwork": "Ordinary level setup and Get Psyched.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Retain inventory; restore entry score.",
+      "sound": "Destination track.",
+      "input": "Clear input.",
+      "evidence": [
+        "hidden",
+        "loading"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "cheat-message",
+      "group": "Optional routes",
+      "from": "gameplay",
+      "to": "message",
+      "trigger": "MLI/BAT/debug message",
+      "source": [
+        "WOLFSRC/WL_PLAY.C:CheckKeys",
+        "WOLFSRC/WL_DEBUG.C:DebugKeys"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:HiddenKeys"
+      ],
+      "artwork": "Original cheat/debug text.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Paused acknowledgement; MLI +42000 tics.",
+      "sound": "Current track.",
+      "input": "MLI clears score, supplies health/ammo/keys/chaingun.",
+      "evidence": [
+        "hidden"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "asset-error",
+      "group": "Errors",
+      "from": "setup",
+      "to": "error",
+      "trigger": "Invalid/missing/corrupt level data",
+      "source": [
+        "WOLFSRC/WL_GAME.C:SetupGameLevel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:GameError"
+      ],
+      "artwork": "Native readable error.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "No simulation; release level resources.",
+      "sound": "Stop level music/effects.",
+      "input": "Fresh key to menu.",
+      "evidence": [
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage"
+      ]
+    },
+    {
+      "id": "error-menu",
+      "group": "Errors",
+      "from": "error",
+      "to": "menu",
+      "trigger": "Fresh key",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:Quit"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Control panel.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu track.",
+      "input": "Consume error acknowledgement.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage"
+      ]
+    },
+    {
+      "id": "menu-scores",
+      "group": "High scores",
+      "from": "menu",
+      "to": "scores",
+      "trigger": "View Scores with no active game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ViewScores"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "CREDITSPIC \u2192 HIGHSCORESPIC",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu fade; wait for fresh key.",
+      "sound": "Title/score/level tracks selected at boundaries.",
+      "input": "Fresh key returns to main menu.",
+      "evidence": [
+        "classic",
+        "scores"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "scores-menu",
+      "group": "High scores",
+      "from": "scores",
+      "to": "menu",
+      "trigger": "Fresh key",
+      "source": [
+        "WOLFSRC/WL_INTER.C:CheckHighScore",
+        "WOLFSRC/WL_MAIN.C:DemoLoop"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Title/attract cycle.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu fade.",
+      "sound": "Title track.",
+      "input": "Consume acknowledgement.",
+      "evidence": [
+        "scores",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "menu-attract",
+      "group": "Pause",
+      "from": "menu",
+      "to": "title",
+      "trigger": "Back to Demo with no live game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:US_ControlPanel"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen"
+      ],
+      "artwork": "Original TITLEPIC and restarted attract cycle.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Title track 7.",
+      "input": "Clear selection input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "game-sound",
+      "group": "Other panels",
+      "from": "gameplay",
+      "to": "sound",
+      "trigger": "Corresponding F key during living gameplay",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Sound"
+      ],
+      "implementation": [
+        "src/engine/WL_MENU.c:BeginSoundSettings"
+      ],
+      "artwork": "Original sound labels plus independent native volumes",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "audio"
+      ],
+      "status": "partial",
+      "gaps": [
+        "audio",
+        "presentation"
+      ]
+    },
+    {
+      "id": "sound-game",
+      "group": "Other panels",
+      "from": "sound",
+      "to": "gameplay",
+      "trigger": "Accept/Escape from direct F-key panel",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Sound"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Rebase game clock and clear panel input.",
+      "evidence": [
+        "audio"
+      ],
+      "status": "partial",
+      "gaps": [
+        "audio",
+        "presentation"
+      ]
+    },
+    {
+      "id": "game-controls",
+      "group": "Other panels",
+      "from": "gameplay",
+      "to": "controls",
+      "trigger": "Corresponding F key during living gameplay",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Control"
+      ],
+      "implementation": [
+        "src/engine/WL_CONTROLS_MENU.c:BeginControlsMenu"
+      ],
+      "artwork": "Classic/Modern bindings and mouse settings",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "interface"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "controls-game",
+      "group": "Other panels",
+      "from": "controls",
+      "to": "gameplay",
+      "trigger": "Accept/Escape from direct F-key panel",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Control"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Rebase game clock and clear panel input.",
+      "evidence": [
+        "interface"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "game-view",
+      "group": "Other panels",
+      "from": "gameplay",
+      "to": "view",
+      "trigger": "Corresponding F key during living gameplay",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ChangeView"
+      ],
+      "implementation": [
+        "src/engine/WL_VIEW.c:BeginViewMenu"
+      ],
+      "artwork": "Original sizes 4\u201319 and border preview",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "view-game",
+      "group": "Other panels",
+      "from": "view",
+      "to": "gameplay",
+      "trigger": "Accept/Escape from direct F-key panel",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_ChangeView"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Rebase game clock and clear panel input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "game-boss",
+      "group": "Other panels",
+      "from": "gameplay",
+      "to": "boss",
+      "trigger": "Corresponding F key during living gameplay",
+      "source": [
+        "WOLFSRC/WL_MENU.C:BossKey"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ChangeScreen"
+      ],
+      "artwork": "GOODTIMES C> rendered using game font",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Menu effects; boss key mutes music.",
+      "input": "Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "boss-game",
+      "group": "Other panels",
+      "from": "boss",
+      "to": "gameplay",
+      "trigger": "Accept/Escape from direct F-key panel",
+      "source": [
+        "WOLFSRC/WL_MENU.C:BossKey"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Restore caller track.",
+      "input": "Rebase game clock and clear panel input.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    },
+    {
+      "id": "save-cancel-game",
+      "group": "Storage",
+      "from": "save",
+      "to": "gameplay",
+      "trigger": "Escape from direct F2 panel",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller; F-key caller returns directly to gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Escape sound.",
+      "input": "No slot established on cancel.",
+      "evidence": [
+        "classic",
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "load-cancel-game",
+      "group": "Storage",
+      "from": "load",
+      "to": "gameplay",
+      "trigger": "Escape from direct F3 panel",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:ReturnPanel"
+      ],
+      "artwork": "Restore caller; F-key caller returns directly to gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Escape sound.",
+      "input": "No slot established on cancel.",
+      "evidence": [
+        "classic",
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage",
+        "presentation"
+      ]
+    },
+    {
+      "id": "quit-no-game",
+      "group": "Quit",
+      "from": "quit-confirm",
+      "to": "gameplay",
+      "trigger": "N/Escape from F10 confirmation",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Quit"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore live game and border.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Menu redraw/return fade.",
+      "sound": "Level track.",
+      "input": "Consume answer.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "end-game",
+      "group": "Death",
+      "from": "gameplay",
+      "to": "end-confirm",
+      "trigger": "F7 or End Game row",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_EndGame",
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "Original ENDGAMESTR message and confirmation cursor.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Blink/release confirmation.",
+      "sound": "Confirmation effects.",
+      "input": "Y/N/Escape; freeze active game.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "end-menu",
+      "group": "Death",
+      "from": "menu",
+      "to": "end-confirm",
+      "trigger": "F7 or End Game row",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_EndGame",
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:QuickDialog"
+      ],
+      "artwork": "Original ENDGAMESTR message and confirmation cursor.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Blink/release confirmation.",
+      "sound": "Confirmation effects.",
+      "input": "Y/N/Escape; freeze active game.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "end-yes",
+      "group": "Death",
+      "from": "end-confirm",
+      "to": "death-turn",
+      "trigger": "Y released",
+      "source": [
+        "WOLFSRC/WL_GAME.C:Died"
+      ],
+      "implementation": [
+        "src/engine/WL_PLAY.c:Died"
+      ],
+      "artwork": "Held weapon sentinel -1; retain HUD weapon icon.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "2 degrees/tic; shortest arc; 180\u00b0 chooses negative; float intermediate atan2.",
+      "sound": "Stop music; PLAYERDEATHSND.",
+      "input": "Set lives=0, ex_died; clear quick slot and answer input.",
+      "evidence": [
+        "death",
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "end-no",
+      "group": "Death",
+      "from": "end-confirm",
+      "to": "gameplay",
+      "trigger": "N/Escape from gameplay End Game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_CheckQuick"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore gameplay. ",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "10-tic menu dark-red fade (43,0,0); simulation frozen.",
+      "sound": "Level track.",
+      "input": "Preserve active game.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "end-no-menu",
+      "group": "Death",
+      "from": "end-confirm",
+      "to": "menu",
+      "trigger": "N/Escape from menu End Game",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_Quit"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:StepDemoLoop"
+      ],
+      "artwork": "Restore menu; F10 caller restores gameplay.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Menu redraw/return fade.",
+      "sound": "Menu or level track.",
+      "input": "Consume answer.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "presentation"
+      ]
+    },
+    {
+      "id": "preload-error",
+      "group": "Errors",
+      "from": "psyched",
+      "to": "error",
+      "trigger": "Asset read/allocation fails during preload",
+      "source": [
+        "WOLFSRC/WL_INTER.C:PreloadGraphics"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:GameError"
+      ],
+      "artwork": "Native readable error.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "No simulation; release level resources.",
+      "sound": "Stop level music/effects.",
+      "input": "Fresh key to menu.",
+      "evidence": [
+        "loading",
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage"
+      ]
+    },
+    {
+      "id": "save-error",
+      "group": "Storage",
+      "from": "save",
+      "to": "save",
+      "trigger": "Write or overwrite fails",
+      "source": [
+        "WOLFSRC/WL_MENU.C:CP_SaveGame",
+        "WOLFSRC/WL_MENU.C:DrawLSAction"
+      ],
+      "implementation": [
+        "src/engine/WL_SAVE_MENU.c:HandleSaveMenu"
+      ],
+      "artwork": "Native readable error in save panel.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Acknowledge error; no gameplay advance.",
+      "sound": "Menu effects; loading restores level music.",
+      "input": "Keep prior slot and active game; retry/cancel supported.",
+      "evidence": [
+        "save"
+      ],
+      "status": "partial",
+      "gaps": [
+        "storage"
+      ]
+    },
+    {
+      "id": "window-close",
+      "group": "Quit",
+      "from": "gameplay",
+      "to": "exit",
+      "trigger": "SDL quit/window close",
+      "source": [
+        "WOLFSRC/WL_MAIN.C:Quit"
+      ],
+      "implementation": [
+        "src/engine/WL_MAIN.c:DemoLoopPrepareExit"
+      ],
+      "artwork": "No additional screen.",
+      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
+      "timing": "Immediate normal application teardown; no confirmation.",
+      "sound": "Stop music and sound before fade.",
+      "input": "OS close exits directly from every presentation state.",
+      "evidence": [
+        "classic"
+      ],
+      "status": "partial",
+      "gaps": [
+        "hardware"
+      ]
+    }
+  ],
+  "references": {
+    "WOLFSRC/WL_MAIN.C:InitGame": {
+      "path": "WOLFSRC/WL_MAIN.C",
+      "anchor": "InitGame",
+      "label": "InitGame"
+    },
+    "WOLFSRC/WL_MENU.C:IntroScreen": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "IntroScreen",
+      "label": "IntroScreen"
+    },
+    "src/engine/WL_MAIN.c:DemoLoopStartupDevices": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "DemoLoopStartupDevices",
+      "label": "DemoLoopStartupDevices"
+    },
+    "src/engine/WL_MAIN.c:DemoLoopSignon": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "DemoLoopSignon",
+      "label": "DemoLoopSignon"
+    },
+    "WOLFSRC/WL_MAIN.C:FinishSignon": {
+      "path": "WOLFSRC/WL_MAIN.C",
+      "anchor": "FinishSignon",
+      "label": "FinishSignon"
+    },
+    "WOLFSRC/WL_INTER.C:PG13": {
+      "path": "WOLFSRC/WL_INTER.C",
+      "anchor": "PG13",
+      "label": "PG13"
+    },
+    "src/engine/WL_MAIN.c:SignonPrompt": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "SignonPrompt",
+      "label": "SignonPrompt"
+    },
+    "src/engine/WL_MAIN.c:DemoLoopIntro": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "DemoLoopIntro",
+      "label": "DemoLoopIntro"
+    },
+    "WOLFSRC/WL_MAIN.C:DemoLoop": {
+      "path": "WOLFSRC/WL_MAIN.C",
+      "anchor": "DemoLoop",
+      "label": "DemoLoop"
+    },
+    "src/engine/WL_MAIN.c:StepDemoLoop": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "StepDemoLoop",
+      "label": "StepDemoLoop"
+    },
+    "WOLFSRC/WL_GAME.C:PlayDemo": {
+      "path": "WOLFSRC/WL_GAME.C",
+      "anchor": "PlayDemo",
+      "label": "PlayDemo"
+    },
+    "src/engine/WL_MAIN.c:ChangeScreen": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "ChangeScreen",
+      "label": "ChangeScreen"
+    },
+    "WOLFSRC/WL_MENU.C:US_ControlPanel": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "US_ControlPanel",
+      "label": "US_ControlPanel"
+    },
+    "WOLFSRC/WL_MENU.C:CP_NewGame": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_NewGame",
+      "label": "CP_NewGame"
+    },
+    "src/engine/WL_MENU.c:DrawNewSelection": {
+      "path": "src/engine/WL_MENU.c",
+      "anchor": "DrawNewSelection",
+      "label": "DrawNewSelection"
+    },
+    "src/engine/WL_MAIN.c:QuickDialog": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "QuickDialog",
+      "label": "QuickDialog"
+    },
+    "WOLFSRC/WL_MENU.C:Confirm": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "Confirm",
+      "label": "Confirm"
+    },
+    "WOLFSRC/WL_GAME.C:SetupGameLevel": {
+      "path": "WOLFSRC/WL_GAME.C",
+      "anchor": "SetupGameLevel",
+      "label": "SetupGameLevel"
+    },
+    "src/engine/WL_PLAY.c:GameStartSelected": {
+      "path": "src/engine/WL_PLAY.c",
+      "anchor": "GameStartSelected",
+      "label": "GameStartSelected"
+    },
+    "WOLFSRC/WL_GAME.C:GameLoop": {
+      "path": "WOLFSRC/WL_GAME.C",
+      "anchor": "GameLoop",
+      "label": "GameLoop"
+    },
+    "WOLFSRC/WL_INTER.C:PreloadGraphics": {
+      "path": "WOLFSRC/WL_INTER.C",
+      "anchor": "PreloadGraphics",
+      "label": "PreloadGraphics"
+    },
+    "src/engine/WL_INTER.c:StartPreloadGraphics": {
+      "path": "src/engine/WL_INTER.c",
+      "anchor": "StartPreloadGraphics",
+      "label": "StartPreloadGraphics"
+    },
+    "WOLFSRC/WL_INTER.C:PreloadUpdate": {
+      "path": "WOLFSRC/WL_INTER.C",
+      "anchor": "PreloadUpdate",
+      "label": "PreloadUpdate"
+    },
+    "WOLFSRC/ID_PM.C:PM_Preload": {
+      "path": "WOLFSRC/ID_PM.C",
+      "anchor": "PM_Preload",
+      "label": "PM_Preload"
+    },
+    "src/engine/WL_INTER.c:PreloadUpdate": {
+      "path": "src/engine/WL_INTER.c",
+      "anchor": "PreloadUpdate",
+      "label": "PreloadUpdate"
+    },
+    "src/engine/WL_INTER.c:StepPreloadGraphics": {
+      "path": "src/engine/WL_INTER.c",
+      "anchor": "StepPreloadGraphics",
+      "label": "StepPreloadGraphics"
+    },
+    "WOLFSRC/WL_PLAY.C:PlayLoop": {
+      "path": "WOLFSRC/WL_PLAY.C",
+      "anchor": "PlayLoop",
+      "label": "PlayLoop"
+    },
+    "WOLFSRC/WL_PLAY.C:CheckKeys": {
+      "path": "WOLFSRC/WL_PLAY.C",
+      "anchor": "CheckKeys",
+      "label": "CheckKeys"
+    },
+    "src/engine/WL_MAIN.c:Transition": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "Transition",
+      "label": "Transition"
+    },
+    "WOLFSRC/WL_MENU.C:CP_SaveGame": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_SaveGame",
+      "label": "CP_SaveGame"
+    },
+    "WOLFSRC/WL_MENU.C:CP_LoadGame": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_LoadGame",
+      "label": "CP_LoadGame"
+    },
+    "WOLFSRC/WL_MENU.C:DrawLSAction": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "DrawLSAction",
+      "label": "DrawLSAction"
+    },
+    "src/engine/WL_SAVE_MENU.c:HandleSaveMenu": {
+      "path": "src/engine/WL_SAVE_MENU.c",
+      "anchor": "HandleSaveMenu",
+      "label": "HandleSaveMenu"
+    },
+    "src/engine/WL_PLAY.c:GameRestoreClock": {
+      "path": "src/engine/WL_PLAY.c",
+      "anchor": "GameRestoreClock",
+      "label": "GameRestoreClock"
+    },
+    "src/engine/WL_MAIN.c:ReturnPanel": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "ReturnPanel",
+      "label": "ReturnPanel"
+    },
+    "WOLFSRC/WL_MENU.C:CP_CheckQuick": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_CheckQuick",
+      "label": "CP_CheckQuick"
+    },
+    "src/engine/WL_MAIN.c:QuickSave": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "QuickSave",
+      "label": "QuickSave"
+    },
+    "src/engine/WL_MAIN.c:QuickActivity": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "QuickActivity",
+      "label": "QuickActivity"
+    },
+    "src/engine/WL_MAIN.c:GamePreloadConsumed": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "GamePreloadConsumed",
+      "label": "GamePreloadConsumed"
+    },
+    "WOLFSRC/WL_GAME.C:Died": {
+      "path": "WOLFSRC/WL_GAME.C",
+      "anchor": "Died",
+      "label": "Died"
+    },
+    "src/engine/WL_PLAY.c:Died": {
+      "path": "src/engine/WL_PLAY.c",
+      "anchor": "Died",
+      "label": "Died"
+    },
+    "WOLFSRC/ID_VH.C:FizzleFade": {
+      "path": "WOLFSRC/ID_VH.C",
+      "anchor": "FizzleFade",
+      "label": "FizzleFade"
+    },
+    "WOLFSRC/WL_INTER.C:CheckHighScore": {
+      "path": "WOLFSRC/WL_INTER.C",
+      "anchor": "CheckHighScore",
+      "label": "CheckHighScore"
+    },
+    "src/engine/WL_MAIN.c:HighScores_Insert": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "HighScores_Insert",
+      "label": "HighScores_Insert"
+    },
+    "WOLFSRC/WL_INTER.C:LevelCompleted": {
+      "path": "WOLFSRC/WL_INTER.C",
+      "anchor": "LevelCompleted",
+      "label": "LevelCompleted"
+    },
+    "src/engine/WL_PLAY.c:GameStep": {
+      "path": "src/engine/WL_PLAY.c",
+      "anchor": "GameStep",
+      "label": "GameStep"
+    },
+    "src/engine/WL_INTER.c:StartLevelIntermission": {
+      "path": "src/engine/WL_INTER.c",
+      "anchor": "StartLevelIntermission",
+      "label": "StartLevelIntermission"
+    },
+    "WOLFSRC/WL_GAME.C:ElevatorBackTo": {
+      "path": "WOLFSRC/WL_GAME.C",
+      "anchor": "ElevatorBackTo",
+      "label": "ElevatorBackTo"
+    },
+    "WOLFSRC/WL_ACT2.C:A_StartDeathCam": {
+      "path": "WOLFSRC/WL_ACT2.C",
+      "anchor": "A_StartDeathCam",
+      "label": "A_StartDeathCam"
+    },
+    "WOLFSRC/WL_INTER.C:Victory": {
+      "path": "WOLFSRC/WL_INTER.C",
+      "anchor": "Victory",
+      "label": "Victory"
+    },
+    "src/engine/WL_VICTORY.c:DeathCameraActive": {
+      "path": "src/engine/WL_VICTORY.c",
+      "anchor": "DeathCameraActive",
+      "label": "DeathCameraActive"
+    },
+    "src/engine/WL_INTER.c:DrawVictory": {
+      "path": "src/engine/WL_INTER.c",
+      "anchor": "DrawVictory",
+      "label": "DrawVictory"
+    },
+    "WOLFSRC/WL_TEXT.C:EndText": {
+      "path": "WOLFSRC/WL_TEXT.C",
+      "anchor": "EndText",
+      "label": "EndText"
+    },
+    "src/engine/WL_TEXT.c:StartEndText": {
+      "path": "src/engine/WL_TEXT.c",
+      "anchor": "StartEndText",
+      "label": "StartEndText"
+    },
+    "src/engine/WL_TEXT.c:StepEndText": {
+      "path": "src/engine/WL_TEXT.c",
+      "anchor": "StepEndText",
+      "label": "StepEndText"
+    },
+    "WOLFSRC/ID_US_1.C:US_LineInput": {
+      "path": "WOLFSRC/ID_US_1.C",
+      "anchor": "US_LineInput",
+      "label": "US_LineInput"
+    },
+    "src/engine/WL_HIGHSCORES.c:HighScores_Insert": {
+      "path": "src/engine/WL_HIGHSCORES.c",
+      "anchor": "HighScores_Insert",
+      "label": "HighScores_Insert"
+    },
+    "src/engine/WL_HIGHSCORES.c:HighScores_Save": {
+      "path": "src/engine/WL_HIGHSCORES.c",
+      "anchor": "HighScores_Save",
+      "label": "HighScores_Save"
+    },
+    "WOLFSRC/WL_MENU.C:CP_Quit": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_Quit",
+      "label": "CP_Quit"
+    },
+    "src/engine/WL_MAIN.c:QuitMessage": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "QuitMessage",
+      "label": "QuitMessage"
+    },
+    "WOLFSRC/WL_MENU.C:CP_Sound": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_Sound",
+      "label": "CP_Sound"
+    },
+    "src/engine/WL_MENU.c:BeginSoundSettings": {
+      "path": "src/engine/WL_MENU.c",
+      "anchor": "BeginSoundSettings",
+      "label": "BeginSoundSettings"
+    },
+    "WOLFSRC/WL_MENU.C:CP_Control": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_Control",
+      "label": "CP_Control"
+    },
+    "src/engine/WL_CONTROLS_MENU.c:BeginControlsMenu": {
+      "path": "src/engine/WL_CONTROLS_MENU.c",
+      "anchor": "BeginControlsMenu",
+      "label": "BeginControlsMenu"
+    },
+    "WOLFSRC/WL_MENU.C:CP_ChangeView": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "CP_ChangeView",
+      "label": "CP_ChangeView"
+    },
+    "src/engine/WL_DISPLAY.c:BeginDisplayMenu": {
+      "path": "src/engine/WL_DISPLAY.c",
+      "anchor": "BeginDisplayMenu",
+      "label": "BeginDisplayMenu"
+    },
+    "src/engine/WL_VIEW.c:BeginViewMenu": {
+      "path": "src/engine/WL_VIEW.c",
+      "anchor": "BeginViewMenu",
+      "label": "BeginViewMenu"
+    },
+    "WOLFSRC/WL_MENU.C:BossKey": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "BossKey",
+      "label": "BossKey"
+    },
+    "WOLFSRC/WL_MAIN.C:DoJukebox": {
+      "path": "WOLFSRC/WL_MAIN.C",
+      "anchor": "DoJukebox",
+      "label": "DoJukebox"
+    },
+    "src/engine/WL_MAIN.c:DemoLoopJukebox": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "DemoLoopJukebox",
+      "label": "DemoLoopJukebox"
+    },
+    "WOLFSRC/WL_DEBUG.C:DebugKeys": {
+      "path": "WOLFSRC/WL_DEBUG.C",
+      "anchor": "DebugKeys",
+      "label": "DebugKeys"
+    },
+    "src/engine/WL_MAIN.c:HiddenKeys": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "HiddenKeys",
+      "label": "HiddenKeys"
+    },
+    "src/engine/WL_PLAY.c:GameWarp": {
+      "path": "src/engine/WL_PLAY.c",
+      "anchor": "GameWarp",
+      "label": "GameWarp"
+    },
+    "src/engine/WL_MAIN.c:GameError": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "GameError",
+      "label": "GameError"
+    },
+    "WOLFSRC/WL_MAIN.C:Quit": {
+      "path": "WOLFSRC/WL_MAIN.C",
+      "anchor": "Quit",
+      "label": "Quit"
+    },
+    "WOLFSRC/WL_MENU.C:CP_ViewScores": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "void CP_ViewScores(void)",
+      "label": "CP_ViewScores"
+    },
+    "WOLFSRC/WL_MENU.C:CP_EndGame": {
+      "path": "WOLFSRC/WL_MENU.C",
+      "anchor": "int CP_EndGame(void)",
+      "label": "CP_EndGame"
+    },
+    "src/engine/WL_MAIN.c:DemoLoopPrepareExit": {
+      "path": "src/engine/WL_MAIN.c",
+      "anchor": "DemoLoopPrepareExit",
+      "label": "DemoLoopPrepareExit"
+    }
+  },
+  "evidence": {
+    "loading": {
+      "scope": "Actual frontend phases, partial page counts, palette steps, fresh ack, progression/secret routing/load and stable Enhanced geometry.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Native source/artwork oracle; DOS execution now compares controlled progress drawings, not cache duration or the continuous loading sequence.",
+      "refs": [
+        {
+          "path": "tests/loading_tests.c",
+          "anchor": "static void Loading"
+        }
+      ]
+    },
+    "death": {
+      "scope": "320 attacker/view scenarios, sentinel, rotation, tie/wrap, sound event, intermediate red fizzle and restart.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Source-derived native assertions, not executed-DOS death frames or physical audio latency.",
+      "refs": [
+        {
+          "path": "tests/loading_tests.c",
+          "anchor": "static void Death"
+        }
+      ]
+    },
+    "classic": {
+      "scope": "F1\u2013F10, pause, replacement confirmation, quick operations, clock/RNG freeze and final death.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "No continuous executed-DOS menu journey or enabled-DOS audio comparison.",
+      "refs": [
+        {
+          "path": "tests/classic_tests.c",
+          "anchor": "static void Keys"
+        }
+      ]
+    },
+    "interface": {
+      "scope": "Mouse/key input, music pause, disk phases and shifted text.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Native operation phases replace DOS disk serialization timing.",
+      "refs": [
+        {
+          "path": "tests/classic_tests.c",
+          "anchor": "static void Interface"
+        }
+      ]
+    },
+    "scores": {
+      "scope": "Qualification/ties, editing, cancellation, persistence and corrupt-file protection.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "No executed-DOS score-entry animation comparison; native file format.",
+      "refs": [
+        {
+          "path": "tests/classic_tests.c",
+          "anchor": "static void Scores"
+        }
+      ]
+    },
+    "hidden": {
+      "scope": "MLI/BAT, portable debug tools and all three jukebox banks.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "No ISA/gameport/EMS/XMS debug emulation.",
+      "refs": [
+        {
+          "path": "tests/classic_tests.c",
+          "anchor": "static void Hidden"
+        }
+      ]
+    },
+    "dos-pixels": {
+      "scope": "30 full executed-DOS indexed frames: quit, disk, controlled Get Psyched progress, Pause art new-game message and default high scores.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Controlled original drawing calls on a menu background, plus the original score table drawing; not gameplay composites, fades, sound, cache reads, input waits or animated name entry.",
+      "refs": [
+        {
+          "path": "tests/dos_ui_reference.c",
+          "anchor": "int main"
+        }
+      ]
+    },
+    "demo": {
+      "scope": "Four recordings, 5386 per-command DOS state hashes, Classic and Enhanced.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Reference archive revision, view size 15 and DOS sound off only; not every gameplay branch.",
+      "refs": [
+        {
+          "path": "tests/test_demo_sync.py",
+          "anchor": "def owned_frames"
+        }
+      ]
+    },
+    "campaign": {
+      "scope": "Exit routing, secret return, inventory and restart.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Controlled fixtures and all-map loading, not human playthrough of all 60 floors.",
+      "refs": [
+        {
+          "path": "tests/campaign_tests.c",
+          "anchor": "static void TestProgression"
+        }
+      ]
+    },
+    "finale": {
+      "scope": "Boss/BJ victory, statistics, articles and restarts.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Source-based native coverage; no continuous executed-DOS finale comparison.",
+      "refs": [
+        {
+          "path": "tests/finale_tests.c",
+          "anchor": "static void TestRestartAndArticles"
+        }
+      ]
+    },
+    "signon": {
+      "scope": "Optional owned sign-on, capability lights, prompt and startup order.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Native capabilities replace DOS memory/card detection; no physical VGA timing.",
+      "refs": [
+        {
+          "path": "tests/test_signon.py",
+          "anchor": "class "
+        }
+      ]
+    },
+    "save": {
+      "scope": "Persistence, CRC/field validation, failed writes, restart and deterministic continuation.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Six native slots/version 1, not original ten-slot serialization.",
+      "refs": [
+        {
+          "path": "tests/test_save.py",
+          "anchor": "class "
+        }
+      ]
+    },
+    "audio": {
+      "scope": "IMF/OPL/PCM schedules, priorities, volumes, disabled effects/music and lifecycle.",
+      "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
+      "limits": "Emulated OPL with native gain; no calibrated physical DAC/OPL comparison.",
+      "refs": [
+        {
+          "path": "tests/audio_tests.c",
+          "anchor": "static void Timing"
+        }
+      ]
+    }
+  },
+  "gaps": {
+    "presentation": {
+      "priority": "P1",
+      "title": "Continuous executed-DOS comparison incomplete",
+      "finding": "30 controlled indexed frames and four sound-off demo state traces do not establish all intermediate fades, gameplay composites, victory/article/name-entry or death frames.",
+      "close_with": "Capture synchronized original DOS intermediate framebuffer/palette/input/audio records for these journeys.",
+      "refs": [
+        "WOLFSRC/WL_INTER.C:PreloadGraphics",
+        "src/engine/WL_INTER.c:StepPreloadGraphics"
+      ]
+    },
+    "cache": {
+      "priority": "P2",
+      "title": "Native cache and I/O cadence",
+      "finding": "Native heap residency and bounded reads replace DOS main/EMS/XMS budgets and disk speed; exact page counts and duration differ.",
+      "close_with": "Treat as intentional adaptation; compare visual progress formula separately from hardware-dependent duration.",
+      "refs": [
+        "WOLFSRC/ID_PM.C:PM_Preload",
+        "src/engine/WL_INTER.c:StepPreloadGraphics"
+      ]
+    },
+    "entry-fizzle": {
+      "priority": "P1",
+      "title": "Gameplay-entry reveal differs",
+      "finding": "DOS GameLoop sets fizzlein; Revive reveals gameplay with a 30-tic palette fade after loading/restart. This is an acknowledged visual difference, not pixel parity.",
+      "close_with": "Implement and independently compare DOS entry fizzle before claiming complete presentation equivalence.",
+      "refs": [
+        "WOLFSRC/WL_GAME.C:GameLoop",
+        "src/engine/WL_INTER.c:StepPreloadGraphics"
+      ]
+    },
+    "fizzle-clip": {
+      "priority": "P2",
+      "title": "Safe red-fizzle clipping",
+      "finding": "Revive clips to the active viewport; DOS FizzleFade accepts x==width/y==height and can overdraw border pixels.",
+      "close_with": "Retain safe clipping as an intentional difference unless a bounded compatible renderer is separately demonstrated.",
+      "refs": [
+        "WOLFSRC/ID_VH.C:FizzleFade",
+        "src/engine/WL_PLAY.c:Died"
+      ]
+    },
+    "storage": {
+      "priority": "P2",
+      "title": "Portable storage/error flows",
+      "finding": "Six versioned atomic native saves and separate score/config files replace DOS ten-slot formats. Native I/O/error and disk-flip phases differ.",
+      "close_with": "Document compatibility boundary; keep corruption, atomic failure and restart regressions passing.",
+      "refs": [
+        "WOLFSRC/WL_MENU.C:CP_LoadGame",
+        "src/engine/WL_PLAY.c:GameRestoreClock"
+      ]
+    },
+    "hardware": {
+      "priority": "P2",
+      "title": "Portable hardware, input and debug adaptations",
+      "finding": "No ISA/gameport/EMS/XMS detection, BIOS text mode, controller calibration or DOS timing/cache debug emulation. Native display/binding panels and startup plumbing differ.",
+      "close_with": "Document unsupported hardware/editions and verify actual native devices separately.",
+      "refs": [
+        "WOLFSRC/WL_MENU.C:IntroScreen",
+        "src/engine/WL_MAIN.c:DemoLoopStartupDevices"
+      ]
+    },
+    "ui-rng": {
+      "priority": "P2",
+      "title": "Separate UI entropy",
+      "finding": "Quit-message selection uses separate native UI entropy, preserving gameplay/demo RNG rather than consuming original US_RndT.",
+      "close_with": "Retain intentional separation and test original saying selection precedence independently.",
+      "refs": [
+        "WOLFSRC/WL_MENU.C:CP_Quit",
+        "src/engine/WL_MAIN.c:QuitMessage"
+      ]
+    },
+    "audio": {
+      "priority": "P1",
+      "title": "Physical FM/PCM balance unverified",
+      "finding": "The current wide-accumulator \u00d74 FM gain, synth and native volume controls are not calibrated against physical OPL/Sound Blaster output. Scheduling/priority tests do not establish loudness parity. DOS UpdateFace skips RNG while GETGATLINGSND is playing; the native engine intentionally retains audio-independent face/RNG updates. The four reference demos use DOS sound off.",
+      "close_with": "Measure representative enabled-DOS tracks/effects against a documented device/reference before changing gain.",
+      "refs": [
+        "WOLFSRC/WL_MENU.C:CP_Sound",
+        "src/engine/WL_MENU.c:BeginSoundSettings"
+      ]
+    }
+  },
+  "statuses": {
+    "source-reviewed": "Source correspondence inspected; no runtime or pixel-equivalence claim.",
+    "partial": "Known intentional difference or verification gap remains; see linked findings."
+  },
+  "original_sha256": {
+    "WOLFSRC/ID_PM.C": "5fd7e5586635881b06a0a80c6b0f23caab2e17bcdfecb3611228d4369a6c3a2e",
+    "WOLFSRC/ID_US_1.C": "6a56462ac38b997f9ca8c14e24564082286e7d08b1e3fbd89607e56cf2c8b611",
+    "WOLFSRC/ID_VH.C": "787cc1bf483432b9b922beb69356aa134224dd1bbedd9fb8bcbaae19da8d863b",
+    "WOLFSRC/WL_ACT2.C": "16374a70218dceec093a83e7610cac201da0cf371cb14768f27ddc41836c24b0",
+    "WOLFSRC/WL_DEBUG.C": "d4635d6c6a4a5d5bc3198e01b669c9b09afe5d99196187f604c03675b36030d4",
+    "WOLFSRC/WL_GAME.C": "adf9b84852a04bfbd27fda62b8337dd85435562e8aa563907d0ade2e43ff7423",
+    "WOLFSRC/WL_INTER.C": "563f960b59b489de4aa96f3f5e749a8317ddd4752ee85d8edb8302bf84c675a2",
+    "WOLFSRC/WL_MAIN.C": "73a69d37497976c70031326b0ead1748a4bec330b427899393830260bdde0a00",
+    "WOLFSRC/WL_MENU.C": "c2ef6856a16d699ef0a68b130daaecec7e137ea2bc2c98510fa63be8951eedff",
+    "WOLFSRC/WL_PLAY.C": "f8ef33eea485c5b9cd91c1167f431c058190148aaaf24296e1b7656e8d9cdf31",
+    "WOLFSRC/WL_TEXT.C": "dc6c2ed77e0652c153020436a8cad9115f1402277c9ce58dcac20824b3bff13a"
+  },
+  "native_ui": {
+    "UI_BOSS": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "panel-boss",
+        "return-boss",
+        "game-boss",
+        "boss-game"
+      ]
+    },
+    "UI_CONFIRM": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "quit-menu",
+        "quit-game",
+        "quit-no",
+        "quit-yes",
+        "quit-no-game"
+      ]
+    },
+    "UI_CONTROLS": {
+      "classification": "native-adaptation",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "panel-controls",
+        "return-controls",
+        "panel-display",
+        "return-display",
+        "game-controls",
+        "controls-game"
+      ]
+    },
+    "UI_CREDITS": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "title-credits",
+        "credits-scores",
+        "credits-menu"
+      ]
+    },
+    "UI_DEMO": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "scores-demo",
+        "demo-title",
+        "demo-menu"
+      ]
+    },
+    "UI_DIFFICULTY": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "episode-difficulty",
+        "replace-yes",
+        "difficulty-setup",
+        "difficulty-back"
+      ]
+    },
+    "UI_DISK": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "quicksave",
+        "quickload-yes",
+        "quick-resume",
+        "storage-error"
+      ]
+    },
+    "UI_DISPLAY": {
+      "classification": "native-adaptation",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "panel-display",
+        "return-display"
+      ]
+    },
+    "UI_DONE": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "quit-yes",
+        "window-close"
+      ]
+    },
+    "UI_EPISODE": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "menu-episode",
+        "episode-difficulty",
+        "episode-replace",
+        "episode-back",
+        "difficulty-back"
+      ]
+    },
+    "UI_ERROR": {
+      "classification": "native-adaptation",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "asset-error",
+        "error-menu",
+        "preload-error"
+      ]
+    },
+    "UI_GAME": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "difficulty-setup",
+        "setup-psyched",
+        "psyched-progress",
+        "psyched-reveal",
+        "reveal-game",
+        "game-pause",
+        "pause-game",
+        "game-menu",
+        "menu-game",
+        "save-panel",
+        "load-panel",
+        "ordinary-load-setup",
+        "save-return",
+        "quicksave",
+        "quickload-confirm",
+        "quickload-no",
+        "quick-resume",
+        "message-return",
+        "death-turn",
+        "death-fizzle",
+        "death-ack",
+        "death-restart",
+        "restart-reveal",
+        "death-final",
+        "exit-completion",
+        "secret-completion",
+        "next-setup",
+        "secret-entry",
+        "secret-return",
+        "boss-victory",
+        "victory-stats",
+        "victory-article",
+        "article-scores",
+        "quit-game",
+        "debug-warp",
+        "warp-setup",
+        "cheat-message",
+        "asset-error",
+        "game-sound",
+        "sound-game",
+        "game-controls",
+        "controls-game",
+        "game-view",
+        "view-game",
+        "game-boss",
+        "boss-game",
+        "save-cancel-game",
+        "load-cancel-game",
+        "quit-no-game",
+        "end-game",
+        "end-yes",
+        "end-no",
+        "preload-error",
+        "window-close"
+      ]
+    },
+    "UI_HIGHSCORES": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "credits-scores",
+        "scores-demo",
+        "attract-scores-menu"
+      ]
+    },
+    "UI_JUKEBOX": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "jukebox",
+        "jukebox-return"
+      ]
+    },
+    "UI_LOAD": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "load-panel",
+        "menu-load",
+        "load-work",
+        "load-cancel",
+        "load-cancel-game"
+      ]
+    },
+    "UI_MENU": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "title-menu",
+        "credits-menu",
+        "attract-scores-menu",
+        "demo-menu",
+        "menu-episode",
+        "replace-no",
+        "episode-back",
+        "game-menu",
+        "menu-game",
+        "menu-save",
+        "menu-load",
+        "save-cancel",
+        "load-cancel",
+        "quit-menu",
+        "quit-no",
+        "panel-sound",
+        "return-sound",
+        "panel-controls",
+        "return-controls",
+        "panel-view",
+        "return-view",
+        "panel-boss",
+        "return-boss",
+        "error-menu",
+        "menu-scores",
+        "scores-menu",
+        "menu-attract",
+        "end-menu",
+        "end-no-menu"
+      ]
+    },
+    "UI_MESSAGE": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "storage-error",
+        "message-return",
+        "cheat-message"
+      ]
+    },
+    "UI_PAUSE": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "game-pause",
+        "pause-game"
+      ]
+    },
+    "UI_QUICK": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "episode-replace",
+        "replace-yes",
+        "replace-no",
+        "quickload-confirm",
+        "quickload-yes",
+        "quickload-no",
+        "quit-menu",
+        "quit-game",
+        "quit-no",
+        "quit-yes",
+        "quit-no-game",
+        "end-game",
+        "end-menu",
+        "end-yes",
+        "end-no",
+        "end-no-menu"
+      ]
+    },
+    "UI_RATING": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "signon-ack",
+        "rating-title"
+      ]
+    },
+    "UI_RESULTS": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "death-final",
+        "article-scores",
+        "qualify",
+        "not-qualified",
+        "name-save",
+        "results-title"
+      ]
+    },
+    "UI_SAVE": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "save-panel",
+        "menu-save",
+        "save-work",
+        "save-cancel",
+        "save-cancel-game",
+        "save-error"
+      ]
+    },
+    "UI_SCORES": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "menu-scores",
+        "scores-menu"
+      ]
+    },
+    "UI_SIGNON": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "startup",
+        "signon-ack",
+        "jukebox"
+      ]
+    },
+    "UI_SOUND": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "panel-sound",
+        "return-sound",
+        "game-sound",
+        "sound-game"
+      ]
+    },
+    "UI_TITLE": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "rating-title",
+        "title-credits",
+        "demo-title",
+        "title-menu",
+        "name-save",
+        "results-title",
+        "jukebox-return",
+        "menu-attract"
+      ]
+    },
+    "UI_VIEW": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "panel-view",
+        "return-view",
+        "game-view",
+        "view-game"
+      ]
+    },
+    "UI_WARP": {
+      "classification": "DOS-route",
+      "note": "Return destinations are caller-dependent; see transition input notes. UI_GAME includes loading, death, completion and victory substates.",
+      "transitions": [
+        "debug-warp",
+        "warp-setup"
+      ]
+    }
+  },
+  "dos_exits": {
+    "ex_stillplaying": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "game-pause",
+        "game-menu"
+      ]
+    },
+    "ex_completed": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "exit-completion",
+        "next-setup"
+      ]
+    },
+    "ex_died": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "death-turn",
+        "death-final"
+      ]
+    },
+    "ex_warped": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "warp-setup"
+      ]
+    },
+    "ex_resetgame": {
+      "classification": "declaration-only",
+      "note": "Declared but not handled as a distinct GOODTIMES GameLoop route.",
+      "transitions": []
+    },
+    "ex_loadedgame": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "ordinary-load-setup"
+      ]
+    },
+    "ex_victorious": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "boss-victory",
+        "victory-stats"
+      ]
+    },
+    "ex_abort": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "demo-menu",
+        "ordinary-load-setup"
+      ]
+    },
+    "ex_demodone": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "demo-title"
+      ]
+    },
+    "ex_secretlevel": {
+      "classification": "route",
+      "note": "Source enum route; Revive uses scoped booleans/native playstate. ex_resetgame has no active GOODTIMES GameLoop case.",
+      "transitions": [
+        "secret-completion",
+        "secret-entry",
+        "secret-return"
+      ]
+    }
+  },
+  "journeys": {
+    "New game": [
+      "title-menu",
+      "menu-episode",
+      "episode-difficulty",
+      "difficulty-setup",
+      "setup-psyched",
+      "psyched-progress",
+      "psyched-reveal",
+      "reveal-game"
+    ],
+    "Death restart": [
+      "death-turn",
+      "death-fizzle",
+      "death-ack",
+      "death-restart",
+      "restart-reveal",
+      "reveal-game"
+    ],
+    "Final death": [
+      "death-turn",
+      "death-fizzle",
+      "death-ack",
+      "death-final",
+      "qualify",
+      "name-save"
+    ],
+    "Secret floor": [
+      "secret-completion",
+      "secret-entry",
+      "setup-psyched",
+      "psyched-reveal",
+      "reveal-game"
+    ],
+    "Ordinary load": [
+      "menu-load",
+      "load-work",
+      "ordinary-load-setup",
+      "setup-psyched",
+      "psyched-reveal",
+      "reveal-game"
+    ],
+    "Established quickload": [
+      "quickload-confirm",
+      "quickload-yes",
+      "quick-resume"
+    ],
+    "Victory": [
+      "boss-victory",
+      "victory-stats",
+      "victory-article",
+      "article-scores",
+      "not-qualified",
+      "results-title"
+    ],
+    "Quit": [
+      "quit-menu",
+      "quit-yes"
+    ],
+    "Startup/attract": [
+      "startup",
+      "signon-ack",
+      "rating-title",
+      "title-credits",
+      "credits-scores",
+      "scores-demo",
+      "demo-title"
+    ],
+    "End Game": [
+      "end-game",
+      "end-yes",
+      "death-fizzle",
+      "death-ack",
+      "death-final",
+      "not-qualified",
+      "results-title"
+    ]
+  },
+  "boundaries": [
+    "- GOODTIMES registered WL6 only: no shareware locks, SPEAR/JAPAN/SPANISH layouts or non-GOODTIMES help remapping.",
+    "- Original software raycaster and fixed-point 70 Hz rules remain shared by Classic and Enhanced. Modern controls, interpolation, six native saves, settings/score formats and volume controls are intentional adaptations.",
+    "- Physical DOS CRT/DAC/OPL, native Windows/macOS, WebAssembly and Android are not certified. Dummy SDL/Wine tests establish only their stated scope. No Android controls are introduced."
+  ]
+}
