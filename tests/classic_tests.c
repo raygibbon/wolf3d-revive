@@ -69,6 +69,19 @@ static void Views(void)
 }
 static void Keys(const char *slots)
 {
+    /* Exact historical strings and precedence, including the ninth saying. */
+    CHECK(!strcmp(MenuQuitMessage(8,1),"For guns and glory, press N.\nFor work and worry, press Y."));
+    CHECK(!strcmp(MenuQuitMessage(1,0),"Chickening out...\nalready?"));
+    for(unsigned i=0;i<9;++i) CHECK(BeginConfirmation(MenuQuitMessage(i,i==8?1:0),ticks));
+    unsigned original_rng=US_RndIndex();
+    CHECK(BeginConfirmation("Confirm?",ticks));
+    w3r_byte initial[VL_PIXELS];memcpy(initial,framebuffer,sizeof(initial));
+    CHECK(HandleConfirmation(ticks+10)==0 && !memcmp(initial,framebuffer,sizeof(initial)));
+    CHECK(HandleConfirmation(ticks+20)==0 && memcmp(initial,framebuffer,sizeof(initial)));
+    CHECK(HandleConfirmation(ticks+30)==0 && !memcmp(initial,framebuffer,sizeof(initial)));
+    IN_KeyEvent(sc_Y,true);CHECK(HandleConfirmation(ticks+31)==0);
+    IN_KeyEvent(sc_Y,false);CHECK(HandleConfirmation(ticks+32)==1 && US_RndIndex()==original_rng);
+    IN_KeyEvent(sc_N,true);IN_KeyEvent(sc_N,false);CHECK(HandleConfirmation(ticks+33)==-1);
     /* A fresh process has no save directory; unavailable F2/F3/F8/F9 are safe. */
     Start();const SDL_Scancode unavailable[]={SDL_SCANCODE_F2,SDL_SCANCODE_F3,SDL_SCANCODE_F8,SDL_SCANCODE_F9};
     for(unsigned i=0;i<4;++i) { Tap(unavailable[i]);CHECK(DemoLoopState()==UI_GAME); }
@@ -90,9 +103,19 @@ static void Keys(const char *slots)
     CHECK(NewViewSize(15));
     FKey(SDL_SCANCODE_F5,UI_VIEW);Tap(SDL_SCANCODE_RIGHT);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME && ViewSize()==16);Border();Capture("classic-size16");
     for(unsigned key=58;key<=68;++key) CHECK(!CT_Bind(CT_FIRE,0,key));
+    Start();uint32_t paused_time=gamestate.TimeCount;unsigned paused_rng=US_RndIndex();
+    Tap(SDL_SCANCODE_PAUSE);CHECK(DemoLoopState()==UI_PAUSE && !CT_Gameplay());
+    Step(140);CHECK(gamestate.TimeCount==paused_time && US_RndIndex()==paused_rng);
+    Tap(SDL_SCANCODE_SPACE);CHECK(DemoLoopState()==UI_GAME && gamestate.TimeCount==paused_time);
+    Tap(SDL_SCANCODE_ESCAPE);Step(20);MainItems.curpos=newgame;
+    Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_EPISODE);
+    Tap(SDL_SCANCODE_RETURN);CHECK(DemoLoopState()==UI_QUICK);
+    Tap(SDL_SCANCODE_N);Step(20);CHECK(DemoLoopState()==UI_EPISODE && GameRunning());
+    Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Step(20);CHECK(DemoLoopState()==UI_DIFFICULTY);
+    CHECK(gamestate.TimeCount==paused_time && US_RndIndex()==paused_rng);
     Start();FKey(SDL_SCANCODE_F2,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME);
     gamestate.ammo=2;FKey(SDL_SCANCODE_F3,UI_LOAD);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==8);
-    char initial[4096];(void)snprintf(initial,sizeof(initial),"%s/slot1.w3s",slots);CHECK(remove(initial)==0);
+    char initial_path[4096];(void)snprintf(initial_path,sizeof(initial_path),"%s/slot1.w3s",slots);CHECK(remove(initial_path)==0);
     CHECK(!GameStartSelected(ticks,UINT32_MAX,2) && !GameRunning());
     Start();gamestate.died=true;Tap(SDL_SCANCODE_F2);CHECK(DemoLoopState()==UI_GAME && !GameCanSave());
     Start();FKey(SDL_SCANCODE_F8,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME);

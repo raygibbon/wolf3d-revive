@@ -44,6 +44,7 @@ unsigned IN_MapSDLScancode(unsigned code)
     if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9) return 2 + code-SDL_SCANCODE_1;
     if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F10) return 0x3b + code-SDL_SCANCODE_F1;
     switch (code) {
+        case SDL_SCANCODE_PAUSE: return sc_Pause;
         case SDL_SCANCODE_0: return 0x0b;
         case SDL_SCANCODE_ESCAPE: return sc_Escape;
         case SDL_SCANCODE_RETURN: case SDL_SCANCODE_KP_ENTER: return sc_Enter;

@@ -280,3 +280,51 @@ int HandleSoundSettings(void)
     if((up || down || left || right || enter) && !DrawSoundSettings()) return -3;
     return 0;
 }
+
+/* WL_MENU.C endStrings and Confirm. Keep DOS operator precedence: the
+   original expression is first & (7 + (second & 1)), not (first & 7)+bit. */
+const char *MenuQuitMessage(unsigned first,unsigned second)
+{
+    static const char *const sayings[]={
+        "Dost thou wish to\nleave with such hasty\nabandon?",
+        "Chickening out...\nalready?",
+        "Press N for more carnage.\nPress Y to be a weenie.",
+        "So, you think you can\nquit this easily, huh?",
+        "Press N to save the world.\nPress Y to abandon it in\nits hour of need.",
+        "Press N if you are brave.\nPress Y to cower in shame.",
+        "Heroes, press N.\nWimps, press Y.",
+        "You are at an intersection.\nA sign says, 'Press Y to quit.'\n>",
+        "For guns and glory, press N.\nFor work and worry, press Y."
+    };
+    return sayings[first & (7U+(second & 1U))];
+}
+static int confirm_x,confirm_y,confirm_answer;
+static uint64_t confirm_next;
+static bool confirm_blink;
+bool BeginConfirmation(const char *text,uint64_t ticks)
+{
+    if(!Message(text)) return false;
+    confirm_x=PrintX;confirm_y=PrintY;confirm_answer=0;
+    confirm_next=ticks+10;confirm_blink=false;IN_ClearKeysDown();return true;
+}
+int HandleConfirmation(uint64_t ticks)
+{
+    if(!confirm_answer) {
+        bool yes=IN_ConsumePress(sc_Y),no=IN_ConsumePress(sc_N)|IN_ConsumePress(sc_Escape);
+        if(yes || no) confirm_answer=yes?1:-1;
+    }
+    if(confirm_answer) {
+        if(Keyboard[sc_Y] || Keyboard[sc_N] || Keyboard[sc_Escape]) return 0;
+        int answer=confirm_answer;confirm_answer=0;IN_ClearKeysDown();
+        (void)SD_PlaySound(answer>0?SHOOTSND:ESCPRESSEDSND,0,0);return answer;
+    }
+    if(ticks>=confirm_next) {
+        uint64_t count=(ticks-confirm_next)/10+1;confirm_next+=count*10;
+        /* DOS first erases, then draws, at ten-tic intervals. */
+        bool draw=confirm_blink;if(count%2) confirm_blink=!confirm_blink;
+        if(count%2==0) draw=!draw;
+        VWB_Bar(confirm_x,confirm_y,8,13,TEXTCOLOR);
+        if(draw) { fontnumber=1;fontcolor=0;PrintX=confirm_x;PrintY=confirm_y;if(!US_Print("_")) return -3; }
+    }
+    return 0;
+}

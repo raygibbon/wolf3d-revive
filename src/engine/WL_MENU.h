@@ -41,5 +41,10 @@ bool DrawSoundSettings(void);
 bool BeginSoundSettings(void);
 int HandleSoundSettings(void);
 bool Message(const char *text);
+/* Separate UI entropy: DOS quit selection must never advance gameplay RNG. */
+const char *MenuQuitMessage(unsigned first,unsigned second);
+bool BeginConfirmation(const char *text,uint64_t ticks);
+/* -3 error, -1 cancelled, 0 pending, 1 accepted; waits for answer release. */
+int HandleConfirmation(uint64_t ticks);
 bool DrawHighScores(void);
 #endif

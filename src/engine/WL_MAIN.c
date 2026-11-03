@@ -18,17 +18,23 @@
 #include <errno.h>
 static ui_state state, next_state, signon_return;
 static bool leaving;
-static uint64_t deadline, transition_end, blink_next;
-static int cursor_x, cursor_y;
-static bool blink,resuming;
+static uint64_t deadline, transition_end;
+static bool resuming;
+static uint32_t ui_random=0x574f4c46U;
+static const char *QuitMessage(uint64_t ticks)
+{
+    ui_random^=(uint32_t)ticks;ui_random=ui_random*1664525U+1013904223U;
+    unsigned first=ui_random>>24;ui_random=ui_random*1664525U+1013904223U;
+    return MenuQuitMessage(first,ui_random>>24);
+}
 static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
 static bool boss_music,boss_effects,choosequick;
 static int quickslot=-1;
-static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_ERROR } quick_action;
+static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_NEW,QUICK_ERROR } quick_action;
 static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO || state==UI_RATING; }
 ui_state DemoLoopState(void) { return state; }
-void DemoLoopPrepareExit(void) { if(state==UI_BOSS) SD_SetEnabled(boss_music,boss_effects); }
+void DemoLoopPrepareExit(void) { if(state==UI_BOSS || state==UI_PAUSE) SD_SetEnabled(boss_music,boss_effects); }
 
 static bool GameError(void)
 {
@@ -159,17 +165,18 @@ static bool ReturnPanel(uint64_t ticks)
 static bool QuickDialog(int action,uint64_t ticks)
 {
     quick_action=action;if(state!=UI_QUICK) quick_return=state;FinishPaletteShifts();
-    if(GameRunning() && !GameDrawPaused()) return false;
+    if(GameRunning() && state==UI_GAME && !GameDrawPaused()) return false;
     state=UI_QUICK;IN_ClearKeysDown();
-    const char *text=action==QUICK_END?"Are you sure you want\nto end the game? (Y/N)":
-        action==QUICK_QUIT?"Dost thou wish to\nleave with such hasty\nabandon? (Y/N)":
+    const char *text=action==QUICK_END?"Are you sure you want\nto end the game you\nare playing? (Y or N):":
+        action==QUICK_QUIT?QuitMessage(ticks):
+        action==QUICK_NEW?"You are currently in\na game. Continuing will\nerase old game. Ok?":
         action==QUICK_ERROR?"Quick operation failed.\nPress a key to return.":NULL;
     if(!text) {
         save_info info;Save_ReadInfo((unsigned)quickslot,&info);
         char message[128];(void)snprintf(message,sizeof(message),"Load Game called\n\"%s\"? (Y/N)",info.description);
-        return Message(message);
+        return BeginConfirmation(message,ticks);
     }
-    (void)ticks;return Message(text);
+    return action==QUICK_ERROR?Message(text):BeginConfirmation(text,ticks);
 }
 static bool QuickSave(uint64_t ticks)
 {
@@ -223,6 +230,12 @@ static bool StepDemoLoop(uint64_t ticks)
     if (state == UI_GAME) {
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */
+        if(GameCanSave() && IN_ConsumePress(sc_Pause)) {
+            FinishPaletteShifts();
+            if(!GameDrawPaused() || !VWB_DrawPic(128,64,PAUSEDPIC)) return false;
+            unsigned m,e;SD_GetSettings(&m,&e,&boss_music,&boss_effects);
+            SD_SetEnabled(false,boss_effects);IN_ClearKeysDown();state=UI_PAUSE;return true;
+        }
         if(GameCanSave()) {
             panel_return=UI_GAME;choosequick=false;
             if(IN_ConsumePress(0x3b)) { FinishPaletteShifts();return Transition(UI_BOSS,ticks,10); }
@@ -258,10 +271,8 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {
-            state = UI_CONFIRM; IN_ClearKeysDown();
-            /* Keep dialog choice outside gameplay RNG. */
-            if (!Message("Dost thou wish to\nleave with such hasty\nabandon?")) return false;
-            cursor_x = PrintX; cursor_y = PrintY; blink = false; blink_next = ticks + 10;
+            state = UI_CONFIRM;
+            return BeginConfirmation(QuitMessage(ticks),ticks);
         }
     } else if (state==UI_SAVE || state==UI_LOAD) {
         int action=HandleSaveMenu(ticks);
@@ -286,12 +297,20 @@ static bool StepDemoLoop(uint64_t ticks)
     } else if(state==UI_BOSS) {
         if(IN_ConsumePress(sc_Escape)) { SD_SetEnabled(boss_music,boss_effects);return ReturnPanel(ticks); }
     } else if(state==UI_QUICK) {
-        bool yes=IN_ConsumePress(sc_Y),no=IN_ConsumePress(sc_N)|IN_ConsumePress(sc_Escape);
-        if(yes || no || (quick_action==QUICK_ERROR && IN_AnyPressed())) {
+        int answer=quick_action==QUICK_ERROR?(IN_AnyPressed()?-1:0):HandleConfirmation(ticks);
+        if(answer==-3) return false;
+        if(answer) {
+            bool yes=answer>0;
             if(yes && quick_action==QUICK_QUIT) return Transition(UI_DONE,ticks,10);
+            if(yes && quick_action==QUICK_NEW) return Transition(UI_DIFFICULTY,ticks,10);
             if(yes && quick_action==QUICK_END) { GameStop();gamestate.lives=0;quickslot=-1;return Transition(UI_HIGHSCORES,ticks,10); }
             if(yes && quick_action==QUICK_LOAD && !Save_Load((unsigned)quickslot,ticks)) return QuickDialog(QUICK_ERROR,ticks);
             resuming=quick_return==UI_GAME;return Transition(quick_return,ticks,10);
+        }
+    } else if(state==UI_PAUSE) {
+        if(IN_AnyPressed()) {
+            SD_SetEnabled(boss_music,boss_effects);IN_ClearKeysDown();
+            GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused();
         }
     } else if (state == UI_SOUND) {
         int action=HandleSoundSettings();
@@ -302,22 +321,19 @@ static bool StepDemoLoop(uint64_t ticks)
         int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
+        if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);
         if (action==1) return Transition(choosing_episode ? UI_DIFFICULTY : UI_GAME,ticks,10);
     } else if (state == UI_ERROR && IN_AnyPressed()) {
         return Transition(UI_MENU,ticks,10);
     } else if (state == UI_SCORES && IN_AnyPressed()) {
         return Transition(UI_MENU,ticks,10);
     } else if (state == UI_CONFIRM) {
-        if (IN_ConsumePress(sc_Y)) return Transition(UI_DONE,ticks,10);
-        else if (IN_ConsumePress(sc_N) || IN_ConsumePress(sc_Escape)) {
-            state = UI_MENU; IN_ClearKeysDown();
-            if (!SetupControlPanel(ticks)) return false;
-        } else if (ticks >= blink_next) {
-            uint64_t count = (ticks - blink_next) / 10 + 1;
-            blink_next += count * 10;
-            if (count % 2) blink = !blink;
-            VWB_Bar(cursor_x,cursor_y,8,13,TEXTCOLOR);
-            if (blink) { PrintX = cursor_x; PrintY = cursor_y; fontcolor = 0; if (!US_Print("_")) return false; }
+        int answer=HandleConfirmation(ticks);
+        if(answer==-3) return false;
+        if(answer>0) return Transition(UI_DONE,ticks,10);
+        if(answer<0) {
+            state=UI_MENU;
+            if(!SetupControlPanel(ticks)) return false;
         }
     }
     IN_ClearPressed();CT_EndTic();
