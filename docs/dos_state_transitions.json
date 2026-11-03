@@ -1296,15 +1296,16 @@
       ],
       "artwork": "Red viewport/HUD retained.",
       "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
-      "timing": "100-tic wait or fresh ack; native logical sound wait.",
-      "sound": "Wait for death effect.",
+      "timing": "100-tic wait or fresh acknowledgement. DOS then calls SD_WaitSoundDone for the active FM/PC effect; native has no separate completion gate.",
+      "sound": "Death sound continues; sound-enabled continuation timing has not received an executed-DOS comparison.",
       "input": "Clear turn/fizzle presses.",
       "evidence": [
         "death"
       ],
       "status": "partial",
       "gaps": [
-        "presentation"
+        "presentation",
+        "audio"
       ]
     },
     {
@@ -3448,7 +3449,7 @@
     "audio": {
       "priority": "P1",
       "title": "Physical FM/PCM balance unverified",
-      "finding": "The current wide-accumulator \u00d74 FM gain, synth and native volume controls are not calibrated against physical OPL/Sound Blaster output. Scheduling/priority tests do not establish loudness parity. DOS UpdateFace skips RNG while GETGATLINGSND is playing; the native engine intentionally retains audio-independent face/RNG updates. The four reference demos use DOS sound off.",
+      "finding": "The current wide-accumulator \u00d74 FM gain, synth and native volume controls are not calibrated against physical OPL/Sound Blaster output. Scheduling/priority tests do not establish loudness parity. DOS UpdateFace skips RNG while GETGATLINGSND is playing; the native engine intentionally retains audio-independent face/RNG updates. The four reference demos use DOS sound off. DOS Died also calls SD_WaitSoundDone after acknowledgement; native death has no separate sound-completion gate. The existing fizzle/wait usually outlasts the effect, but early acknowledgement versus FM completion is not independently verified.",
       "close_with": "Measure representative enabled-DOS tracks/effects against a documented device/reference before changing gain.",
       "refs": [
         "WOLFSRC/WL_MENU.C:CP_Sound",

@@ -354,3 +354,11 @@ run passed both synthetic/owned cases (76.940 s); both also passed with
 ASan/UBSan (136.583 s), without findings. All 22 display, renderer and Classic
 regressions passed (186.895 s). Strict C11/SDL3 build and MinGW compilation
 of the changed implementation units passed. PR #16 records this follow-up.
+
+### Milestone 13 follow-up
+
+The missing audit manifest/document are restored in
+[the state-transition inventory](DOS_STATE_TRANSITIONS.md). Current fixes,
+30-frame executed-DOS drawing comparisons, release validation and remaining
+intentional differences are recorded in
+[MILESTONE13_FINAL_FIDELITY.md](MILESTONE13_FINAL_FIDELITY.md).

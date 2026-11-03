@@ -115,11 +115,11 @@ Close with: Retain intentional separation and test original saying selection pre
 
 ### audio — P1: Physical FM/PCM balance unverified
 
-The current wide-accumulator ×4 FM gain, synth and native volume controls are not calibrated against physical OPL/Sound Blaster output. Scheduling/priority tests do not establish loudness parity. DOS UpdateFace skips RNG while GETGATLINGSND is playing; the native engine intentionally retains audio-independent face/RNG updates. The four reference demos use DOS sound off.
+The current wide-accumulator ×4 FM gain, synth and native volume controls are not calibrated against physical OPL/Sound Blaster output. Scheduling/priority tests do not establish loudness parity. DOS UpdateFace skips RNG while GETGATLINGSND is playing; the native engine intentionally retains audio-independent face/RNG updates. The four reference demos use DOS sound off. DOS Died also calls SD_WaitSoundDone after acknowledgement; native death has no separate sound-completion gate. The existing fizzle/wait usually outlasts the effect, but early acknowledgement versus FM completion is not independently verified.
 
 Source/implementation: [CP_Sound](../WOLFSRC/WL_MENU.C#L67); [BeginSoundSettings](../src/engine/WL_MENU.c#L246)
 
-Rows: panel-sound, return-sound, game-sound, sound-game.
+Rows: death-ack, panel-sound, return-sound, game-sound, sound-game.
 
 Close with: Measure representative enabled-DOS tracks/effects against a documented device/reference before changing gain.
 
@@ -742,13 +742,13 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 **Trigger:** Polynomial completes **Status:** `partial`.
 
 - **DOS source:** [Died](../WOLFSRC/WL_GAME.C#L1107)
-- **Timing:** 100-tic wait or fresh ack; native logical sound wait.
+- **Timing:** 100-tic wait or fresh acknowledgement. DOS then calls SD_WaitSoundDone for the active FM/PC effect; native has no separate completion gate.
 - **Palette:** Original gamepal indices; VGA-style DAC interpolation where faded.
 - **Artwork/layout:** Red viewport/HUD retained.
-- **Sound/music:** Wait for death effect.
+- **Sound/music:** Death sound continues; sound-enabled continuation timing has not received an executed-DOS comparison.
 - **Input/state:** Clear turn/fizzle presses.
 - **Revive:** [Died](../src/engine/WL_PLAY.c#L81)
-- **Regression evidence:** [death](#death). Open findings: presentation.
+- **Regression evidence:** [death](#death). Open findings: presentation, audio.
 
 #### death-restart: death-ack → restart
 
