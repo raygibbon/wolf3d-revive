@@ -2,6 +2,7 @@
 /* WL_AGENT.C inventory, attackinfo, T_Attack and status-bar drawing. No gameplay assets. */
 #include "WL_DEF.h"
 #include "WL_DEMO.h"
+#include "WL_MAIN.h"
 #include "WL_SAVE.h"
 #include "WL_CONTROLS.h"
 #include "ID_CA.h"
@@ -37,7 +38,7 @@ void GiveWeapon(int weapon)
 }
 void TakeDamage(int points,objtype *attacker)
 {
-    if (gamestate.died || gamestate.victoryflag || points<0) return;
+    if (gamestate.died || gamestate.victoryflag || GameGodMode() || points<0) return;
     if (gamestate.difficulty==0) points/=4;
     gotgatgun=false;
     StartDamageFlash(points);

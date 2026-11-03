@@ -14,6 +14,8 @@
 #include "engine/WL_DISPLAY.h"
 #include "engine/WL_FRAME_CLOCK.h"
 #include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_filesystem.h>
 #include <errno.h>
 #include <stdio.h>
@@ -22,7 +24,7 @@
 
 static void Usage(const char *name)
 {
-    printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui|--check-level] [--menu|--level] [--no-audio] [--frames N] [--capture local.bmp]\n"
+    printf("Usage: %s --data /path/to/WL6 [--check-assets|--check-ui|--check-level] [--menu|--level] [--no-audio] [--jukebox] [--goobers] [--frames N] [--capture local.bmp]\n"
            "Original WL6 campaign with native AdLib music and digitized audio. New Game selects episode and difficulty.\n"
            "--check-assets/--check-ui/--check-level validate without a window.\n"
            "--level starts E1M1 directly; arrows move/turn, Alt strafes, Shift runs.\n"
@@ -33,12 +35,14 @@ static void Usage(const char *name)
 int main(int argc, char *argv[])
 {
     const char *directory = NULL, *capture = NULL;
-    bool no_audio=false,config_writable=false;
+    bool no_audio=false,config_writable=false,jukebox=false;
     char *save_path=NULL;
     bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
     for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--jukebox")==0) { jukebox=true;continue; }
+        if (strcmp(argv[i], "--goobers")==0) { DemoLoopAllowDebug(true);continue; }
         if (strcmp(argv[i], "--no-audio") == 0) { no_audio=true;continue; }
         if (strcmp(argv[i], "--help") == 0) { Usage(argv[0]); return 0; }
         if (strcmp(argv[i], "--check-level") == 0) { check_level = true; continue; }
@@ -99,6 +103,10 @@ int main(int argc, char *argv[])
         if(*Config_Error()) fprintf(stderr,"Configuration: %s\n",Config_Error());
     }
     else fputs("Save storage unavailable; gameplay remains available.\n",stderr);
+    /* Detect the historical held-M startup route before clearing menu input. */
+    if(VL_PollQuit()) { status=0;goto video_done; }
+    const bool *keys=SDL_GetKeyboardState(NULL);jukebox=jukebox || keys[SDL_SCANCODE_M];
+    DemoLoopStartupDevices(SDL_HasMouse(),SD_Ready(),SD_Ready() && SD_DigitizedMode());
     uint64_t ticks = VL_GetTicks70();
     if (!DemoLoopStartup(ticks,menu)) { fprintf(stderr,"Cannot load original UI: %s\n",CA_Error()); goto video_done; }
     if(!menu && !level && !DemoLoopIntro(ticks)) { fprintf(stderr,"Startup artwork: %s\n",CA_Error());goto video_done; }
@@ -112,6 +120,7 @@ int main(int argc, char *argv[])
             fprintf(stderr,"Sign-on artwork: %s\n",CA_Error());goto video_done;
         }
     }
+    if(jukebox && !menu && !level && !DemoLoopJukebox(ticks,(unsigned)((ticks/7U)%3U))) goto video_done;
     if (level && !DemoLoopStartGame(ticks)) { fprintf(stderr,"E1M1: %s\n",CA_Error()); goto video_done; }
     if (capture) {
         w3r_byte saved[768]; memcpy(saved,palette,sizeof(saved));

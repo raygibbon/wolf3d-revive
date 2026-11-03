@@ -50,12 +50,18 @@ class ClassicTests(unittest.TestCase):
             if owned:
                 if not os.environ.get('WOLF3D_DATA'): self.skipTest('Owned WL6 data not supplied')
                 data = Path(os.environ['WOLF3D_DATA'])
-            else: classic_files(data, mode)
+            else:
+                classic_files(data, mode)
+                if mode=='hidden':
+                    from audio_fixtures import audio_files
+                    audio_files(data)
             env = dict(os.environ, SDL_VIDEODRIVER='dummy', SDL_RENDER_DRIVER='software', SDL_AUDIODRIVER='dummy')
             subprocess.run([str(self.binary), str(data), str(slots), mode], env=env, check=True)
             if mode == 'scores':
                 subprocess.run([str(self.binary), str(data), str(slots), 'scores-read'], env=env, check=True)
             if mode == 'view': self.assertEqual((slots / 'slot1.w3s').read_bytes()[96:], (slots / 'slot2.w3s').read_bytes()[96:])
+
+    def test_hidden_features(self): self.run_display('hidden')
 
     def test_high_scores(self): self.run_display('scores')
 

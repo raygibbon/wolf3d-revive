@@ -224,3 +224,13 @@ behaviour. Extraction was verified against the owned Steam/Activision executable
 the historical source object listed above; other publisher/release executables
 require manual import or a future separately verified profile. Commercial art, diagnostics and captures
 remain in private temporary or ignored build directories.
+
+## Milestone 12 capability overlays
+
+The later fidelity branch fills the original Mouse, AdLib-only and Sound
+Blaster boxes when the front end reports an SDL mouse, loaded synthesis or
+loaded digitized playback respectively. Positions/colors follow `IntroScreen`.
+These indicate supported runtime equivalents, not detection of physical ISA
+hardware. Memory/EMS/XMS, joystick and Sound Source remain unfilled. The
+untouched-artwork validation above describes Milestone 11; current sign-on
+regressions include these explicit, bounded overlays.

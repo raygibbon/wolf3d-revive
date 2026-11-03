@@ -47,13 +47,30 @@ and exhaustive text-entry parity remain in Batch D.
 
 ## Batch C — startup and hidden features
 
-- [ ] Audit sign-on indicator fills against historical hardware detection;
-  preserve real artwork and explicitly document portable limitations.
-- [ ] Startup presentation/source comparison (existing Milestone 11 groundwork).
-- [ ] Robert's Jukebox, startup M activation, six-song bank selection.
-- [ ] MLI cheat and BAT Easter egg, acknowledgement and input isolation.
-- [ ] Audit debug activation and supported portable functions; document hardware
-  functions that cannot meaningfully be restored.
+- [x] Sign-on device lights use `WL_MENU.C IntroScreen` coordinates/colors:
+  mouse (164,82), synthesis-only (164,128), digitized (164,151), 12×2, index 14.
+  Front end supplies actual SDL mouse / loaded audio capabilities. No invented
+  conventional/EMS/XMS sizes, joystick, Sound Source or physical ISA detection.
+  Those hardware-specific indicators remain intentionally unfilled.
+- [x] Startup retains Milestone 11 artwork, FinishSignon prompt and rating/title
+  ordering; native DOS memory-manager startup order is not simulated.
+- [x] Robert's Jukebox (`WL_MAIN.C DoJukebox` → `DemoLoopJukebox`): all 18 labels,
+  original track indices, three six-song banks, cursor, selection and Escape.
+  Held M at startup, M at sign-on, or `--jukebox` enters it. Portable bank choice
+  uses monotonic time instead of DOS hundredths; exit returns to title.
+- [x] MLI and BAT (`WL_PLAY.C CheckKeys` → `HiddenKeys`): exact inventory,
+  zero score, +42000 tics, original text, paused acknowledgement/input isolation.
+- [ ] Debug functions: `--goobers`, original Backspace+LeftShift+Alt unlock,
+  Tab+G/H/I/E/F/C/P/Q implemented (god mode, hurt, items, end level, coordinates,
+  counts, picture pause, quit). Damage bypass is false by default and isolated
+  from demos; it is session-only, preserving save format. Warp/shape viewer,
+  memory diagnostic, border-register and timing debugger functions remain.
+
+Verification: `test_classic.py` all 10 tests passed (44.546 s); `test_signon.py`
+all 16 passed (13.197 s), strict C11. Coverage includes MLI penalty/RNG, BAT,
+unlock, invulnerability/hurt, every jukebox bank, original sign-on pixels outside
+supported overlays, prompt, input clearing and exact 4:3/widescreen geometry.
+Physical DOS audio timing and non-WL6 edition layouts remain unverified.
 
 ## Batch D — interface
 
@@ -79,5 +96,5 @@ Batch A: `test_classic.py` passed all eight synthetic/owned cases (33.981 s),
 strict C11 warnings as errors. Tests cover nine sayings, confirmation blink and
 release gating, Pause clock/RNG isolation, new-game confirmation, F1–F10,
 all viewport sizes and four full demo durations. Exhaustive audio and save
-overwrite parity remain unchecked above. Batch B focused checks passed; continue with Batch C. Private logs belong under ignored `build/`; owned data
+overwrite parity remain unchecked above. Batch B focused checks passed; continue with Batch D. Private logs belong under ignored `build/`; owned data
 is available locally but must never be committed. No commercial assets added.

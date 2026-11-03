@@ -180,6 +180,37 @@ static void Demos(void)
     focus.type=SDL_EVENT_WINDOW_FOCUS_GAINED;CHECK(SDL_PushEvent(&focus));Mouse(false);Mouse(true);Mouse(false);Step(60);CHECK(DemoLoopState()==UI_MENU && !Demo_Active());
     puts("Original demo decoding, bounds, duration, deterministic cadence, input isolation and attract abort passed.");
 }
+static void Chord(unsigned a,unsigned b,unsigned c)
+{ IN_KeyEvent(a,true);IN_KeyEvent(b,true);if(c) IN_KeyEvent(c,true);Step(1); }
+static void Hidden(void)
+{
+    CHECK(SD_Startup(48000));
+    Start();unsigned rng=US_RndIndex();uint32_t time=gamestate.TimeCount;
+    gamestate.score=777;gamestate.health=1;gamestate.ammo=1;
+    Chord(0x32,0x26,0x17);CHECK(DemoLoopState()==UI_MESSAGE);
+    CHECK(gamestate.score==0 && gamestate.health==100 && gamestate.ammo==99 && gamestate.keys==3 && gamestate.bestweapon==wp_chaingun);
+    CHECK(gamestate.TimeCount==time+42000 && US_RndIndex()==rng);
+    Step(70);CHECK(gamestate.TimeCount==time+42000);
+    Tap(SDL_SCANCODE_SPACE);CHECK(DemoLoopState()==UI_GAME && gamestate.TimeCount==time+42000);
+    Chord(0x30,0x1e,0x14);CHECK(DemoLoopState()==UI_MESSAGE && US_RndIndex()==rng);
+    Tap(SDL_SCANCODE_RETURN);CHECK(DemoLoopState()==UI_GAME);
+    DemoLoopAllowDebug(true);Chord(0x0e,0x2a,0x38);CHECK(DemoLoopState()==UI_MESSAGE);
+    Tap(SDL_SCANCODE_RETURN);Chord(0x0f,0x22,0);CHECK(DemoLoopState()==UI_MESSAGE && GameGodMode());
+    TakeDamage(16,NULL);CHECK(gamestate.health==100);
+    Tap(SDL_SCANCODE_RETURN);Chord(0x0f,0x22,0);CHECK(!GameGodMode());Tap(SDL_SCANCODE_RETURN);
+    Chord(0x0f,0x23,0);CHECK(gamestate.health==84);DemoLoopAllowDebug(false);
+    GameStop();
+    static const int first[]={3,8,6};
+    for(unsigned bank=0;bank<3;++bank) {
+        CHECK(DemoLoopJukebox(ticks,bank));Step(10);Tap(SDL_SCANCODE_RETURN);
+        sd_status status;SD_GetStatus(&status);CHECK(status.music==first[bank]);
+        uint32_t stopped=gamestate.TimeCount;Step(70);CHECK(gamestate.TimeCount==stopped);
+        Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);
+        Tap(SDL_SCANCODE_ESCAPE);Step(40);CHECK(DemoLoopState()==UI_TITLE);
+    }
+    CHECK(!DemoLoopJukebox(ticks,3));SD_Shutdown();
+    puts("MLI penalty/inventory, BAT, debug unlock/god/hurt and all jukebox banks passed without simulation or RNG leakage.");
+}
 static void Scores(const char *directory,bool reading)
 {
     CHECK(HighScores_Load(directory));
@@ -221,7 +252,8 @@ static void Scores(const char *directory,bool reading)
 int main(int argc,char **argv)
 {
     CHECK(argc==4);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_Startup());CHECK(VL_SetPalette(gamepal,768));Display_Connect(VL_DisplayGet,VL_DisplaySet);
-    if(!strcmp(argv[3],"scores") || !strcmp(argv[3],"scores-read")) Scores(argv[2],!strcmp(argv[3],"scores-read"));
+    if(!strcmp(argv[3],"hidden")) Hidden();
+    else if(!strcmp(argv[3],"scores") || !strcmp(argv[3],"scores-read")) Scores(argv[2],!strcmp(argv[3],"scores-read"));
     else if(!strcmp(argv[3],"keys")) Keys(argv[2]);
     else { CHECK(Save_SetDirectory(argv[2]));if(!strcmp(argv[3],"view")) Views();else if(!strcmp(argv[3],"missing") || !strcmp(argv[3],"corrupt")) Missing();else Demos(); }
     GameStop();Display_Connect(NULL,NULL);VL_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());return 0;

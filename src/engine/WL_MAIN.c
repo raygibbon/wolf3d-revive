@@ -19,6 +19,13 @@
 #include <errno.h>
 static ui_state state, next_state, signon_return;
 static bool leaving;
+static bool startup_mouse,startup_synth,startup_digi,allow_debug,debug_unlocked,godmode;
+static unsigned jukebox_bank,jukebox_choice;
+static int jukebox_playing=-1;
+void DemoLoopStartupDevices(bool mouse,bool synthesis,bool digitized)
+{ startup_mouse=mouse;startup_synth=synthesis;startup_digi=digitized; }
+void DemoLoopAllowDebug(bool allow) { allow_debug=allow;debug_unlocked=false; }
+bool GameGodMode(void) { return godmode && !Demo_Active(); }
 static int score_rank=-1;
 static bool score_error;
 static uint64_t deadline, transition_end;
@@ -153,6 +160,11 @@ bool DemoLoopSignon(const char *path,uint64_t ticks)
         return CA_Fail("Sign-on image must contain exactly 64000 indexed pixels");
     signon_return=state;
     memcpy(framebuffer,pixels,sizeof(pixels));
+    /* WL_MENU.C IntroScreen hardware boxes: fill supported virtual devices
+       at the original coordinates. No conventional/EMS/XMS inventory exists. */
+    if(startup_mouse) VWB_Bar(164,82,12,2,14);
+    if(startup_synth && !startup_digi) VWB_Bar(164,128,12,2,14);
+    if(startup_digi) VWB_Bar(164,151,12,2,14);
     if(!SignonPrompt("Press a key",14)) return false;
     state=UI_SIGNON;leaving=false;IN_ClearKeysDown();
     SD_StartMusic(-1);
@@ -197,6 +209,73 @@ static bool QuickSave(uint64_t ticks)
     if(!Save_Write((unsigned)quickslot,info.description,true)) return QuickDialog(QUICK_ERROR,ticks);
     return true;
 }
+static bool GameMessage(const char *text)
+{
+    FinishPaletteShifts();if(!GameDrawPaused() || !Message(text)) return false;
+    state=UI_MESSAGE;IN_ClearKeysDown();return true;
+}
+/* WL_MAIN.C DoJukebox: registered WL6 has three time-selected six-song banks. */
+static const unsigned jukebox_tracks[]={3,11,9,12,2,0,8,18,17,4,1,19,6,20,22,21,19,26};
+static const char *const jukebox_names[]={
+    "Get Them!","Searching","P.O.W.","Suspense","War March","Around The Corner!",
+    "Nazi Anthem","Lurking...","Going After Hitler","Pounding Headache","Into the Dungeons","Ultimate Conquest",
+    "Kill the S.O.B.","The Nazi Rap","Twelfth Hour","Zero Hour","Ultimate Conquest","Wolfpack"
+};
+static bool DrawJukebox(void)
+{
+    ClearMScreen();DrawStripes(10);DrawWindow(22,64,280,91,BKGDCOLOR);
+    if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
+    fontnumber=1;fontcolor=0x47;int w,h;
+    if(!VW_MeasurePropString("Robert's Jukebox",&w,&h)) return false;
+    PrintX=(320-w)/2;PrintY=15;if(!US_Print("Robert's Jukebox")) return false;
+    for(unsigned i=0;i<6;++i) {
+        fontcolor=i==jukebox_choice?HIGHLIGHT:(int)i==jukebox_playing?0x4a:TEXTCOLOR;
+        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(jukebox_names[jukebox_bank*6+i])) return false;
+    }
+    return VWB_DrawPic(24,68+(int)jukebox_choice*13,MenuCursorPicture());
+}
+bool DemoLoopJukebox(uint64_t ticks,unsigned bank)
+{
+    if(GameRunning() || bank>2) return CA_Fail("Jukebox unavailable");
+    jukebox_bank=bank;jukebox_choice=0;jukebox_playing=-1;
+    state=UI_JUKEBOX;leaving=false;ResetMenuCursor(ticks);IN_ClearKeysDown();
+    return DrawJukebox() && VL_FadeIn(gamepal,10,ticks);
+}
+static bool HiddenKeys(uint64_t ticks,bool *handled)
+{
+    *handled=true;
+    if(Keyboard[0x32] && Keyboard[0x26] && Keyboard[0x17]) {
+        /* WL_PLAY.C MLI: score reset and ten-minute time penalty are vital. */
+        gamestate.health=100;gamestate.ammo=99;gamestate.keys=3;gamestate.score=0;
+        gamestate.TimeCount+=42000U;GiveWeapon(wp_chaingun);
+        return GameMessage("You now have 100% Health,\n99 Ammo and both Keys!\n\nNote that you have basically\neliminated your chances of\ngetting a high score!");
+    }
+    if(allow_debug && Keyboard[0x0e] && Keyboard[0x2a] && Keyboard[0x38]) {
+        debug_unlocked=true;return GameMessage("Debugging keys are\nnow available!");
+    }
+    if(Keyboard[0x30] && Keyboard[0x1e] && Keyboard[0x14])
+        return GameMessage("Commander Keen is also\navailable from Apogee, but\nthen, you already know\nthat - right, Cheatmeister?!");
+    if(debug_unlocked && Keyboard[0x0f]) {
+        char text[160];
+        if(Keyboard[0x22]) { godmode=!godmode;return GameMessage(godmode?"God mode ON":"God mode OFF"); }
+        if(Keyboard[0x23]) { IN_ClearKeysDown();TakeDamage(16,NULL);return true; }
+        if(Keyboard[0x17]) {
+            GivePoints(100000);HealSelf(99);if(gamestate.bestweapon<wp_chaingun) GiveWeapon(gamestate.bestweapon+1);
+            GiveAmmo(50);return GameMessage("Free items!");
+        }
+        if(Keyboard[0x12]) { IN_ClearKeysDown();playstate=ex_completed;return true; }
+        if(Keyboard[0x21]) {
+            (void)snprintf(text,sizeof(text),"X:%ld\nY:%ld\nA:%d",(long)player.x,(long)player.y,player.angle);
+            return GameMessage(text);
+        }
+        if(Keyboard[0x2e]) {
+            (void)snprintf(text,sizeof(text),"Actors: %u\nStatic objects: %u",objcount,statcount);return GameMessage(text);
+        }
+        if(Keyboard[0x19]) { state=UI_MESSAGE;IN_ClearKeysDown();return true; }
+        if(Keyboard[0x10]) return Transition(UI_DONE,ticks,10);
+    }
+    *handled=false;return true;
+}
 static bool StepDemoLoop(uint64_t ticks)
 {
     /* Catch up to scheduled screen deadlines; never derive time from frames. */
@@ -208,6 +287,7 @@ static bool StepDemoLoop(uint64_t ticks)
             continue;
         }
         if(state==UI_SIGNON) {
+            if(IN_PressPending(0x32)) return DemoLoopJukebox(ticks,(unsigned)((ticks/7U)%3U));
             if(IN_AnyPressed()) {
                 if(!SignonPrompt("Working...",10)) return false;
                 if(!Transition(signon_return,ticks,10)) return false;
@@ -239,6 +319,9 @@ static bool StepDemoLoop(uint64_t ticks)
     if (state == UI_GAME) {
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */
+        if(GameCanSave()) {
+            bool handled;if(!HiddenKeys(ticks,&handled)) return false;if(handled) return true;
+        }
         if(GameCanSave() && IN_ConsumePress(sc_Pause)) {
             FinishPaletteShifts();
             if(!GameDrawPaused() || !VWB_DrawPic(128,64,PAUSEDPIC)) return false;
@@ -323,6 +406,17 @@ static bool StepDemoLoop(uint64_t ticks)
             if(yes && quick_action==QUICK_LOAD && !Save_Load((unsigned)quickslot,ticks)) return QuickDialog(QUICK_ERROR,ticks);
             resuming=quick_return==UI_GAME;return Transition(quick_return,ticks,10);
         }
+    } else if(state==UI_JUKEBOX) {
+        bool redraw=TickMenuCursor(ticks);int direction=MenuNavigation();
+        if(direction) { jukebox_choice=(jukebox_choice+(direction<0?5U:1U))%6;MenuCursorMoved();redraw=true;(void)SD_PlaySound(MOVEGUN1SND,0,0); }
+        if(IN_ConsumePress(sc_Enter) || IN_ConsumePress(sc_Space)) {
+            jukebox_playing=(int)jukebox_choice;SD_StartMusic((int)jukebox_tracks[jukebox_bank*6+jukebox_choice]);
+            (void)SD_PlaySound(SHOOTSND,0,0);redraw=true;
+        }
+        if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return Transition(UI_TITLE,ticks,10); }
+        if(redraw && !DrawJukebox()) return false;
+    } else if(state==UI_MESSAGE) {
+        if(IN_AnyPressed()) { IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused(); }
     } else if(state==UI_PAUSE) {
         if(IN_AnyPressed()) {
             SD_SetEnabled(boss_music,boss_effects);IN_ClearKeysDown();
