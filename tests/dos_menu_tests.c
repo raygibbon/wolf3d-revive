@@ -68,11 +68,11 @@ static void SoundOracle(void)
 static void ControlOracle(unsigned selected,bool mouse,int cursor)
 {
     memset(expected,BORDCOLOR,sizeof(expected));Bar(0,10,320,24,0);Bar(0,32,320,1,STRIPE);
-    Pic(80,0,C_CONTROLPIC);Pic(112,184,C_MOUSELBACKPIC);Panel(16,65,284,84);
+    Pic(80,0,C_CONTROLPIC);Pic(112,184,C_MOUSELBACKPIC);Panel(16,62,284,102);
     static const char *const labels[]={"Mouse Enabled","Joystick Enabled","Use joystick port 2",
-        "Gravis GamePad Enabled","Mouse Sensitivity","Customize controls"};
-    for(unsigned i=0;i<6;++i) {
-        bool active=i==0 || i==5 || (i==4 && mouse);
+        "Gravis GamePad Enabled","Mouse Sensitivity","Customize controls","Display settings"};
+    for(unsigned i=0;i<7;++i) {
+        bool active=i==0 || i==5 || (i==4 && mouse) || (i==6 && Display_Available());
         Text(80,70+(int)i*13,labels[i],active?(selected==i?HIGHLIGHT:TEXTCOLOR):DEACTIVE);
         if(i<4) Pic(56,73+(int)i*13,i==0 && mouse?C_SELECTEDPIC:C_NOTSELECTEDPIC);
     }
@@ -91,9 +91,10 @@ static void Menus(const char *directory)
     CT_Reset(CT_CLASSIC);ResetMenuCursor(0);CHECK(BeginControlsMenu());ControlOracle(0,false,C_CURSOR1PIC);Capture(directory,"control-off");
     IN_KeyEvent(sc_DownArrow,true);CHECK(HandleControlsMenu()==0);ControlOracle(5,false,C_CURSOR1PIC);
     (void)TickMenuCursor(19);CHECK(HandleControlsMenu()==0);ControlOracle(5,false,C_CURSOR1PIC);
-    (void)TickMenuCursor(20);CHECK(HandleControlsMenu()==0);ControlOracle(0,false,C_CURSOR1PIC);
-    IN_KeyEvent(sc_DownArrow,false);Control(sc_DownArrow);ControlOracle(5,false,C_CURSOR1PIC);
-    Control(sc_UpArrow);Control(sc_Enter);ControlOracle(0,true,C_CURSOR1PIC);
+    (void)TickMenuCursor(20);CHECK(HandleControlsMenu()==0);ControlOracle(6,false,C_CURSOR1PIC);
+    IN_KeyEvent(sc_DownArrow,false);Control(sc_UpArrow);ControlOracle(5,false,C_CURSOR1PIC);
+    Control(sc_UpArrow);ControlOracle(0,false,C_CURSOR1PIC);
+    Control(sc_Enter);ControlOracle(0,true,C_CURSOR1PIC);
     Control(sc_DownArrow);ControlOracle(4,true,C_CURSOR1PIC);Control(sc_Enter);
     unsigned sensitivity=CT_Sensitivity();Control(sc_RightArrow);CHECK(CT_Sensitivity()==sensitivity+1);
     Control(sc_Escape);Control(sc_DownArrow);Control(sc_Enter);Capture(directory,"customize");
