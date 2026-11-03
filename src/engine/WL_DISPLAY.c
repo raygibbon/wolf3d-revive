@@ -10,6 +10,25 @@
 static bool (*Get)(display_settings *),(*Set)(const display_settings *);
 static unsigned selected;
 static display_settings previous;
+/* Window sizing is independent of the 4:3 DOS menu canvas and 3D render size. */
+typedef struct { int width,height; } window_preset;
+static const window_preset window_presets[]={
+    {640,480},{960,720},{1280,960},
+    {960,600},{1280,800},{1600,1000},{1920,1200},
+    {960,540},{1280,720},{1600,900},{1920,1080},
+    {1680,720},{2560,1080},
+    {1920,540},{2560,720}
+};
+#define WINDOW_PRESET_COUNT (sizeof(window_presets)/sizeof(window_presets[0]))
+static void CycleWindowSize(display_settings *s,bool backwards)
+{
+    size_t current=WINDOW_PRESET_COUNT;
+    for(size_t i=0;i<WINDOW_PRESET_COUNT;++i)
+        if(s->width==window_presets[i].width && s->height==window_presets[i].height) { current=i;break; }
+    size_t next=current==WINDOW_PRESET_COUNT?(backwards?WINDOW_PRESET_COUNT-1:0):
+        (current+(backwards?WINDOW_PRESET_COUNT-1:1))%WINDOW_PRESET_COUNT;
+    s->scale=0;s->width=window_presets[next].width;s->height=window_presets[next].height;
+}
 void Display_Connect(bool (*get)(display_settings *),bool (*set)(const display_settings *)) { Get=get;Set=set; }
 bool Display_Available(void) { return Get && Set; }
 static bool Text(int x,int y,const char *s) { PrintX=x;PrintY=y;return US_Print(s); }
@@ -54,7 +73,7 @@ int HandleDisplayMenu(void)
     if((left || right || enter) && !s.pending) {
         if(selected==0) s.fullscreen=!s.fullscreen;
         else if(selected==1) s.integer=!s.integer;
-        else if(selected==2) { unsigned n=s.scale?s.scale:3U;s.scale=left?(n>1?n-1:1):(n<5?n+1:5); }
+        else if(selected==2) CycleWindowSize(&s,left);
         else if(selected==3) s.high_resolution=!s.high_resolution;
         else if(selected==4) {
             unsigned n=s.render_auto?3U:s.render_width==1920?2U:s.render_width==1280?1U:0U;
