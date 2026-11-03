@@ -94,7 +94,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_SCORES || screen == UI_HIGHSCORES || screen==UI_RESULTS) SD_StartMusic(23);
     if(screen==UI_RESULTS) {
         score_error=false;
-        if(score_rank>=0) { if(!BeginHighScoreEntry(score_rank,ticks+10)) return false; }
+        if(score_rank>=0) { if(!BeginHighScoreEntry(score_rank,ticks+30)) return false; }
         else if(!DrawHighScores()) return false;
     }
     if(screen==UI_CONTROLS || screen==UI_SOUND || screen==UI_SAVE || screen==UI_LOAD) ResetMenuCursor(ticks);
@@ -111,10 +111,10 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
     if (screen == UI_EPISODE && !DrawNewSelection(true,episode)) return false;
     if (screen == UI_DIFFICULTY && !DrawNewSelection(false,difficulty)) return false;
-    unsigned steps = Attract() ? 30 : 10;
+    unsigned steps = Attract() || screen==UI_RESULTS ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
     deadline = ticks + steps + (screen==UI_RATING?7U*70U:screen == UI_TITLE ? 15U*70U : 10U*70U);
-    if(screen==UI_RESULTS) deadline=ticks+10+500;
+    if(screen==UI_RESULTS) deadline=ticks+30+500;
     return true;
 }
 static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
@@ -124,7 +124,7 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     /* CP_Quit/CP_CheckQuick silence both streams before MenuFadeOut. */
     if(next==UI_DONE) { SD_StartMusic(-1);SD_StopSound(); }
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
-    return VL_FadeOut(Attract() || state==UI_SIGNON ? 0 : 43,0,0,steps,ticks);
+    return VL_FadeOut(Attract() || state==UI_SIGNON || state==UI_RESULTS || next==UI_RESULTS ? 0 : 43,0,0,steps,ticks);
 }
 bool DemoLoopStartGame(uint64_t ticks) { quickslot=-1;episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
@@ -373,7 +373,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if (!GameStep(ticks)) return GameError();
         if (GameFinished()) {
             score_rank=HighScores_Insert((uint32_t)gamestate.score,(unsigned)gamestate.mapon+1,(unsigned)gamestate.episode);
-            GameStop();return Transition(UI_RESULTS,ticks,10);
+            GameStop();return Transition(UI_RESULTS,ticks,30);
         }
         return true;
     }
@@ -483,7 +483,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(action==1 && !choosing_episode) quickslot=-1;
         if (action==1) return Transition(choosing_episode ? UI_DIFFICULTY : UI_GAME,ticks,10);
     } else if(state==UI_RESULTS) {
-        if(score_error) { if(IN_AnyPressed()) return Transition(UI_TITLE,ticks,10); }
+        if(score_error) { if(IN_AnyPressed()) return Transition(UI_TITLE,ticks,30); }
         else if(score_rank>=0) {
             int result=HandleHighScoreEntry(ticks);if(result<0) return false;
             if(result) {
@@ -492,9 +492,9 @@ static bool StepDemoLoop(uint64_t ticks)
                     score_error=true;IN_ClearKeysDown();
                     return Message("Cannot save high scores.\nRanking retained this session.\nPress a key to continue.");
                 }
-                return Transition(UI_TITLE,ticks,10);
+                return Transition(UI_TITLE,ticks,30);
             }
-        } else if(IN_AnyPressed() || ticks>=deadline) return Transition(UI_TITLE,ticks,10);
+        } else if(IN_AnyPressed() || ticks>=deadline) return Transition(UI_TITLE,ticks,30);
     } else if (state == UI_ERROR && IN_AnyPressed()) {
         return Transition(UI_MENU,ticks,10);
     } else if (state == UI_SCORES && IN_AnyPressed()) {

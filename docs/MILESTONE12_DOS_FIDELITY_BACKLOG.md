@@ -35,8 +35,8 @@ regression verification and physical DOS comparison.
   Seven explicit little-endian records, version/count and checksum validation.
   Invalid/future files are preserved; write errors keep session rankings and
   show a readable message. No DOS CONFIG.WL6 import.
-- [x] Final death and victory → qualification → name entry or 500-tic wait →
-  title/attract (`WL_GAME.C GameLoop` → `UI_RESULTS`). Historical source has
+- [x] Final death and victory → original 30-tic black fades → qualification →
+  name entry or 500-tic wait → title/attract (`WL_GAME.C GameLoop` → `UI_RESULTS`). Historical source has
   **no separate Game Over card** in these paths; do not invent one.
 - [x] Explicit End Game sets zero lives and enters the existing death sequence,
   then qualifies the score (`CP_EndGame` → `QUICK_END`).
@@ -163,3 +163,12 @@ keyboard make repeats; gameplay, menu confirmation and held-key isolation keep
 their existing event rules. All 11 focused Classic cases passed (52.051 s).
 The final quit-audio source check also passed all 11 Classic cases (79.583 s).
 Normal/sanitizer full suites and final portability checks are recorded below.
+
+### Completion timing verification
+
+`ID_VH.H VW_FadeIn/VW_FadeOut` use 30 tics and black; `WL_MENU.H` menu fades
+use 10 tics and dark red. Completion/score transitions now retain that
+original distinction. After this source correction, all 41 engine tests passed
+(232.644 s), including six episode finales and final death, and all 11 Classic
+cases passed (67.539 s). Final strict native/MinGW builds, Wine interaction and
+the sanitized application UI/menu/level smoke checks also passed.

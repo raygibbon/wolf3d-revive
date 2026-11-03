@@ -119,10 +119,10 @@ static void Episode(bool owned)
     unsigned map=(unsigned)(ep*10+8);CHECK(CA_Map()->number==map);
     Tap(SDL_SCANCODE_RETURN);Capture("ending-page1");
     Tap(SDL_SCANCODE_RIGHT);Capture("ending-page2");
-    Tap(SDL_SCANCODE_LEFT);Tap(SDL_SCANCODE_ESCAPE);Steps(21);
+    Tap(SDL_SCANCODE_LEFT);Tap(SDL_SCANCODE_ESCAPE);Steps(61);
     CHECK(DemoLoopState()==UI_RESULTS && !CA_Map() && !player.next);
-    Tap(SDL_SCANCODE_ESCAPE);Steps(21);
-    if(DemoLoopState()==UI_RESULTS) { Tap(SDL_SCANCODE_SPACE);Steps(21); }
+    Tap(SDL_SCANCODE_ESCAPE);Steps(61);
+    if(DemoLoopState()==UI_RESULTS) { Tap(SDL_SCANCODE_SPACE);Steps(61); }
     CHECK(DemoLoopState()==UI_TITLE);
     printf("E%u controlled %s weapon fight, finale, two article pages and menu return passed.\n",ep+1,owned ? "owned" : "synthetic");
 }
