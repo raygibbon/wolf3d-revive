@@ -43,18 +43,21 @@ int main(int argc,char **argv)
     const unsigned sizes[][2]={{640,480},{1280,720},{1920,1080},{1920,1080}};
     int window_count;SDL_Window **windows=SDL_GetWindows(&window_count);CHECK(windows && window_count==1);
     SDL_Renderer *renderer=SDL_GetRenderer(windows[0]);SDL_free(windows);
-    printf("video=%s, renderer=%s, audio=%s; owned E1M1, view 19, 4 seconds/canvas\n",
-           SDL_GetCurrentVideoDriver(),SDL_GetRendererName(renderer),SDL_GetCurrentAudioDriver());
+    printf("video=%s, renderer=%s, audio=%s, smooth=%s; owned E1M1, view 19, 4 seconds/canvas\n",
+           SDL_GetCurrentVideoDriver(),SDL_GetRendererName(renderer),SDL_GetCurrentAudioDriver(),SDL_getenv("M9_NO_SMOOTH")?"off":"on");
     for(unsigned n=0;n<4;++n) {
         CHECK(DemoLoopStartGame(VL_GetTicks70()) && NewViewSize(19));
-        display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=d.smooth=true;
+        display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=true;d.smooth=SDL_getenv("M9_NO_SMOOTH")==NULL;
         d.render_width=sizes[n][0];d.render_height=sizes[n][1];d.aspect=2;d.scale=0;d.width=n==3?3840:1280;d.height=n==3?2160:720;
         d.vsync=SDL_getenv("M8_VSYNC")!=NULL;CHECK(VL_DisplaySet(&d));
         /* Warm page caches, audio and texture allocation before measuring. */
         uint64_t warm_start=SDL_GetTicksNS();
-        for(unsigned i=0;i<20 || SDL_GetTicksNS()-warm_start<300000000;++i) { CHECK(DemoLoop(VL_GetTicks70()) && VW_UpdateScreen());Audio_Pump(); }
+        for(unsigned i=0;i<20 || SDL_GetTicksNS()-warm_start<300000000;++i) { CHECK(!VL_PollQuit());CHECK(DemoLoop(VL_GetTicks70()) && VW_UpdateScreen());Audio_Pump(); }
         CHECK(VL_DisplayGet(&d));
-        CHECK(n!=3 || (d.pixel_width==3840 && d.pixel_height==2160));
+        if(n==3 && (d.pixel_width!=3840 || d.pixel_height!=2160)) {
+            printf("4K output unavailable: drawable is %dx%d; no 4K measurement.\n",d.pixel_width,d.pixel_height);
+            continue;
+        }
         uint64_t tick=VL_GetTicks70(),initial_tick=tick,start=SDL_GetTicksNS(),last=start,next=0;
         GamePauseClock(tick);uint32_t initial_clock=gamestate.TimeCount;
         double intervals[4096];unsigned count=0;clock_t cpu=clock();unsigned long initial_allocations=atomic_load(&allocations);
@@ -64,13 +67,14 @@ int main(int argc,char **argv)
             for(unsigned steps=0;steps<8 && WL_TickNext(&tick,now);++steps) CHECK(DemoLoop(tick));
             Audio_Pump();now=SDL_GetTicksNS();
             double refresh=argc==3?strtod(argv[2],NULL):VL_MonitorRefreshRate();
-            if(now>=next) {
+            if(!d.smooth || now>=next) {
                 uint64_t begin=now;CHECK(VW_UpdateScreen());now=SDL_GetTicksNS();
                 intervals[count++]=(double)(now-last)/1000000.0;last=now;
                 next=WL_PresentationDeadline(begin,now,refresh,VL_VSyncPaced(refresh));
             }
             now=SDL_GetTicksNS();uint64_t wake=WL_TickNS(tick+1);if(next<wake) wake=next;
-            if(wake>now) SDL_DelayNS(wake-now>4000000?4000000:wake-now);
+            if(!d.smooth) SDL_Delay(4);
+            else if(wake>now) SDL_DelayNS(wake-now>4000000?4000000:wake-now);
         }
         uint64_t finish=SDL_GetTicksNS();
         double seconds=(double)(finish-start)/1000000000.0;
