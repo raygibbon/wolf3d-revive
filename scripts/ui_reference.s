@@ -56,6 +56,64 @@ diskseg: .word 0x6a5
  inc word ptr cs:[number]
  cmp word ptr cs:[number],2
  jb disk_loop
+ /* Draw the original latch artwork on a controlled menu background. */
+ .byte 0x9a
+ .word 0x2cf7
+clear3seg: .word 0x6a5
+ push 134
+ push 56
+ push 6
+ .byte 0x9a
+ .word 0x062f
+latchseg: .word 0x1d62
+ add sp,6
+ /* Publish buffer before sampling the initial art. */
+ .byte 0x9a
+ .word 0x0625
+updateseg: .word 0x1d62
+ call dump
+ mov word ptr ds:[0x9b7f],48
+ mov word ptr ds:[0x9b7d],56
+ mov word ptr ds:[0x9b7b],224
+ mov word ptr ds:[0xa046],48
+ mov word ptr cs:[number],0
+progress_loop:
+ push 5
+ push word ptr cs:[number]
+ .byte 0x9a
+ .word 0x0f10
+progressseg: .word 0x0a85
+ add sp,4
+ call dump
+ inc word ptr cs:[number]
+ cmp word ptr cs:[number],6
+ jb progress_loop
+ .byte 0x9a
+ .word 0x2cf7
+clear4seg: .word 0x6a5
+ push 133
+ push 64
+ push 16
+ .byte 0x9a
+ .word 0x062f
+pausepicseg: .word 0x1d62
+ add sp,6
+ .byte 0x9a
+ .word 0x0625
+update2seg: .word 0x1d62
+ call dump
+ mov word ptr ds:[0xa046],200
+ push cs
+ push offset newgame
+ .byte 0x9a
+ .word 0x3960
+newseg: .word 0x6a5
+ add sp,4
+ call dump
+ .byte 0x9a
+ .word 0x1041
+scoresseg: .word 0x0a85
+ call dump
  mov bx,cs:[handle]
  mov ah,0x3e
  int 0x21
@@ -94,3 +152,5 @@ plane:
 filename: .asciz "PIXELS.BIN"
 handle: .word 0
 number: .word 0
+
+newgame: .asciz "You are currently in\na game. Continuing will\nerase old game. Ok?"

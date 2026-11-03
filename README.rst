@@ -87,6 +87,8 @@ Documentation
 * `Milestone 7: widescreen and high-resolution rendering <docs/MILESTONE7_VISUAL.md>`_
 * `DOS demo synchronization <docs/MILESTONE6G.md>`_
 * `Classic fidelity audit <docs/CLASSIC_FIDELITY_AUDIT.md>`_
+* `DOS state-transition inventory <docs/DOS_STATE_TRANSITIONS.md>`_
+* `Milestone 13: final audit and release validation <docs/MILESTONE13_FINAL_FIDELITY.md>`_
 * `Configuration details <docs/MILESTONE6F.md>`_
 * `Porting notes and progress <docs/PORTING.md>`_
 * `Licensing and data ownership <docs/LICENSING.md>`_

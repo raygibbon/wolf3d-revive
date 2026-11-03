@@ -13,68 +13,103 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / 'docs/dos_state_transitions.json'
 DOCUMENT = ROOT / 'docs/DOS_STATE_TRANSITIONS.md'
+# Semantic route coverage is independent of the input manifest: deleting both
+# a transition and its coverage mapping must not silently pass validation.
+REQUIRED_TRANSITIONS = {
+    'startup', 'signon-ack', 'rating-title', 'title-credits', 'credits-scores',
+    'scores-demo', 'demo-title', 'demo-menu', 'menu-episode',
+    'episode-difficulty', 'episode-replace', 'replace-yes', 'replace-no',
+    'difficulty-setup', 'setup-psyched', 'psyched-progress', 'psyched-reveal',
+    'reveal-game', 'game-pause', 'pause-game', 'game-menu', 'menu-game',
+    'save-panel', 'load-panel', 'save-work', 'load-work', 'ordinary-load-setup',
+    'quicksave', 'quickload-confirm', 'quickload-yes', 'quickload-no',
+    'quick-resume', 'storage-error', 'death-turn', 'death-fizzle', 'death-ack',
+    'death-restart', 'restart-reveal', 'death-final', 'exit-completion',
+    'next-setup', 'secret-completion', 'secret-entry', 'secret-return',
+    'boss-victory', 'victory-stats', 'victory-article', 'article-scores',
+    'qualify', 'not-qualified', 'name-save', 'results-title', 'quit-menu',
+    'quit-game', 'quit-no', 'quit-yes', 'quit-no-game', 'end-game', 'end-yes',
+    'end-no', 'menu-scores', 'scores-menu', 'menu-attract', 'preload-error',
+}
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
 
 
 def reference(ref):
-    path = ROOT / ref['path']
+    require(isinstance(ref['path'], str), 'Reference path must be text')
+    path = (ROOT / ref['path']).resolve()
+    require(path.is_relative_to(ROOT.resolve()) and not Path(ref['path']).is_absolute(),
+            f"Reference escapes repository: {ref['path']}")
+    require(isinstance(ref['anchor'], str) and ref['anchor'].strip(), 'Empty reference anchor')
     text = path.read_text(encoding='latin1')
-    assert ref['anchor'] in text, f"Missing anchor: {ref}"
+    require(ref['anchor'] in text, f'Missing anchor: {ref}')
     line = text[:text.index(ref['anchor'])].count('\n') + 1
     return f"[{ref.get('label', ref['anchor']).strip()}](../{ref['path']}#L{line})"
 
 
 def validate(data):
-    assert data['schema'] == 1
+    require(data['schema'] == 1, 'Invalid inventory structure')
+    require(isinstance(data['transitions'], list), 'Transitions must be a list')
+    require(data['states'] and len(data['states']) == len(set(data['states'])), 'Empty/duplicate states')
     ids = [t['id'] for t in data['transitions']]
-    assert len(ids) == len(set(ids)), 'Duplicate transition IDs'
+    require(REQUIRED_TRANSITIONS <= set(ids), f'Missing required routes: {REQUIRED_TRANSITIONS - set(ids)}')
+    require(len(ids) == len(set(ids)), 'Duplicate transition IDs')
     states = set(data['states'])
     refs = data['references']
     evidence = data['evidence']
     gaps = data['gaps']
     for ref in refs.values():
         reference(ref)
+    original_refs = {r['path'] for r in refs.values() if r['path'].startswith('WOLFSRC/')}
+    require(original_refs <= data['original_sha256'].keys(), 'Unhashed original source reference')
     for name, digest in data['original_sha256'].items():
-        assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, f'Re-audit changed source: {name}'
+        require(hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, f'Re-audit changed source: {name}')
     for item in evidence.values():
-        assert item['scope'] and item['observation'] and item['limits']
+        require(item['scope'] and item['observation'] and item['limits'], 'Invalid inventory structure')
         for ref in item['refs']:
             reference(ref)
     for transition in data['transitions']:
-        for field in ('group', 'from', 'to', 'trigger', 'source', 'timing', 'artwork', 'sound', 'input', 'implementation', 'evidence', 'status', 'gaps'):
-            assert field in transition, f"{transition['id']}: missing {field}"
-        assert transition['from'] in states and transition['to'] in states
-        assert transition['source'], f"{transition['id']}: no original source"
-        assert set(transition['source'] + transition['implementation']) <= refs.keys()
-        assert set(transition['evidence']) <= evidence.keys()
-        assert set(transition['gaps']) <= gaps.keys()
-        assert transition['status'] in data['statuses']
-        for field in ('timing', 'artwork', 'sound', 'input'):
-            assert transition[field].strip(), f"{transition['id']}: empty {field}"
+        for field in ('group', 'from', 'to', 'trigger', 'source', 'timing', 'palette', 'artwork', 'sound', 'input', 'implementation', 'evidence', 'status', 'gaps'):
+            require(field in transition, f"{transition['id']}: missing {field}")
+        require(transition['from'] in states and transition['to'] in states, 'Invalid inventory structure')
+        require(transition['implementation'] and transition['evidence'], f"{transition['id']}: no implementation/evidence")
+        require(transition['source'], f"{transition['id']}: no original source")
+        require(set(transition['source'] + transition['implementation']) <= refs.keys(), 'Invalid inventory structure')
+        require(set(transition['evidence']) <= evidence.keys(), 'Invalid inventory structure')
+        require(set(transition['gaps']) <= gaps.keys(), 'Invalid inventory structure')
+        require(transition['status'] in data['statuses'], 'Invalid inventory structure')
+        for field in ('group', 'trigger', 'timing', 'palette', 'artwork', 'sound', 'input'):
+            require(transition[field].strip(), f"{transition['id']}: empty {field}")
         if transition['status'] == 'partial':
-            assert transition['gaps'], f"{transition['id']}: partial without a tracked gap"
+            require(transition['gaps'], f"{transition['id']}: partial without a tracked gap")
     ui = set(re.findall(r'\bUI_[A-Z_]+\b', (ROOT / 'src/engine/WL_MAIN.h').read_text()))
-    assert set(data['native_ui']) == ui, f"UI coverage differs: {set(data['native_ui']) ^ ui}"
+    require(set(data['native_ui']) == ui, f"UI coverage differs: {set(data['native_ui']) ^ ui}")
     exits_text = (ROOT / 'WOLFSRC/WL_DEF.H').read_text(encoding='latin1')
     exit_enum = re.search(r'typedef\s+enum\s*\{\s*(ex_stillplaying[\s\S]*?)\}\s*exit_t', exits_text)
-    assert exit_enum, 'Cannot locate DOS exit_t'
+    require(exit_enum, 'Cannot locate DOS exit_t')
     exits = set(re.findall(r'\bex_\w+\b', exit_enum[1]))
-    assert set(data['dos_exits']) == exits, f"DOS exit coverage differs: {set(data['dos_exits']) ^ exits}"
+    require(set(data['dos_exits']) == exits, f"DOS exit coverage differs: {set(data['dos_exits']) ^ exits}")
     for mapping in (data['native_ui'], data['dos_exits']):
         for entry in mapping.values():
-            assert entry['classification'] and entry['note']
-            assert set(entry['transitions']) <= set(ids)
+            require(entry['transitions'] or entry['classification'] == 'declaration-only', 'Unmapped active state')
+            require(entry['classification'] and entry['note'], 'Invalid inventory structure')
+            require(set(entry['transitions']) <= set(ids), 'Invalid inventory structure')
     for gap in gaps.values():
-        assert gap['priority'] and gap['finding'] and gap['close_with']
-        assert set(gap['refs']) <= refs.keys()
+        require(gap['priority'] and gap['finding'] and gap['close_with'], 'Invalid inventory structure')
+        require(set(gap['refs']) <= refs.keys(), 'Invalid inventory structure')
     edges = {t['id']: t for t in data['transitions']}
     for journey in data['journeys'].values():
+        require(journey, 'Empty journey')
         previous = None
         for step in journey:
             edge = edges[step]
-            assert previous is None or previous == edge['from'], f'Disconnected journey at {step}'
+            require(previous is None or previous == edge['from'], f'Disconnected journey at {step}')
             previous = edge['to']
     used_states = {t[k] for t in data['transitions'] for k in ('from', 'to')}
-    assert used_states == states, f'Unmapped phases: {states - used_states}'
+    require(used_states == states, f'Unmapped phases: {states - used_states}')
 
 
 def render(data):
@@ -123,7 +158,8 @@ def render(data):
         lines += [f"#### {t['id']}: {t['from']} → {t['to']}", '',
                   f"**Trigger:** {t['trigger']} **Status:** `{t['status']}`.", '',
                   f"- **DOS source:** {links(t['source'])}",
-                  f"- **Timing/palette:** {t['timing']}",
+                  f"- **Timing:** {t['timing']}",
+                  f"- **Palette:** {t['palette']}",
                   f"- **Artwork/layout:** {t['artwork']}",
                   f"- **Sound/music:** {t['sound']}",
                   f"- **Input/state:** {t['input']}",
@@ -161,13 +197,16 @@ def main():
     group.add_argument('--write', action='store_true')
     group.add_argument('--check', action='store_true')
     args = parser.parse_args()
-    data = json.loads(MANIFEST.read_text())
-    validate(data)
-    expected = render(data)
-    if args.write:
-        DOCUMENT.write_text(expected)
-    else:
-        assert DOCUMENT.read_text() == expected, 'Document stale; run --write after review'
+    try:
+        data = json.loads(MANIFEST.read_text(encoding='utf-8'))
+        validate(data)
+        expected = render(data)
+        if args.write:
+            DOCUMENT.write_text(expected, encoding='utf-8')
+        else:
+            require(DOCUMENT.read_text(encoding='utf-8') == expected, 'Document stale; run --write after review')
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        parser.exit(1, f'Audit failed: {error}\n')
     print(f"Validated {len(data['transitions'])} transitions, {len(data['states'])} phases, "
           f"{len(data['native_ui'])} UI states, {len(data['dos_exits'])} DOS exits; "
           f"{len(data['gaps'])} findings remain open. No runtime behaviour was certified by this check.")

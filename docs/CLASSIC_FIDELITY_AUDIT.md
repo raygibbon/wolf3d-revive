@@ -83,3 +83,14 @@ Final Milestone 12 validation passed 146 normal and 146 ASan/UBSan tests without
 skips or findings, plus the final completion-timing follow-ups. WOLFSRC remains
 unchanged; see the milestone matrix for executed-DOS, native display and Wine
 results and the physical hardware/edition limitations.
+
+## Milestone 13 audit and release hardening
+
+The [current transition inventory](DOS_STATE_TRANSITIONS.md) accounts for all
+native UI states and original exit values, with explicit verification gaps.
+[Milestone 13](MILESTONE13_FINAL_FIDELITY.md) records the established-quickload
+correction, 30 executed-DOS drawing frames, expanded 21:9/32:9 loading checks
+and current release validation. The earlier counts above are historical.
+Entry palette fading versus DOS `fizzlein`, safe death-fizzle clipping,
+enabled-sound face/RNG behavior and physical audio/display comparison remain
+explicit differences or open evidence gaps.

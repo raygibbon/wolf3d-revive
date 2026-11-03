@@ -207,7 +207,7 @@ bool VL_DisplaySet(const display_settings *s)
     if(s->scale) { window_w=(int)s->scale*320;window_h=(int)s->scale*240; }
     else { window_w=s->width;window_h=s->height; }
     if(s->fullscreen!=Fullscreen()) {
-        IN_SDLCapture(window,false);IN_SDLDiscardInput();
+        IN_SDLCapture(window,false,false);IN_SDLDiscardInput();
         bool denied=Fail(4);
         if(Fail(1) || (!denied && ((s->fullscreen && !SDL_SetWindowFullscreenMode(window,NULL)) || !SDL_SetWindowFullscreen(window,s->fullscreen)))) {
             window_w=old_w;window_h=old_h;integer_scale=old_integer;
@@ -221,7 +221,7 @@ bool VL_DisplaySet(const display_settings *s)
             char error[160];(void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
             (void)ApplyPresentation();(void)SDL_SetError("%s",error);return SettingsFailure(&candidate);
         }
-        IN_SDLCapture(window,false);IN_SDLDiscardInput();
+        IN_SDLCapture(window,false,false);IN_SDLDiscardInput();
         pending=size_pending=true;target=false;request_deadline=SDL_GetTicks()+3000;
     }
     if(replace) { FreeHigh(&high);high=candidate; }
@@ -400,7 +400,7 @@ static bool VL_DrawScreen(void)
     return SDL_RenderTexture(renderer,texture,NULL,NULL);
 }
 
-static void SyncCapture(void) { RefreshDisplay();IN_SDLCapture(window,CT_Gameplay() && !pending); }
+static void SyncCapture(void) { RefreshDisplay();IN_SDLCapture(window,CT_Gameplay() && !pending,!pending); }
 bool VW_UpdateScreen(void)
 {
     SyncCapture();Audio_Pump();

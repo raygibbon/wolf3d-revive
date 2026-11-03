@@ -314,3 +314,25 @@ minutes; B+A+T displays the Keen Easter egg. `--goobers` permits the original
 Backspace+LeftShift+Alt debug unlock, followed by Tab+G/H/I/E/F/C/P/Q/W/X.
 See [the fidelity checklist](MILESTONE12_DOS_FIDELITY_BACKLOG.md) for exact
 supported scope, intentional native systems and outstanding comparisons.
+
+## Transition inventory (Milestone 13)
+
+The source/evidence audit needs only Python and the checkout, without game data:
+
+```sh
+python3 scripts/audit_transitions.py --check
+python3 -O scripts/audit_transitions.py --check
+```
+
+After reviewing a source/transition change, update
+`docs/dos_state_transitions.json`, then regenerate the review document with
+`python3 scripts/audit_transitions.py --write`. Missing/stale/invalid inventory
+files fail the check and the standard unittest suite. This check validates
+traceability and route coverage, not runtime DOS equivalence. Current executed
+DOS and release results are in [Milestone 13](MILESTONE13_FINAL_FIDELITY.md).
+
+Menu mouse navigation keeps the DOS movement threshold and gun cursor. With
+mouse input enabled, menus use relative capture to hide the desktop pointer
+and avoid stopping at a screen edge. Focus loss, pending display changes,
+disabling mouse input and shutdown release capture. Keyboard navigation remains
+available; mouse movement in a menu never becomes gameplay movement or firing.

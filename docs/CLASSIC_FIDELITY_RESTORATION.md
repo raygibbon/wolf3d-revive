@@ -210,3 +210,12 @@ The actual historical executable now supplies a private 20-frame pixel oracle
 for all quit sayings at both DOS dialog heights and Saving/Loading windows.
 Hardware diagnostics, other editions and physical audio/CRT comparison remain
 explicitly outside the verified result.
+
+## Milestone 13 continuation
+
+See [the final audit/hardening report](MILESTONE13_FINAL_FIDELITY.md) and
+[complete state-transition inventory](DOS_STATE_TRANSITIONS.md). Established
+quickload now resumes directly without Get Psyched, as `CP_LoadGame(1)` does.
+The private executed-DOS drawing oracle covers 30 frames, including partial
+Get Psyched progress and default scores; continuous presentation parity is
+still limited to the explicitly recorded evidence.

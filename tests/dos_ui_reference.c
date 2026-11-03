@@ -2,6 +2,7 @@
 #include "engine/WL_MENU.h"
 #include "engine/ID_CA.h"
 #include "engine/ID_VH.h"
+#include "engine/WL_DEF.h"
 #include <stdio.h>
 #include <stdlib.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s)\n",__LINE__,#x,CA_Error());exit(1); } } while(0)
@@ -23,6 +24,11 @@ int main(int argc,char **argv)
         CHECK(MessageAtHeight(MenuQuitMessage(n,n==8?1:0),i<9?200U:160U));Compare(f,i);
     }
     for(unsigned i=0;i<2;++i) { ClearMScreen();CHECK(DrawSaveActivity(i!=0,false));Compare(f,18+i); }
+    ClearMScreen();CHECK(VWB_DrawPic(48,56,GETPSYCHEDPIC));Compare(f,20);
+    for(unsigned i=0;i<=5;++i) { PreloadUpdate(i,5);Compare(f,21+i); }
+    ClearMScreen();CHECK(VWB_DrawPic(128,64,PAUSEDPIC));Compare(f,27);
+    CHECK(MessageAtHeight("You are currently in\na game. Continuing will\nerase old game. Ok?",200));Compare(f,28);
+    CHECK(DrawHighScores());Compare(f,29);
     CHECK(fgetc(f)==EOF && fclose(f)==0);CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
-    puts("All nine quit sayings at both DOS window heights and both disk dialogs match the original DOS executable pixel-for-pixel.");return 0;
+    puts("30 DOS frames match: quit/disk dialogs, Get Psyched artwork and six progress stages, Pause artwork, new-game message and default scores.");return 0;
 }

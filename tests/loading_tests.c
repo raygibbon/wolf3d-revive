@@ -58,12 +58,13 @@ static void Bar(void)
 }
 static void Loading(bool owned)
 {
-    static const int sizes[][2]={{960,720},{1280,720},{1280,800},{1720,720}};
+    static const int sizes[][3]={{960,720,360},{1280,720,360},{1280,800,400},
+                                  {1720,720,267},{1680,720,274},{2560,720,180}};
     display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=true;d.render_width=640;d.render_height=480;d.aspect=2;d.integer=false;d.smooth=true;CHECK(VL_DisplaySet(&d));
-    for(unsigned size=0;size<4;++size) {
+    for(unsigned size=0;size<sizeof(sizes)/sizeof(sizes[0]);++size) {
         int w=sizes[size][0],h=sizes[size][1];
         /* Include the user's Auto-aspect + integer-scaled DOS screen setup. */
-        CHECK(VL_DisplayGet(&d));d.aspect=size?0U:2U;d.integer=size!=0;CHECK(VL_DisplaySet(&d));
+        CHECK(VL_DisplayGet(&d));d.aspect=size?0U:2U;d.integer=(size%2)!=0;CHECK(VL_DisplaySet(&d));
         CHECK(SDL_SetWindowSize(window,w,h));CHECK(SDL_SyncWindow(window));CHECK(!VL_PollQuit());
         CHECK(DemoLoopStartGame(ticks));CHECK(GameLoading() && !GameCanSave());
         unsigned total=Uncached(),rng=US_RndIndex();uint32_t time=gamestate.TimeCount;
@@ -106,8 +107,7 @@ static void Loading(bool owned)
            showing a 4:3 level during fade-in causes a visible scale pop. */
         int logical_w,logical_h;SDL_RendererLogicalPresentation mode;
         CHECK(SDL_GetRenderLogicalPresentation(renderer,&logical_w,&logical_h,&mode));
-        const int world_heights[]={360,360,400,267};
-        CHECK(logical_w==640 && logical_h==world_heights[size] && mode==SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        CHECK(logical_w==640 && logical_h==sizes[size][2] && mode==SDL_LOGICAL_PRESENTATION_LETTERBOX);
         SDL_FRect entry;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&entry));
         for(unsigned n=0;n<30;++n) {
             Pump();SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
