@@ -38,13 +38,13 @@ static bool Draw(const display_settings *s)
     fontnumber=1;fontcolor=TEXTCOLOR;int w,h;
     if(!VW_MeasurePropString("Display",&w,&h) || !Text((320-w)/2,14,"Display")) return false;
     fontnumber=0;
-    static const char *const labels[]={"Fullscreen","Scaling","Window size","Rendering","3D resolution","Aspect ratio","VSync","Filter","Smooth rendering","Reset defaults"};
+    static const char *const labels[]={"Fullscreen","Menu scaling","Window size","3D renderer","Internal 3D size","Gameplay aspect","VSync","Texture filter","Smooth rendering","Reset defaults"};
     for(unsigned i=0;i<10;++i) {
         char value[40];fontcolor=i==selected?HIGHLIGHT:TEXTCOLOR;
         if(i==0) (void)snprintf(value,sizeof(value),"%s",s->pending?"Switching...":s->fullscreen?"On":"Off");
         else if(i==1) (void)snprintf(value,sizeof(value),"%s",s->integer?"Integer":"Fit");
         else if(i==2) (void)snprintf(value,sizeof(value),"%d x %d",s->width,s->height);
-        else if(i==3) (void)snprintf(value,sizeof(value),"%s",s->high_resolution?"High Resolution":"Original");
+        else if(i==3) (void)snprintf(value,sizeof(value),"%s",s->high_resolution?"Enhanced":"Original");
         else if(i==4) { if(s->render_auto) (void)snprintf(value,sizeof(value),"Auto (desktop)");
             else (void)snprintf(value,sizeof(value),"%u x %u",s->render_width,s->render_height); }
         else if(i==5) { static const char *const names[]={"Auto","4:3","16:9","16:10","21:9","32:9"};(void)snprintf(value,sizeof(value),"%s",names[s->aspect<6?s->aspect:0]); }
@@ -55,7 +55,7 @@ static bool Draw(const display_settings *s)
         if(!Text(56,39+(int)i*11,labels[i]) || !Text(176,39+(int)i*11,value)) return false;
     }
     fontcolor=TEXTCOLOR;
-    if(!Text(26,166,*s->error?"Display change failed; try again.":(s->integer && (s->pixel_width<320 || s->pixel_height<240)?"Small window uses fit scaling.":(s->smooth && !s->high_resolution?"Smooth needs High Resolution.":"F12 saves a screenshot.")))) return false;
+    if(!Text(26,166,*s->error?"Display change failed; try again.":(s->integer && (s->pixel_width<320 || s->pixel_height<240)?"Small window uses fit scaling.":(s->smooth && !s->high_resolution?"Smooth needs Enhanced 3D.":"F12 saves a screenshot.")))) return false;
     return VWB_DrawPic(24,37+(int)selected*11,C_CURSOR1PIC) && VWB_DrawPic(112,184,C_MOUSELBACKPIC);
 }
 bool BeginDisplayMenu(void)
