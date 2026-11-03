@@ -1,0 +1,177 @@
+#!/usr/bin/env python3
+"""Validate the source/evidence inventory and render its review document.
+
+This checks inventory structure and reference/enum coverage, not game behaviour.
+No game assets or external dependencies are required.
+"""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parents[1]
+MANIFEST = ROOT / 'docs/dos_state_transitions.json'
+DOCUMENT = ROOT / 'docs/DOS_STATE_TRANSITIONS.md'
+
+
+def reference(ref):
+    path = ROOT / ref['path']
+    text = path.read_text(encoding='latin1')
+    assert ref['anchor'] in text, f"Missing anchor: {ref}"
+    line = text[:text.index(ref['anchor'])].count('\n') + 1
+    return f"[{ref.get('label', ref['anchor']).strip()}](../{ref['path']}#L{line})"
+
+
+def validate(data):
+    assert data['schema'] == 1
+    ids = [t['id'] for t in data['transitions']]
+    assert len(ids) == len(set(ids)), 'Duplicate transition IDs'
+    states = set(data['states'])
+    refs = data['references']
+    evidence = data['evidence']
+    gaps = data['gaps']
+    for ref in refs.values():
+        reference(ref)
+    for name, digest in data['original_sha256'].items():
+        assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, f'Re-audit changed source: {name}'
+    for item in evidence.values():
+        assert item['scope'] and item['observation'] and item['limits']
+        for ref in item['refs']:
+            reference(ref)
+    for transition in data['transitions']:
+        for field in ('group', 'from', 'to', 'trigger', 'source', 'timing', 'artwork', 'sound', 'input', 'implementation', 'evidence', 'status', 'gaps'):
+            assert field in transition, f"{transition['id']}: missing {field}"
+        assert transition['from'] in states and transition['to'] in states
+        assert transition['source'], f"{transition['id']}: no original source"
+        assert set(transition['source'] + transition['implementation']) <= refs.keys()
+        assert set(transition['evidence']) <= evidence.keys()
+        assert set(transition['gaps']) <= gaps.keys()
+        assert transition['status'] in data['statuses']
+        for field in ('timing', 'artwork', 'sound', 'input'):
+            assert transition[field].strip(), f"{transition['id']}: empty {field}"
+        if transition['status'] == 'partial':
+            assert transition['gaps'], f"{transition['id']}: partial without a tracked gap"
+    ui = set(re.findall(r'\bUI_[A-Z_]+\b', (ROOT / 'src/engine/WL_MAIN.h').read_text()))
+    assert set(data['native_ui']) == ui, f"UI coverage differs: {set(data['native_ui']) ^ ui}"
+    exits_text = (ROOT / 'WOLFSRC/WL_DEF.H').read_text(encoding='latin1')
+    exit_enum = re.search(r'typedef\s+enum\s*\{\s*(ex_stillplaying[\s\S]*?)\}\s*exit_t', exits_text)
+    assert exit_enum, 'Cannot locate DOS exit_t'
+    exits = set(re.findall(r'\bex_\w+\b', exit_enum[1]))
+    assert set(data['dos_exits']) == exits, f"DOS exit coverage differs: {set(data['dos_exits']) ^ exits}"
+    for mapping in (data['native_ui'], data['dos_exits']):
+        for entry in mapping.values():
+            assert entry['classification'] and entry['note']
+            assert set(entry['transitions']) <= set(ids)
+    for gap in gaps.values():
+        assert gap['priority'] and gap['finding'] and gap['close_with']
+        assert set(gap['refs']) <= refs.keys()
+    edges = {t['id']: t for t in data['transitions']}
+    for journey in data['journeys'].values():
+        previous = None
+        for step in journey:
+            edge = edges[step]
+            assert previous is None or previous == edge['from'], f'Disconnected journey at {step}'
+            previous = edge['to']
+    used_states = {t[k] for t in data['transitions'] for k in ('from', 'to')}
+    assert used_states == states, f'Unmapped phases: {states - used_states}'
+
+
+def render(data):
+    def links(names):
+        return '; '.join(reference(data['references'][name]) for name in names) or 'No DOS-equivalent implementation.'
+
+    lines = ['# DOS interaction and state-transition inventory', '', *data['introduction'], '',
+             '## How to read the evidence', '']
+    for name, meaning in data['statuses'].items():
+        lines.append(f'- **{name}**: {meaning}')
+    lines += ['', f"Inventory: **{len(data['states'])} phases, {len(data['transitions'])} directed transition records**, "
+              f"all **{len(data['native_ui'])} native UI states** and **{len(data['dos_exits'])} DOS exit values** accounted for.", '',
+              'A linked test is evidence only for its stated assertions. It does not prove the complete transition, '
+              'DOS fade/audio equivalence, or a continuous playthrough. This audit adds no new runtime pass claims.', '',
+              '## Principal journeys', '', '```mermaid', 'flowchart LR',
+              '  Menu --> Episode --> Difficulty --> Setup --> Psyched --> Reveal --> Gameplay',
+              '  Gameplay --> DeathTurn --> RedFizzle --> DeathAck',
+              '  DeathAck --> Restart --> Reveal',
+              '  DeathAck --> Scores --> Title',
+              '  Gameplay --> Completion --> Psyched',
+              '  Gameplay --> SecretCompletion --> Psyched',
+              '  Gameplay --> BJOrBossReplay --> Victory --> Article --> Scores',
+              '  Menu --> OrdinaryLoad --> Setup',
+              '  Gameplay --> QuickLoad --> Gameplay',
+              '  Menu --> QuitConfirm --> Exit',
+              '```', '',
+              'The graph describes DOS routes. In particular, death restart bypasses Get Psyched, '
+              'and established-slot quickload returns to the existing play loop. Differences below remain open.', '']
+    by_id = {t['id']: t for t in data['transitions']}
+    for name, route in data['journeys'].items():
+        description = ' → '.join([by_id[route[0]]['from']] + [by_id[step]['to'] for step in route])
+        lines.append(f'- **{name}**: {description}. Rows: {", ".join(route)}.')
+    lines += ['', '## Findings that prevent a DOS-equivalence claim', '']
+    for name, gap in data['gaps'].items():
+        affected = ', '.join(t['id'] for t in data['transitions'] if name in t['gaps'])
+        lines += [f"### {name} — {gap['priority']}: {gap['title']}", '', gap['finding'], '',
+                  f"Source/implementation: {links(gap['refs'])}", '', f'Rows: {affected}.', '',
+                  f"Close with: {gap['close_with']}", '']
+    lines += ['## Transition records', '']
+    group = None
+    for t in data['transitions']:
+        if t['group'] != group:
+            group = t['group']
+            lines += [f'### {group}', '']
+        ev = ', '.join(f'[{name}](#{name.lower()})' for name in t['evidence']) or '**No direct executed regression**'
+        lines += [f"#### {t['id']}: {t['from']} → {t['to']}", '',
+                  f"**Trigger:** {t['trigger']} **Status:** `{t['status']}`.", '',
+                  f"- **DOS source:** {links(t['source'])}",
+                  f"- **Timing/palette:** {t['timing']}",
+                  f"- **Artwork/layout:** {t['artwork']}",
+                  f"- **Sound/music:** {t['sound']}",
+                  f"- **Input/state:** {t['input']}",
+                  f"- **Revive:** {links(t['implementation'])}",
+                  f"- **Regression evidence:** {ev}. Open findings: {', '.join(t['gaps']) or 'none recorded for this row; evidence limits still apply'}.", '']
+    lines += ['## Evidence register', '']
+    for name, ev in data['evidence'].items():
+        lines += [f'### {name}', '', f"**Scope:** {ev['scope']}", '',
+                  '; '.join(reference(ref) for ref in ev['refs']), '',
+                  f"**Observed:** {ev['observation']}", '', f"**Does not establish:** {ev['limits']}", '']
+    for label, mapping in [('Native UI coverage', data['native_ui']), ('DOS playstate coverage', data['dos_exits'])]:
+        lines += [f'## {label}', '', '| State | Classification | Rows | Boundary |', '| --- | --- | --- | --- |']
+        for name, entry in mapping.items():
+            lines.append(f"| `{name}` | {entry['classification']} | {', '.join(entry['transitions']) or 'declaration only'} | {entry['note']} |")
+        lines.append('')
+    lines += ['## Excluded editions, hardware and native adaptations', '', *data['boundaries'], '',
+              '## Keeping this inventory current', '',
+              'The JSON manifest is authoritative for this document. After reviewing changed source/behaviour, '
+              'update the records and evidence, then run:', '', '```sh',
+              'python3 scripts/audit_transitions.py --write', 'python3 scripts/audit_transitions.py --check', '```', '',
+              'The check rejects missing fields, stale source hashes/anchors, unknown evidence/gaps, disconnected '
+              'journeys, unclassified native UI states, and unclassified DOS exit values. It also checks that this '
+              'document matches the manifest. It does **not** execute the game, discover arbitrary new branch '
+              'conditions, or prove that a cited test asserts every property in its row.', '',
+              'For a behaviour change, add an edge-specific regression before changing its evidence status. '
+              'Record the initial/intermediate/final framebuffer, palette, time, sound events, input release/ack, '
+              'map/lives/save/RNG and SDL window/logical geometry where applicable. A successful endpoint or '
+              'a helper that drains loading is insufficient evidence for the presentation between endpoints.', '']
+    return '\n'.join(lines)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--write', action='store_true')
+    group.add_argument('--check', action='store_true')
+    args = parser.parse_args()
+    data = json.loads(MANIFEST.read_text())
+    validate(data)
+    expected = render(data)
+    if args.write:
+        DOCUMENT.write_text(expected)
+    else:
+        assert DOCUMENT.read_text() == expected, 'Document stale; run --write after review'
+    print(f"Validated {len(data['transitions'])} transitions, {len(data['states'])} phases, "
+          f"{len(data['native_ui'])} UI states, {len(data['dos_exits'])} DOS exits; "
+          f"{len(data['gaps'])} findings remain open. No runtime behaviour was certified by this check.")
+
+
+if __name__ == '__main__':
+    main()
