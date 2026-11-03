@@ -196,6 +196,9 @@ bool CA_Startup(const char *data_dir)
     return true;
 }
 
+bool CA_GrChunkPresent(int chunk)
+{ return grhandle && chunk>=0 && chunk<NUMCHUNKS && grstarts[chunk]!=SPARSE; }
+
 bool CA_CacheGrChunk(int chunk)
 {
     memptr compressed = NULL;

@@ -25,7 +25,7 @@ static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
 static bool boss_music,boss_effects,choosequick;
 static int quickslot=-1;
 static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_ERROR } quick_action;
-static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO; }
+static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO || state==UI_RATING; }
 ui_state DemoLoopState(void) { return state; }
 void DemoLoopPrepareExit(void) { if(state==UI_BOSS) SD_SetEnabled(boss_music,boss_effects); }
 
@@ -76,6 +76,10 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if(screen==UI_CONTROLS && !(previous==UI_DISPLAY?ResumeControlsMenu():BeginControlsMenu())) return false;
     if (screen == UI_SOUND && !BeginSoundSettings()) return false;
     if (screen == UI_TITLE && !CA_CacheScreen(TITLEPIC)) return false;
+    if(screen==UI_RATING) {
+        VWB_Bar(0,0,320,200,0x82);
+        if(!VWB_DrawPic(216,110,PG13PIC)) return false;
+    }
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
@@ -83,7 +87,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_DIFFICULTY && !DrawNewSelection(false,difficulty)) return false;
     unsigned steps = Attract() ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
-    deadline = ticks + steps + (screen == UI_TITLE ? 15U*70U : 10U*70U);
+    deadline = ticks + steps + (screen==UI_RATING?7U*70U:screen == UI_TITLE ? 15U*70U : 10U*70U);
     return true;
 }
 static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
@@ -102,6 +106,15 @@ bool DemoLoopStartup(uint64_t ticks, bool menu)
         !SetupControlPanel(ticks) || !CA_CacheScreen(CREDITSPIC) || !CA_CacheScreen(TITLEPIC)) return false;
     if (!VL_FadeOut(0,0,0,0,ticks)) return false;
     return ChangeScreen(menu ? UI_MENU : UI_TITLE,ticks);
+}
+bool DemoLoopIntro(uint64_t ticks)
+{
+    /* WL_INTER.C PG13: the sign-on image linked into DOS is a different asset.
+       Never fabricate it or mistake a setup-program screen for archive art. */
+    if(!CA_GrChunkPresent(PG13PIC) || pictable[PG13PIC-STARTPICS].width!=88 ||
+       pictable[PG13PIC-STARTPICS].height!=64) return true;
+    if(state!=UI_TITLE || GameRunning()) return true;
+    return ChangeScreen(UI_RATING,ticks);
 }
 static bool ReturnPanel(uint64_t ticks)
 {
@@ -140,6 +153,10 @@ static bool StepDemoLoop(uint64_t ticks)
         if (leaving) {
             if (VL_Fading()) return true;
             if (!ChangeScreen(next_state,transition_end)) return false;
+            continue;
+        }
+        if(state==UI_RATING && (IN_AnyPressed() || ticks>=deadline)) {
+            if(!Transition(UI_TITLE,ticks>=deadline?deadline:ticks,30)) return false;
             continue;
         }
         if (Attract() && IN_AnyPressed()) { if(state==UI_DEMO) GameStop();return Transition(UI_MENU,ticks,30); }
