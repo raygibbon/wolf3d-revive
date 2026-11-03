@@ -4,6 +4,7 @@
 #include "WL_DISPLAY.h"
 #include "ID_IN.h"
 #include "ID_VH.h"
+#include "ID_CA.h"
 #include "ID_US_1.h"
 #include <stdio.h>
 static unsigned row,binding,alternative;
@@ -37,12 +38,13 @@ static bool Draw(void)
         unsigned first=(binding/5)*5;
         for(unsigned i=first;i<first+5 && i<CT_ACTIONS;++i) {
             int y=65+(int)(i-first)*17;fontcolor=i==binding?HIGHLIGHT:TEXTCOLOR;
-            if(!Text(30,y,CT_ActionName((ct_action)i))) return false;
+            if(!Text(56,y,CT_ActionName((ct_action)i))) return false;
             for(unsigned slot=0;slot<2;++slot) {
                 char key[24];fontcolor=i==binding && slot==alternative?HIGHLIGHT:TEXTCOLOR;
                 if(!Text(slot?234:171,y,KeyName(CT_Binding((ct_action)i,slot),key))) return false;
             }
         }
+        if(!VWB_DrawPic(24,63+(int)(binding-first)*17,C_CURSOR1PIC)) return false;
         fontcolor=HIGHLIGHT;
         if(!Text(30,153,waiting?(conflict?"Key reserved or in use.":"Press a key; Esc cancels."):"Enter binds; Delete clears.")) return false;
         fontcolor=TEXTCOLOR;return Text(20,182,"Arrows select; Esc returns.");
@@ -50,7 +52,7 @@ static bool Draw(void)
     static const char *const labels[]={"Preset","Mouse","Sensitivity","Invert mouse X","Reset defaults","Key bindings","Display settings"};
     for(unsigned i=0;i<(Display_Available()?7U:6U);++i) {
         fontcolor=i==row?HIGHLIGHT:TEXTCOLOR;int y=52+(int)i*16;char value[32];
-        if(!Text(30,y,labels[i])) return false;
+        if(!Text(56,y,labels[i])) return false;
         if(i==0) (void)snprintf(value,sizeof(value),"%s",CT_Preset()==CT_CLASSIC?"Classic":"Modern");
         else if(i==1) (void)snprintf(value,sizeof(value),"%s",CT_MouseEnabled()?"On":"Off");
         else if(i==2) (void)snprintf(value,sizeof(value),"%u / 40",CT_Sensitivity());
@@ -58,6 +60,7 @@ static bool Draw(void)
         else (void)snprintf(value,sizeof(value),"Enter");
         if(!Text(207,y,value)) return false;
     }
+    if(!VWB_DrawPic(24,50+(int)row*16,C_CURSOR1PIC)) return false;
     fontcolor=TEXTCOLOR;return Text(20,182,"Arrows change; Enter selects.");
 }
 bool BeginControlsMenu(void) { row=0;bindings_page=waiting=conflict=false;IN_ClearKeysDown();return Draw(); }
