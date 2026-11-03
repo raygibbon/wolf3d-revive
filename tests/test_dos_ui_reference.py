@@ -19,7 +19,7 @@ class DOSUIReferenceTests(unittest.TestCase):
             env=dict(os.environ,SDL_VIDEODRIVER='dummy',SDL_AUDIODRIVER='dummy')
             result=subprocess.run(['dosbox','-c','config -set cpu cycles=100000','-c',f'mount c {reference}','-c','c:','-c','ui.exe nowait','-c','exit'],env=env,capture_output=True,timeout=60)
             self.assertEqual(result.returncode,0,result.stderr.decode(errors='replace'))
-            self.assertEqual((reference/'PIXELS.BIN').stat().st_size,20*64000)
+            self.assertEqual((reference/'PIXELS.BIN').stat().st_size,30*64000)
             binary=root/'compare';flags=['-std=c11','-O1','-Wall','-Wextra','-Wpedantic','-Wconversion','-Wshadow','-Werror']
             if os.environ.get('SANITIZE')=='1':flags+=['-fsanitize=address,undefined','-fno-omit-frame-pointer']
             sources=sorted((ROOT/'src/engine').glob('*.c'))

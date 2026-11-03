@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Private original-DOS quit-dialog/disk pixel oracle; no commercial assets emitted to Git."""
+"""Private original-DOS UI/progress pixel oracle; no commercial assets emitted to Git."""
 # SPDX-License-Identifier: GPL-2.0-only
 import hashlib
 from pathlib import Path
@@ -38,7 +38,7 @@ def build(directory, data):
     image[0x5e8a:0x5e8f]=struct.pack('<BHH',0xea,0x15aa,0x48f)
     relocations=[(o,s) for o,s in relocations if s*16+o!=0x5e8d]
     relocations.append((0x5e8d%16,0x5e8d//16))
-    relocations += [(0x15aa+labels[name],0x48f) for name in ('setupseg','clearseg','messageseg','clear2seg','diskseg')]
+    relocations += [(0x15aa+labels[name],0x48f) for name in ('setupseg','clearseg','messageseg','clear2seg','diskseg','clear3seg','latchseg','updateseg','progressseg','clear4seg','pausepicseg','update2seg','newseg','scoresseg')]
     if table+4*len(relocations)>header:
         raise ValueError('Relocation table capacity exceeded')
     for i,entry in enumerate(relocations):struct.pack_into('<HH',binary,table+4*i,*entry)
@@ -51,8 +51,15 @@ def build(directory, data):
         if len(candidates)!=1:raise ValueError('Missing/ambiguous '+name)
         shutil.copyfile(candidates[0],directory/(name+'.WL6'))
     # Private DOS settings: silent output/input, original view size. Never copy
-    # or update the user's CONFIG/saves; score values do not affect these draws.
+    # or update the user's CONFIG/saves; scores use the historical default table.
     config=bytearray(522);struct.pack_into('<HH',config,518,15,5)
+    # Original ID_US_1.C defaults, encoded into the DOS 66-byte records.
+    names=("id software-'92", "Adrian Carmack", "John Carmack", "Kevin Cloud",
+           "Tom Hall", "John Romero", "Jay Wilbur")
+    for i,name in enumerate(names):
+        encoded=name.encode('ascii')
+        config[i*66:i*66+len(encoded)]=encoded
+        struct.pack_into('<IHH',config,i*66+58,10000,1,0)
     (directory/'CONFIG.WL6').write_bytes(config)
     return directory/'UI.EXE'
 
