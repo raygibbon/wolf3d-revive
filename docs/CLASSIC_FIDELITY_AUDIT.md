@@ -94,3 +94,9 @@ and current release validation. The earlier counts above are historical.
 Entry palette fading versus DOS `fizzlein`, safe death-fizzle clipping,
 enabled-sound face/RNG behavior and physical audio/display comparison remain
 explicit differences or open evidence gaps.
+
+Following user feedback after PR #17, native menu mouse selection now follows
+the visible pointer rather than stepping rows from accumulated DOS-style motion.
+This is an intentional native input adaptation. The coordinate transform handles
+4:3 correction, letterbox borders and integer/fit scaling; relative gameplay
+mouse controls retain their existing behavior.

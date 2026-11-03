@@ -426,6 +426,13 @@ bool VL_Capture(const char *path)
     return ok;
 }
 
+static void MenuPointer(float x,float y)
+{
+    float logical_x,logical_y;
+    if(SDL_RenderCoordinatesFromWindow(renderer,x,y,&logical_x,&logical_y))
+        IN_SDLPointerMotion(logical_x,logical_y*(200.0/240.0));
+}
+
 bool VL_PollQuit(void)
 {
     SyncCapture();
@@ -435,9 +442,14 @@ bool VL_PollQuit(void)
         if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) quit = true;
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { memset(consumed,0,sizeof(consumed));IN_SDLFocusLost(); }
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) IN_SDLFocusGained();
-        else if (event.type == SDL_EVENT_MOUSE_MOTION) IN_SDLPointerMotion(event.motion.xrel,event.motion.yrel);
-        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
+        else if (event.type == SDL_EVENT_MOUSE_MOTION) {
+            if(IN_SDLCaptured()) IN_SDLMouseMotion(event.motion.xrel);
+            else MenuPointer(event.motion.x,event.motion.y);
+        }
+        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+            if(!IN_SDLCaptured()) MenuPointer(event.button.x,event.button.y);
             IN_SDLMouseButton(event.button.button,event.type==SDL_EVENT_MOUSE_BUTTON_DOWN);
+        }
         else if(event.type==SDL_EVENT_KEY_DOWN || event.type==SDL_EVENT_KEY_UP) {
             if(!Shortcut(&event.key)) {
                 if(event.type==SDL_EVENT_KEY_DOWN && event.key.repeat) IN_SDLRepeat((unsigned)event.key.scancode);

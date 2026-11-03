@@ -91,6 +91,7 @@ int HandleSaveMenu(uint64_t ticks)
         return 0;
     }
     if(phase==EDIT_NAME) {
+        (void)IN_MenuPointerRow(75,56+(int)selected*13,175,13,1);
         if(IN_ConsumePress(sc_Escape)) { phase=PICK_SLOT;IN_ClearKeysDown();return DrawSlots()?0:-3; }
         bool redraw=false;
         if(IN_ConsumePress(0x0e) && *name) { name[strlen(name)-1]=0;redraw=true; }
@@ -110,6 +111,10 @@ int HandleSaveMenu(uint64_t ticks)
         return !redraw || DrawSlots()?0:-3;
     }
     if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
+    int hit=IN_MenuPointerRow(75,56,175,13,SAVE_SLOTS);
+    if(hit>=0 && (unsigned)hit!=selected) {
+        selected=(unsigned)hit;(void)SD_PlaySound(MOVEGUN1SND,0,0);if(!DrawSlots()) return -3;
+    }
     int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     if(up || down) { selected=(selected+(up?SAVE_SLOTS-1U:1U))%SAVE_SLOTS;(void)SD_PlaySound(MOVEGUN1SND,0,0);if(!DrawSlots()) return -3; }
     if(IN_ConsumePress(sc_Enter) || IN_ConsumePress(sc_Space)) {

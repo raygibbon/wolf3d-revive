@@ -62,6 +62,7 @@ class ClassicTests(unittest.TestCase):
             if mode == 'view': self.assertEqual((slots / 'slot1.w3s').read_bytes()[96:], (slots / 'slot2.w3s').read_bytes()[96:])
 
     def test_interface(self): self.run_display('interface')
+    def test_owned_interface(self): self.run_display('interface', owned=True)
 
     def test_hidden_features(self): self.run_display('hidden')
 

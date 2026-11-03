@@ -4,7 +4,17 @@
 #include "WL_CONTROLS.h"
 #include <string.h>
 bool Keyboard[128];
-static bool pressed[128],ack,caps;
+static bool pressed[128],ack,caps,pointer_pending,pointer_click,pointer_hit;
+static double pointer_x,pointer_y;
+void IN_MenuPointerEvent(double x,double y)
+{ pointer_x=x;pointer_y=y;pointer_pending=true;pointer_hit=false; }
+void IN_MenuPointerClick(void) { pointer_click=true; }
+void IN_MenuPointerReject(void) { pointer_hit=false; }
+int IN_MenuPointerRow(int x,int y,int width,int spacing,unsigned count)
+{
+    if(!pointer_pending || spacing<=0 || !count || !(pointer_x>=x && pointer_x<x+width && pointer_y>=y && pointer_y<y+(double)spacing*count)) return -1;
+    pointer_hit=true;return (int)((pointer_y-y)/spacing);
+}
 static char ascii_chars[128];
 void IN_AckEvent(void) { ack=true; }
 static unsigned ascii_scans[128], ascii_read, ascii_write;
@@ -26,7 +36,7 @@ char IN_ScanASCII(unsigned scan)
     if (scan == sc_Space) return ' ';
     return 0;
 }
-void IN_ClearPressed(void) { ack=false; memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0;CT_EndTic(); }
+void IN_ClearPressed(void) { pointer_pending=pointer_click=pointer_hit=false;ack=false; memset(pressed, 0, sizeof(pressed)); LastScan = 0; LastASCII = 0; ascii_read = ascii_write = 0;CT_EndTic(); }
 void IN_ClearKeysDown(void) { memset(Keyboard, 0, sizeof(Keyboard)); IN_ClearPressed();CT_Clear(); }
 void IN_KeyEvent(unsigned scan,bool down) { CT_LegacyKey(scan,down);IN_MenuKeyEvent(scan,down); }
 void IN_MenuKeyEvent(unsigned scan, bool down)
@@ -49,7 +59,9 @@ void IN_MenuKeyEvent(unsigned scan, bool down)
 bool IN_ConsumePress(unsigned scan)
 {
     if (scan >= 128) return false;
-    bool result = pressed[scan]; pressed[scan] = false; return result;
+    bool result = pressed[scan]; pressed[scan] = false;
+    if(scan==sc_Enter && pointer_click && !pointer_hit) return false;
+    return result;
 }
 bool IN_AnyPressed(void)
 {

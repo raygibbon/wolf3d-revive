@@ -67,6 +67,9 @@ int HandleDisplayMenu(void)
 {
     if(IN_ConsumePress(sc_Escape)) return -1;
     display_settings s;if(!Display_Available() || !Get(&s)) return -1;
+    int hit=IN_MenuPointerRow(20,39,280,11,10);
+    bool hover=hit>=0 && (unsigned)hit!=selected;
+    if(hover) selected=(unsigned)hit;
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow),enter=IN_ConsumePress(sc_Enter);
     if(up || down) selected=(selected+(up?9U:1U))%10U;
@@ -87,7 +90,7 @@ int HandleDisplayMenu(void)
         else if(enter) { s.smooth=false;s.fullscreen=s.integer=s.high_resolution=s.render_auto=s.vsync=s.linear=false;s.aspect=0;s.scale=3;s.render_width=640;s.render_height=480; }
         (void)Set(&s);if(!Get(&s)) return -1;
     }
-    if(up || down || left || right || enter || memcmp(&previous,&s,sizeof(s))) {
+    if(hover || up || down || left || right || enter || memcmp(&previous,&s,sizeof(s))) {
         previous=s;return Draw(&s)?0:-3;
     }
     return 0;

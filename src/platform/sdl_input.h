@@ -13,6 +13,7 @@ void IN_SDLDiscardInput(void);
 bool IN_SDLFocused(void);
 void IN_SDLCapture(SDL_Window *window,bool gameplay);
 void IN_SDLMouseMotion(double x);
+/* Absolute position in the original 320x200 menu framebuffer. */
 void IN_SDLPointerMotion(double x,double y);
 void IN_SDLMouseButton(unsigned button,bool down);
 bool IN_SDLCaptured(void);

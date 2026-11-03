@@ -255,3 +255,41 @@ on an archive branch when reconciling the app-created commit metadata.
 
 The changes are ready for review with these limits. A stable engine regression
 result must not be described as historical equivalence beyond its evidence.
+
+## Pointer-alignment follow-up — 2026-11-04
+
+A user reported menu selection drifting away from the visible mouse pointer.
+The SDL menu path accumulated relative movement with the original DOS strict
+60-count threshold. That implements DOS stepping but cannot remain aligned with
+a freely visible desktop cursor. Native menus now hit-test the absolute pointer
+against their displayed rows. SDL converts window coordinates through the
+renderer’s logical presentation, including DPI/letterbox/integer scaling; the
+corrected 320×240 canvas is then mapped to the 320×200 interface framebuffer.
+Captured gameplay continues to use relative motion.
+
+Hover only changes selection on fresh mouse input. Idle frames do not repeat
+movement or override keyboard selection. Button coordinates are processed even
+without a prior motion event; clicks in borders or disabled rows cannot activate
+the old selection. Main, episode/difficulty, sound/volume, controls/bindings,
+display, save/load and jukebox rows use the same core hit-test. Text entry,
+confirmation and view-preview actions retain their scoped input behavior.
+
+The Classic interface regression now tests actual SDL events at 960×720,
+1280×720, 1280×800, 1001×601 and 2560×720, in both integer and fit modes, with
+synthetic and owned data. Deliberately unrelated relative motion in those events
+must not affect the pointed row. Checks include stationary/keyboard ownership,
+black borders, disabled rows and a click without prior motion. The earlier
+DOS-threshold assertions are replaced by assertions for this requested native
+input contract.
+
+Validation: CART SDL3 build passed; **12 Classic cases passed** (39.847 s),
+the same **12 passed under ASan/UBSan** (68.232 s, no findings), and **24 related
+controls/display/DOS-menu/save cases passed** (84.231 s). All 50 application
+units passed strict MinGW C11 compilation and linked. The four inventory
+regressions passed after regenerating source links. Private logs:
+`mouse-classic-final2.log`, `mouse-classic-sanitize.log`,
+`mouse-regressions.log`, `mouse-mingw.log` and `mouse-audit.log`.
+
+These follow-up checks supplement the preceding 152-case full runs; those full
+runs predate this input adaptation. Historical DOS threshold stepping is now an
+intentional difference, rather than a claim about current native mouse behavior.
