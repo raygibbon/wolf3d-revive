@@ -12,14 +12,16 @@ regression verification and physical DOS comparison.
   UI entropy intentionally protects gameplay/demo RNG order.
 - [x] Confirmation cursor, Y/N/Escape, answer-release wait and sound
   (`Confirm` → `BeginConfirmation`/`HandleConfirmation`). Shared main/quick/new
-  dialogs implemented; save overwrite migration remains in Batch D.
+  dialogs verified; save overwrite uses the same implementation in Batch D.
 - [x] Original Pause picture at (128,64), music off/on, input clearing and clock
   freeze (`WL_PLAY.C CheckKeys` → `UI_PAUSE`). Verified by synthetic and owned-data Classic regressions.
 - [x] New-game confirmation after episode selection, before skill selection
   (`CP_NewGame`, `CURGAME` → `QUICK_NEW`). Declining returns to the main menu;
   quick-save selection resets only after accepting a difficulty. Verified by synthetic and owned-data Classic regressions.
-- [ ] Menu transitions/audio: existing dark-red menu fades, movement/select/
-  Escape sounds retained. Exhaustive physical DOS audio comparison pending.
+- [x] Menu transitions/audio: original dark-red fades and movement/select/
+  Escape sounds retained. `CP_Quit`/`CP_CheckQuick` silence music and effects
+  before fading out; focused regression verifies both streams stop. Exhaustive
+  physical DOS audio comparison is separately pending in Batch E.
 
 ## Batch B — high scores and completion
 
@@ -43,8 +45,8 @@ Verification: strict application compilation passed. `test_classic.py`: all
 nine synthetic/owned tests passed (34.935 s), including a second process reading
 persisted rankings, exact ties, edit insertion, cancellation, corrupt-file
 protection, final End Game path and unchanged RNG. Full engine/finale regression
-validation is running; Batch E records its final outcome. Shifted punctuation
-and exhaustive text-entry parity remain in Batch D.
+validation is recorded in Batch E. Shifted punctuation and native editor
+repeat support are covered in Batch D.
 
 ## Batch C — startup and hidden features
 
@@ -159,4 +161,5 @@ with NaN/infinity regression coverage. SDL typematic events are admitted only
 for editable text/navigation in names and warp input, matching the role of DOS
 keyboard make repeats; gameplay, menu confirmation and held-key isolation keep
 their existing event rules. All 11 focused Classic cases passed (52.051 s).
-Source edits are frozen for the final full normal and sanitizer runs below.
+The final quit-audio source check also passed all 11 Classic cases (79.583 s).
+Normal/sanitizer full suites and final portability checks are recorded below.

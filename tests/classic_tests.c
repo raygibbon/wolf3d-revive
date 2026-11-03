@@ -249,7 +249,10 @@ static void Hidden(void)
         Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);
         Tap(SDL_SCANCODE_ESCAPE);Step(40);CHECK(DemoLoopState()==UI_TITLE);
     }
-    CHECK(!DemoLoopJukebox(ticks,3));SD_Shutdown();
+    CHECK(!DemoLoopJukebox(ticks,3));
+    Start();Tap(SDL_SCANCODE_F10);Tap(SDL_SCANCODE_Y);
+    sd_status quit_audio;SD_GetStatus(&quit_audio);CHECK(quit_audio.music==-1 && quit_audio.sound==-1 && quit_audio.digitized==-1);
+    Step(20);CHECK(DemoLoopState()==UI_DONE);GameStop();SD_Shutdown();
     puts("MLI penalty/inventory, BAT, debug unlock/god/hurt and all jukebox banks passed without simulation or RNG leakage.");
 }
 static void Scores(const char *directory,bool reading)

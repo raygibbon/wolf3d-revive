@@ -121,6 +121,8 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
 {
     leaving = true; next_state = next; transition_end = ticks + steps;
     IN_ClearKeysDown();
+    /* CP_Quit/CP_CheckQuick silence both streams before MenuFadeOut. */
+    if(next==UI_DONE) { SD_StartMusic(-1);SD_StopSound(); }
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
     return VL_FadeOut(Attract() || state==UI_SIGNON ? 0 : 43,0,0,steps,ticks);
 }
