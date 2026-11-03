@@ -18,6 +18,7 @@
 #include <string.h>
 #include <math.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s / %s)\n",__LINE__,#x,CA_Error(),SDL_GetError());exit(1); } } while(0)
+#include "finish_loading.h"
 static unsigned char expected[64000];
 static void Key(unsigned scan) { IN_KeyEvent(scan,true);IN_KeyEvent(scan,false); }
 static void Control(unsigned scan) { Key(scan);CHECK(HandleControlsMenu()==0); }
@@ -144,7 +145,7 @@ static void Geometry(int w,int h)
 }
 static void Presentation(const char *directory)
 {
-    CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(11));
+    CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(11));TestFinishLoading(11);
     display_settings d;CHECK(VL_DisplayGet(&d));d.high_resolution=true;d.render_width=1280;d.render_height=720;d.aspect=2;
     CHECK(VL_DisplaySet(&d) && VW_UpdateScreen());
     unsigned rng=US_RndIndex();uint32_t clock=gamestate.TimeCount;
@@ -199,7 +200,7 @@ static void StaticGameScreens(void)
     CHECK(GameVictoryPresentation());memcpy(frame,framebuffer,sizeof(frame));
     clock=gamestate.TimeCount;rng=US_RndIndex();Geometry(3440,1440);
     CHECK(!memcmp(frame,framebuffer,sizeof(frame)) && gamestate.TimeCount==clock && US_RndIndex()==rng);
-    CHECK(DemoLoopStartGame(1200) && DemoLoop(1211) && VW_UpdateScreen());
+    CHECK(DemoLoopStartGame(1200) && DemoLoop(1211));TestFinishLoading(1211);CHECK(VW_UpdateScreen());
     SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
     CHECK(fabs(rect.w/rect.h-16.0/9)<0.002);
 }

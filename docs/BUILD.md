@@ -294,3 +294,23 @@ See [MILESTONE8.md](MILESTONE8.md) for fixed-step debt semantics, VSync pacing,
 interpolation boundary tests, end-to-end benchmarking commands and measured
 performance/hardware limitations. `test_presentation.py` verifies immutable
 snapshots and identical simulation saves across all eight requested rates.
+
+## Milestone 12 DOS interaction
+
+Pause displays the original pause picture during living gameplay; a fresh key
+or click resumes. Pause in menus toggles music. New Game confirms replacing an
+active game after episode selection. Quit uses all nine original sayings.
+When mouse input is enabled, relative menu movements over 60 counts navigate,
+left-click accepts and right-click cancels; Y/N confirmations use the keyboard.
+
+Final death and episode endings qualify the score by points, then floor reached.
+Enter saves the typed name; Escape leaves it blank while keeping the score.
+Scores persist separately as `highscores.w3h` in the SDL preference directory.
+Invalid/future score files are preserved; session rankings still work.
+
+Hold M during startup, press M at sign-on, or use `--jukebox` for Robert's
+Jukebox. M+L+I grants the original inventory while zeroing score and adding ten
+minutes; B+A+T displays the Keen Easter egg. `--goobers` permits the original
+Backspace+LeftShift+Alt debug unlock, followed by Tab+G/H/I/E/F/C/P/Q/W/X.
+See [the fidelity checklist](MILESTONE12_DOS_FIDELITY_BACKLOG.md) for exact
+supported scope, intentional native systems and outstanding comparisons.

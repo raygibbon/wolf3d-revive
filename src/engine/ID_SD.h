@@ -13,6 +13,8 @@ bool SD_Ready(void);
    before a level starts; front end selects digitized + AdLib by default. */
 void SD_SetDigitizedMode(bool enabled);
 bool SD_DigitizedMode(void);
+void SD_SetMusicPaused(bool paused); /* Transient DOS Pause; preserves preferences/position. */
+bool SD_MusicPaused(void);
 void SD_StartMusic(int track); /* -1 stops music; original indices 0..26. */
 int SD_LevelMusic(unsigned episode,unsigned floor);
 bool SD_IsDigitizedSound(soundnames sound);

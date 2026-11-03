@@ -17,6 +17,7 @@
 #include <string.h>
 #include <math.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,CA_Error(),SDL_GetError());exit(1); } } while(0)
+#include "finish_loading.h"
 static uint32_t Hash(const void *data,size_t n) { const unsigned char *p=data;uint32_t h=2166136261U;while(n--) h=(h^*p++)*16777619U;return h; }
 static void Pump(void) { CHECK(!VL_PollQuit());CHECK(VW_UpdateScreen()); }
 /* Force long frames without stalling any individual rendering batch. The
@@ -272,7 +273,7 @@ int main(int argc,char **argv)
     MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(VL_Startup());
     with_audio=!strcmp(argv[3],"owned");if(with_audio) CHECK(Audio_Startup());
     Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(Save_SetDirectory(argv[2]));CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));
-    CHECK(GameStep(14));VL_FadeStep(20);CHECK(Save_Write(0,"render before",true));
+    TestFinishLoading(0);CHECK(GameStep(14));VL_FadeStep(20);CHECK(Save_Write(0,"render before",true));
     unsigned rng=US_RndIndex();uint32_t frame=Hash(framebuffer,VL_PIXELS),clock=gamestate.TimeCount;
     objtype saved_player=player,saved_actors[MAXACTORS];memcpy(saved_actors,objlist,sizeof(saved_actors));
     bool saved_vis[64][64];memcpy(saved_vis,spotvis,sizeof(saved_vis));

@@ -4,7 +4,8 @@
 #include "WL_CONTROLS.h"
 #include <string.h>
 bool Keyboard[128];
-static bool pressed[128],ack;
+static bool pressed[128],ack,caps;
+static char ascii_chars[128];
 void IN_AckEvent(void) { ack=true; }
 static unsigned ascii_scans[128], ascii_read, ascii_write;
 uint8_t LastScan;
@@ -17,6 +18,11 @@ char IN_ScanASCII(unsigned scan)
     if (scan >= 0x2c && scan <= 0x32) return row3[scan - 0x2c];
     if (scan >= 2 && scan <= 10) return (char)('1' + scan - 2);
     if (scan == 11) return '0';
+    switch(scan) {
+        case 0x0c:return '-';case 0x0d:return '=';case 0x1a:return '[';case 0x1b:return ']';
+        case 0x27:return ';';case 0x28:return '\'';case 0x29:return '`';case 0x2b:return '\\';
+        case 0x33:return ',';case 0x34:return '.';case 0x35:return '/';default:break;
+    }
     if (scan == sc_Space) return ' ';
     return 0;
 }
@@ -26,11 +32,17 @@ void IN_KeyEvent(unsigned scan,bool down) { CT_LegacyKey(scan,down);IN_MenuKeyEv
 void IN_MenuKeyEvent(unsigned scan, bool down)
 {
     if (!scan || scan >= 128) return;
-    if (down && !Keyboard[scan]) { pressed[scan] = true; LastScan = (uint8_t)scan; char ascii = IN_ScanASCII(scan); if (ascii) {
+    if (down && !Keyboard[scan]) { if(scan==0x3a) caps=!caps;pressed[scan] = true; LastScan = (uint8_t)scan; char ascii = IN_ScanASCII(scan); if (ascii) {
         LastASCII = ascii;
         unsigned next = (ascii_write+1)%128;
         if (next == ascii_read) ascii_read = (ascii_read+1)%128;
-        ascii_scans[ascii_write] = scan; ascii_write = next;
+        bool shift=Keyboard[0x2a] || Keyboard[0x36];
+        if(ascii>='a' && ascii<='z') { if(shift!=caps) ascii=(char)(ascii-'a'+'A'); }
+        else if(shift) {
+            const char *plain="1234567890-=[];'`\\,./",*shifted="!@#$%^&*()_+{}:\"~|<>?";
+            const char *p=strchr(plain,ascii);if(p) ascii=shifted[p-plain];
+        }
+        ascii_scans[ascii_write] = scan;ascii_chars[ascii_write]=ascii;ascii_write = next;
     } }
     Keyboard[scan] = down;
 }
@@ -49,8 +61,7 @@ bool IN_AnyPressed(void)
 char IN_NextASCII(void)
 {
     if (ascii_read == ascii_write) return 0;
-    unsigned scan = ascii_scans[ascii_read]; ascii_read = (ascii_read+1)%128;
-    char ascii = IN_ScanASCII(scan);
+    unsigned scan = ascii_scans[ascii_read];char ascii=ascii_chars[ascii_read];ascii_read = (ascii_read+1)%128;
     if (ascii != ' ') pressed[scan] = false;
     return ascii;
 }

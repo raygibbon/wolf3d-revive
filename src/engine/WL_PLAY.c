@@ -15,6 +15,9 @@
 static uint64_t lasttimecount;
 static bool running,finished,intermission;
 static unsigned victorypage;
+static bool preload_pending;
+bool GamePreloadPending(void) { return preload_pending; }
+void GamePreloadConsumed(void) { preload_pending=false; }
 bool GameVictoryPresentation(void) { return victorypage!=0; }
 bool GameIntermission(void) { return intermission; }
 static unsigned deathphase,deathwait;
@@ -61,29 +64,43 @@ bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed)
     if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop(); return false; }
     SD_StartMusic(SD_LevelMusic(map/10,map%10));
     deathphase=deathwait=0;finished=intermission=false;
-    lasttimecount=ticks;running=true; IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
+    preload_pending=true;lasttimecount=ticks;running=true; IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
 }
-void GameStop(void) { WL_PresentReset(); Demo_Stop();CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
+/* WL_DEBUG.C Tab-W returns ex_warped to GameLoop: preserve inventory and
+   episode, restore entry score, then perform the ordinary level setup. */
+bool GameWarp(uint64_t ticks,unsigned floor)
+{
+    if(!GameCanSave() || floor<1 || floor>10) return CA_Fail("Invalid debug warp");
+    ShutdownGameLevel();gamestate.mapon=(int)floor-1;gamestate.score=gamestate.oldscore;
+    US_InitRndT((unsigned)(ticks&255U));
+    if(!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop();return false; }
+    SD_StartMusic(SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon));
+    preload_pending=true;deathphase=deathwait=0;lasttimecount=ticks;IN_ClearKeysDown();WL_PresentReset();WL_PresentCapture(ticks);return true;
+}
+void GameStop(void) { preload_pending=false;ResetPreloadGraphics(); WL_PresentReset(); Demo_Stop();CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and
    64000/70 candidate pixels per tic are the original values. */
 static bool Died(uint64_t ticks)
 {
     if (!deathphase) {
+        gamestate.weapon=-1;
         SD_StartMusic(-1);GameSound(PLAYERDEATHSND,NULL);
         if (killerobj) {
-            double angle=atan2((double)player.y-killerobj->y,(double)killerobj->x-player.x);
-            if (angle<0) angle+=6.28318530717958647692;
-            deathangle=(int)(angle/6.28318530717958647692*ANGLES);
+            float angle=(float)atan2((double)player.y-killerobj->y,(double)killerobj->x-player.x);
+            if (angle<0) angle=(float)(6.28318530717958647692+angle);
+            deathangle=(int)(angle/6.28318530717958647692*ANGLES)%ANGLES;
         } else deathangle=player.angle;
         deathphase=1;
     }
     if (deathphase==1) {
+        /* DOS clockwise<counter: equal 180-degree arcs turn negatively.
+           GameStep resumes this once per elapsed 70-Hz tic (2*tics total). */
         int delta=(deathangle-player.angle+540)%360-180;
         int change=delta>2 ? 2 : delta< -2 ? -2 : delta;
         player.angle=(player.angle+change+360)%360;
         if (!ThreeDRefresh() || !DrawStatus()) return false;
-        if (!delta) { FinishPaletteShifts();deathphase=2;fizzlernd=1;IN_ClearKeysDown(); }
+        if (player.angle==deathangle) { FinishPaletteShifts();deathphase=2;fizzlernd=1;IN_ClearKeysDown(); }
     } else if (deathphase==2) {
         for (unsigned p=0;p<64000/70;++p) {
             unsigned x=fizzlernd>>8,y=(fizzlernd-1)&255U;
@@ -91,7 +108,7 @@ static bool Died(uint64_t ticks)
             /* Original x>width/y>height allowed border writes. Clip to the
                actual viewport here, preserving its surrounding bevel. */
             if (x<VIEWWIDTH && y<VIEWHEIGHT) framebuffer[(VIEWY+y)*320+VIEWX+x]=4;
-            if (fizzlernd==1) { deathphase=3;deathwait=100;break; }
+            if (fizzlernd==1) { deathphase=3;deathwait=100;IN_ClearKeysDown();break; }
         }
     } else if (deathphase==3 && (!--deathwait || IN_AnyPressed())) {
         int lives=gamestate.lives-1,nextextra=gamestate.nextextra;
@@ -115,6 +132,9 @@ bool GameStep(uint64_t ticks)
 {
     if (!running || ticks<lasttimecount) return CA_Fail("Invalid simulation clock/state");
     uint64_t elapsed=ticks-lasttimecount;
+    /* Headless/core callers may step directly; the interactive frontend
+       consumes this request before advancing the simulation. */
+    preload_pending=false;
     if (!elapsed) return true; /* Retain quick make/break input until a tic runs. */
     unsigned dt=(unsigned)SimulationTics();
     if(Demo_Active()) {
@@ -133,7 +153,7 @@ bool GameStep(uint64_t ticks)
         ShutdownGameLevel();
         if (!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) return false;
         SD_StartMusic(SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon));
-        intermission=false;IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
+        preload_pending=true;intermission=false;IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
     }
     if (victorypage) {
         if (victorypage==1) {
@@ -209,13 +229,13 @@ bool GameStep(uint64_t ticks)
 bool GameRunning(void) { return running && !finished; }
 bool GameCanSave(void)
 {
-    return GameRunning() && !Demo_Active() && CA_Map() && !intermission && !victorypage && !gamestate.died &&
+    return GameRunning() && !GameLoading() && !Demo_Active() && CA_Map() && !intermission && !victorypage && !gamestate.died &&
         !gamestate.victoryflag && !DeathCameraActive() && playstate==ex_playing && !ActorAllocationFailed();
 }
 void GamePauseClock(uint64_t ticks) { lasttimecount=ticks;WL_PresentReset();WL_PresentCapture(ticks); }
 void GameRestoreClock(uint64_t ticks)
 {
     WL_PresentReset();running=true;finished=intermission=false;victorypage=0;deathphase=deathwait=0;
-    lasttimecount=ticks;ResetVictory();ResetEndText();ClearPaletteShifts();WL_PresentCapture(ticks);
+    preload_pending=true;lasttimecount=ticks;ResetVictory();ResetEndText();ClearPaletteShifts();WL_PresentCapture(ticks);
 }
 bool GameDrawPaused(void) { InvalidateStatus();return DrawPlayScreen() && ThreeDRefreshPaused(); }

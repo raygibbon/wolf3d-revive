@@ -35,7 +35,9 @@ void WL_PresentCapture(uint64_t tick)
     current.push_x=pwallx;current.push_y=pwally;current.push_dir=pwalldir;current.push_state=pwallstate;current.push_offset=(int32_t)(pwallpos*1024);
     current.level=(unsigned)(gamestate.episode*10+gamestate.mapon);current.view_size=ViewSize();current.simulation_clock=gamestate.TimeCount;
     current.ceiling=WL_CeilingColor();current.death_phase=GameDeathPresentation(&current.death_cursor);
-    current.weapon=(unsigned)gamestate.weapon;current.weapon_frame=(unsigned)gamestate.weaponframe;
+    /* Died uses DOS weapon=-1; snapshots retain a valid unsigned index
+       even though the died flag suppresses the held weapon entirely. */
+    current.weapon=gamestate.weapon<0?0U:(unsigned)gamestate.weapon;current.weapon_frame=(unsigned)gamestate.weaponframe;
     current.died=gamestate.died;current.victory=gamestate.victoryflag;current.demo=Demo_Active();
     for(const objtype *o=player.next;o;o=o->next) {
         unsigned slot=(unsigned)(o-objlist);if(slot>=MAXACTORS || !o->state) continue;

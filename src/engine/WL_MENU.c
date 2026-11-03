@@ -129,25 +129,26 @@ int HandleMenu(uint64_t ticks)
     if (enter || space) { (void)SD_PlaySound(SHOOTSND,0,0);return MainItems.curpos; }
     return -2;
 }
-bool Message(const char *text)
+bool Message(const char *text) { return MessageAtHeight(text,200); }
+bool MessageAtHeight(const char *text,unsigned area_height)
 {
     char line[256];
     int width = 0, height = 0, line_height = 0;
     fontnumber = 1;
     const char *p = text;
-    while (*p) {
+    for (;;) {
         const char *end = strchr(p,'\n'); size_t size = end ? (size_t)(end-p) : strlen(p);
         int w;
         if (size >= sizeof(line)) return CA_Fail("Dialog line too long");
         memcpy(line,p,size); line[size]=0;
         if (!VW_MeasurePropString(line,&w,&line_height)) return false;
-        if (w > width) width = w;
         height += line_height;
-        if (!end) break;
+        /* Preserve Message's original final-line padding rule. */
+        if(!end) { if(w+10>width) width=w+10;break; }
+        if(w>width) width=w;
         p = end+1;
     }
-    width += 10;
-    PrintY = 100 - height/2; PrintX = WindowX = 160-width/2;
+    PrintY = (int)(area_height/2) - height/2; PrintX = WindowX = 160-width/2;
     DrawWindow(WindowX-5,PrintY-5,width+10,height+10,TEXTCOLOR);
     DrawOutline(WindowX-5,PrintY-5,width+10,height+10,0,HIGHLIGHT);
     fontcolor = 0;
@@ -279,4 +280,63 @@ int HandleSoundSettings(void)
     }
     if((up || down || left || right || enter) && !DrawSoundSettings()) return -3;
     return 0;
+}
+
+/* WL_MENU.C endStrings and Confirm. Keep DOS operator precedence: the
+   original expression is first & (7 + (second & 1)), not (first & 7)+bit. */
+const char *MenuQuitMessage(unsigned first,unsigned second)
+{
+    static const char *const sayings[]={
+        "Dost thou wish to\nleave with such hasty\nabandon?",
+        "Chickening out...\nalready?",
+        "Press N for more carnage.\nPress Y to be a weenie.",
+        "So, you think you can\nquit this easily, huh?",
+        "Press N to save the world.\nPress Y to abandon it in\nits hour of need.",
+        "Press N if you are brave.\nPress Y to cower in shame.",
+        "Heroes, press N.\nWimps, press Y.",
+        "You are at an intersection.\nA sign says, 'Press Y to quit.'\n>",
+        "For guns and glory, press N.\nFor work and worry, press Y."
+    };
+    return sayings[first & (7U+(second & 1U))];
+}
+static int confirm_x,confirm_y,confirm_answer;
+static uint64_t confirm_next;
+static bool confirm_blink;
+bool BeginConfirmation(const char *text,uint64_t ticks) { return BeginConfirmationAtHeight(text,ticks,200); }
+bool BeginConfirmationAtHeight(const char *text,uint64_t ticks,unsigned height)
+{
+    if(!MessageAtHeight(text,height)) return false;
+    confirm_x=PrintX;confirm_y=PrintY;confirm_answer=0;
+    confirm_next=ticks+10;confirm_blink=false;IN_ClearKeysDown();return true;
+}
+int HandleConfirmation(uint64_t ticks)
+{
+    if(!confirm_answer) {
+        bool yes=IN_ConsumePress(sc_Y),no=IN_ConsumePress(sc_N)|IN_ConsumePress(sc_Escape);
+        if(yes || no) confirm_answer=yes?1:-1;
+    }
+    if(confirm_answer) {
+        if(Keyboard[sc_Y] || Keyboard[sc_N] || Keyboard[sc_Escape]) return 0;
+        int answer=confirm_answer;confirm_answer=0;IN_ClearKeysDown();
+        (void)SD_PlaySound(answer>0?SHOOTSND:ESCPRESSEDSND,0,0);return answer;
+    }
+    if(ticks>=confirm_next) {
+        uint64_t count=(ticks-confirm_next)/10+1;confirm_next+=count*10;
+        /* DOS first erases, then draws, at ten-tic intervals. */
+        bool draw=confirm_blink;if(count%2) confirm_blink=!confirm_blink;
+        if(count%2==0) draw=!draw;
+        VWB_Bar(confirm_x,confirm_y,8,13,TEXTCOLOR);
+        if(draw) { fontnumber=1;fontcolor=0;PrintX=confirm_x;PrintY=confirm_y;if(!US_Print("_")) return -3; }
+    }
+    return 0;
+}
+
+/* WL_MENU.C DrawLSAction and WL_MAIN.C DiskFlopAnim. Native operation
+   phases expose both original disk pictures without blocking event polling. */
+bool DrawSaveActivity(bool saving,bool second)
+{
+    DrawWindow(96,80,130,42,TEXTCOLOR);DrawOutline(96,80,130,42,0,HIGHLIGHT);
+    if(!VWB_DrawPic(104,85,C_DISKLOADING1PIC+(second?1:0))) return false;
+    fontnumber=1;fontcolor=0;PrintX=142;PrintY=93;
+    return US_Print(saving?"Saving...":"Loading...");
 }

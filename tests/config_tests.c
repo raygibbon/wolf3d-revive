@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,Config_Error(),SDL_GetError());exit(1); } } while(0)
+#include "finish_loading.h"
 static const char *directory;
 static SDL_Window *window;
 static void Pump(void) { CHECK(!VL_PollQuit());CHECK(VW_UpdateScreen()); }
@@ -112,7 +113,7 @@ static void Fuzz(void)
 static void Game(const char *data)
 {
     CHECK(CA_Startup(data));CHECK(Save_SetDirectory(directory));Display_Connect(VL_DisplayGet,VL_DisplaySet);
-    CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(10));
+    CHECK(DemoLoopStartup(0,true));CHECK(DemoLoopStartGame(0));CHECK(DemoLoop(10));TestFinishLoading(10);
     CHECK(Save_Write(0,"before config",true));unsigned rng=US_RndIndex();uint32_t t=gamestate.TimeCount;
     CHECK(Config_Save(directory));CHECK(Config_Load(directory)==CONFIG_LOADED);Await();CHECK(GameDrawPaused());CHECK(Save_Write(1,"after config",true));
     CHECK(US_RndIndex()==rng && gamestate.TimeCount==t);

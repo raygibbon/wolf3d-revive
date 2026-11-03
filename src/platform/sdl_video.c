@@ -110,7 +110,7 @@ static bool WorldPresentation(void)
     /* Intermission and end-text pages can live inside UI_GAME, but contain
        the original DOS interface rather than a widescreen world. */
     return GameRunning() && (DemoLoopState()==UI_GAME || DemoLoopState()==UI_DEMO) &&
-        !GameIntermission() && !GameVictoryPresentation();
+        !GameIntermission() && !GameVictoryPresentation() && !GameLoadingScreen();
 }
 static bool ApplyPresentation(void)
 {
@@ -435,11 +435,14 @@ bool VL_PollQuit(void)
         if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) quit = true;
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { memset(consumed,0,sizeof(consumed));IN_SDLFocusLost(); }
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) IN_SDLFocusGained();
-        else if (event.type == SDL_EVENT_MOUSE_MOTION) IN_SDLMouseMotion(event.motion.xrel);
+        else if (event.type == SDL_EVENT_MOUSE_MOTION) IN_SDLPointerMotion(event.motion.xrel,event.motion.yrel);
         else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
             IN_SDLMouseButton(event.button.button,event.type==SDL_EVENT_MOUSE_BUTTON_DOWN);
         else if(event.type==SDL_EVENT_KEY_DOWN || event.type==SDL_EVENT_KEY_UP) {
-            if(!Shortcut(&event.key) && (event.type==SDL_EVENT_KEY_UP || !event.key.repeat)) IN_SDLKey((unsigned)event.key.scancode,event.type==SDL_EVENT_KEY_DOWN);
+            if(!Shortcut(&event.key)) {
+                if(event.type==SDL_EVENT_KEY_DOWN && event.key.repeat) IN_SDLRepeat((unsigned)event.key.scancode);
+                else IN_SDLKey((unsigned)event.key.scancode,event.type==SDL_EVENT_KEY_DOWN);
+            }
         }
 
     }

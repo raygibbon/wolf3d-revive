@@ -13,22 +13,42 @@
 #include "WL_CONTROLS.h"
 #include "WL_DISPLAY.h"
 #include "WL_DEMO.h"
+#include "WL_HIGHSCORES.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 static ui_state state, next_state, signon_return;
 static bool leaving;
-static uint64_t deadline, transition_end, blink_next;
-static int cursor_x, cursor_y;
-static bool blink,resuming;
+static bool startup_mouse,startup_synth,startup_digi,allow_debug,debug_unlocked,godmode;
+static unsigned jukebox_bank,jukebox_choice;
+static char warp_input[3];
+static int jukebox_playing=-1;
+void DemoLoopStartupDevices(bool mouse,bool synthesis,bool digitized)
+{ startup_mouse=mouse;startup_synth=synthesis;startup_digi=digitized; }
+void DemoLoopAllowDebug(bool allow) { allow_debug=allow;debug_unlocked=false; }
+bool GameGodMode(void) { return godmode && !Demo_Active(); }
+static int score_rank=-1;
+static bool score_error;
+static uint64_t deadline, transition_end;
+static bool resuming;
+static uint32_t ui_random=0x574f4c46U;
+static const char *QuitMessage(uint64_t ticks)
+{
+    ui_random^=(uint32_t)ticks;ui_random=ui_random*1664525U+1013904223U;
+    unsigned first=ui_random>>24;ui_random=ui_random*1664525U+1013904223U;
+    return MenuQuitMessage(first,ui_random>>24);
+}
 static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
-static bool boss_music,boss_effects,choosequick;
+static bool boss_music,boss_effects,choosequick,pause_previous;
 static int quickslot=-1;
-static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_ERROR } quick_action;
+static bool disk_saving,disk_done;
+static uint64_t disk_at;
+static char disk_name[SAVE_DESCRIPTION];
+static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_NEW,QUICK_ERROR } quick_action;
 static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO || state==UI_RATING; }
 ui_state DemoLoopState(void) { return state; }
-void DemoLoopPrepareExit(void) { if(state==UI_BOSS) SD_SetEnabled(boss_music,boss_effects); }
+void DemoLoopPrepareExit(void) { if(state==UI_BOSS) SD_SetEnabled(boss_music,boss_effects);if(state==UI_PAUSE) SD_SetMusicPaused(pause_previous); }
 
 static bool GameError(void)
 {
@@ -67,12 +87,18 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
             if(audio.music!=song) SD_StartMusic(song); }
         else ok=GameStartSelected(ticks+10,episode,difficulty);
         if(!ok) return GameError() && VL_FadeIn(gamepal,10,ticks);
+        if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
     }
     if ((screen==UI_SAVE || screen==UI_LOAD) && !BeginSaveMenu(screen==UI_SAVE)) return false;
     if (screen == UI_TITLE || (screen==UI_RATING && previous==UI_SIGNON)) SD_StartMusic(7);
     if (screen == UI_MENU) SD_StartMusic(14);
-    if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
-    if(screen==UI_CONTROLS || screen==UI_SOUND) ResetMenuCursor(ticks);
+    if (screen == UI_SCORES || screen == UI_HIGHSCORES || screen==UI_RESULTS) SD_StartMusic(23);
+    if(screen==UI_RESULTS) {
+        score_error=false;
+        if(score_rank>=0) { if(!BeginHighScoreEntry(score_rank,ticks+30)) return false; }
+        else if(!DrawHighScores()) return false;
+    }
+    if(screen==UI_CONTROLS || screen==UI_SOUND || screen==UI_SAVE || screen==UI_LOAD) ResetMenuCursor(ticks);
     if(screen==UI_DISPLAY && !BeginDisplayMenu()) return false;
     if(screen==UI_CONTROLS && !(previous==UI_DISPLAY?ResumeControlsMenu():BeginControlsMenu())) return false;
     if (screen == UI_SOUND && !BeginSoundSettings()) return false;
@@ -86,17 +112,20 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
     if (screen == UI_EPISODE && !DrawNewSelection(true,episode)) return false;
     if (screen == UI_DIFFICULTY && !DrawNewSelection(false,difficulty)) return false;
-    unsigned steps = Attract() ? 30 : 10;
+    unsigned steps = Attract() || screen==UI_RESULTS ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
     deadline = ticks + steps + (screen==UI_RATING?7U*70U:screen == UI_TITLE ? 15U*70U : 10U*70U);
+    if(screen==UI_RESULTS) deadline=ticks+30+500;
     return true;
 }
 static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
 {
     leaving = true; next_state = next; transition_end = ticks + steps;
     IN_ClearKeysDown();
+    /* CP_Quit/CP_CheckQuick silence both streams before MenuFadeOut. */
+    if(next==UI_DONE) { SD_StartMusic(-1);SD_StopSound(); }
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
-    return VL_FadeOut(Attract() || state==UI_SIGNON ? 0 : 43,0,0,steps,ticks);
+    return VL_FadeOut(Attract() || state==UI_SIGNON || state==UI_RESULTS || next==UI_RESULTS ? 0 : 43,0,0,steps,ticks);
 }
 bool DemoLoopStartGame(uint64_t ticks) { quickslot=-1;episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
@@ -138,6 +167,11 @@ bool DemoLoopSignon(const char *path,uint64_t ticks)
         return CA_Fail("Sign-on image must contain exactly 64000 indexed pixels");
     signon_return=state;
     memcpy(framebuffer,pixels,sizeof(pixels));
+    /* WL_MENU.C IntroScreen hardware boxes: fill supported virtual devices
+       at the original coordinates. No conventional/EMS/XMS inventory exists. */
+    if(startup_mouse) VWB_Bar(164,82,12,2,14);
+    if(startup_synth && !startup_digi) VWB_Bar(164,128,12,2,14);
+    if(startup_digi) VWB_Bar(164,151,12,2,14);
     if(!SignonPrompt("Press a key",14)) return false;
     state=UI_SIGNON;leaving=false;IN_ClearKeysDown();
     SD_StartMusic(-1);
@@ -159,17 +193,24 @@ static bool ReturnPanel(uint64_t ticks)
 static bool QuickDialog(int action,uint64_t ticks)
 {
     quick_action=action;if(state!=UI_QUICK) quick_return=state;FinishPaletteShifts();
-    if(GameRunning() && !GameDrawPaused()) return false;
+    if(GameRunning() && state==UI_GAME && !GameDrawPaused()) return false;
     state=UI_QUICK;IN_ClearKeysDown();
-    const char *text=action==QUICK_END?"Are you sure you want\nto end the game? (Y/N)":
-        action==QUICK_QUIT?"Dost thou wish to\nleave with such hasty\nabandon? (Y/N)":
+    const char *text=action==QUICK_END?"Are you sure you want\nto end the game you\nare playing? (Y or N):":
+        action==QUICK_QUIT?QuitMessage(ticks):
+        action==QUICK_NEW?"You are currently in\na game. Continuing will\nerase old game. Ok?":
         action==QUICK_ERROR?"Quick operation failed.\nPress a key to return.":NULL;
     if(!text) {
         save_info info;Save_ReadInfo((unsigned)quickslot,&info);
         char message[128];(void)snprintf(message,sizeof(message),"Load Game called\n\"%s\"? (Y/N)",info.description);
-        return Message(message);
+        return BeginConfirmationAtHeight(message,ticks,quick_return==UI_GAME?160U:200U);
     }
-    (void)ticks;return Message(text);
+    return action==QUICK_ERROR?MessageAtHeight(text,quick_return==UI_GAME?160U:200U):BeginConfirmationAtHeight(text,ticks,quick_return==UI_GAME?160U:200U);
+}
+static bool QuickActivity(bool saving,const char *name,uint64_t ticks)
+{
+    disk_saving=saving;disk_done=false;disk_at=ticks+1;
+    (void)snprintf(disk_name,sizeof(disk_name),"%s",name?name:"");
+    state=UI_DISK;IN_ClearKeysDown();return DrawSaveActivity(saving,false);
 }
 static bool QuickSave(uint64_t ticks)
 {
@@ -178,8 +219,84 @@ static bool QuickSave(uint64_t ticks)
         quickslot=-1;choosequick=true;panel_return=UI_GAME;return Transition(UI_SAVE,ticks,10);
     }
     IN_ClearKeysDown();GamePauseClock(ticks);
-    if(!Save_Write((unsigned)quickslot,info.description,true)) return QuickDialog(QUICK_ERROR,ticks);
-    return true;
+    return QuickActivity(true,info.description,ticks);
+}
+static bool GameMessage(const char *text)
+{
+    FinishPaletteShifts();if(!GameDrawPaused() || !MessageAtHeight(text,160)) return false;
+    state=UI_MESSAGE;IN_ClearKeysDown();return true;
+}
+/* WL_MAIN.C DoJukebox: registered WL6 has three time-selected six-song banks. */
+static const unsigned jukebox_tracks[]={3,11,9,12,2,0,8,18,17,4,1,19,6,20,22,21,19,26};
+static const char *const jukebox_names[]={
+    "Get Them!","Searching","P.O.W.","Suspense","War March","Around The Corner!",
+    "Nazi Anthem","Lurking...","Going After Hitler","Pounding Headache","Into the Dungeons","Ultimate Conquest",
+    "Kill the S.O.B.","The Nazi Rap","Twelfth Hour","Zero Hour","Ultimate Conquest","Wolfpack"
+};
+static bool DrawJukebox(void)
+{
+    ClearMScreen();DrawStripes(10);DrawWindow(22,64,280,91,BKGDCOLOR);
+    if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
+    fontnumber=1;fontcolor=0x47;int w,h;
+    if(!VW_MeasurePropString("Robert's Jukebox",&w,&h)) return false;
+    PrintX=(320-w)/2;PrintY=15;if(!US_Print("Robert's Jukebox")) return false;
+    for(unsigned i=0;i<6;++i) {
+        fontcolor=i==jukebox_choice?HIGHLIGHT:(int)i==jukebox_playing?0x4a:TEXTCOLOR;
+        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(jukebox_names[jukebox_bank*6+i])) return false;
+    }
+    return VWB_DrawPic(24,68+(int)jukebox_choice*13,MenuCursorPicture());
+}
+bool DemoLoopJukebox(uint64_t ticks,unsigned bank)
+{
+    if(GameRunning() || bank>2) return CA_Fail("Jukebox unavailable");
+    jukebox_bank=bank;jukebox_choice=0;jukebox_playing=-1;
+    state=UI_JUKEBOX;leaving=false;ResetMenuCursor(ticks);IN_ClearKeysDown();
+    return DrawJukebox() && VL_FadeIn(gamepal,10,ticks);
+}
+static bool HiddenKeys(uint64_t ticks,bool *handled)
+{
+    *handled=true;
+    if(Keyboard[0x32] && Keyboard[0x26] && Keyboard[0x17]) {
+        /* WL_PLAY.C MLI: score reset and ten-minute time penalty are vital. */
+        gamestate.health=100;gamestate.ammo=99;gamestate.keys=3;gamestate.score=0;
+        gamestate.TimeCount+=42000U;GiveWeapon(wp_chaingun);
+        return GameMessage("You now have 100% Health,\n99 Ammo and both Keys!\n\nNote that you have basically\neliminated your chances of\ngetting a high score!");
+    }
+    if(allow_debug && Keyboard[0x0e] && Keyboard[0x2a] && Keyboard[0x38]) {
+        debug_unlocked=true;return GameMessage("Debugging keys are\nnow available!");
+    }
+    if(Keyboard[0x30] && Keyboard[0x1e] && Keyboard[0x14])
+        return GameMessage("Commander Keen is also\navailable from Apogee, but\nthen, you already know\nthat - right, Cheatmeister?!");
+    if(debug_unlocked && Keyboard[0x0f]) {
+        char text[160];
+        if(Keyboard[0x22]) { godmode=!godmode;return GameMessage(godmode?"God mode ON":"God mode OFF"); }
+        if(Keyboard[0x23]) { IN_ClearKeysDown();TakeDamage(16,NULL);return true; }
+        if(Keyboard[0x17]) {
+            GivePoints(100000);HealSelf(99);if(gamestate.bestweapon<wp_chaingun) GiveWeapon(gamestate.bestweapon+1);
+            GiveAmmo(50);return GameMessage("Free items!");
+        }
+        if(Keyboard[0x12]) { IN_ClearKeysDown();playstate=ex_completed;return true; }
+        if(Keyboard[0x21]) {
+            (void)snprintf(text,sizeof(text),"X:%ld\nY:%ld\nA:%d",(long)player.x,(long)player.y,player.angle);
+            return GameMessage(text);
+        }
+        if(Keyboard[0x2e]) {
+            unsigned active=0,inactive=0,used=0;
+            for(objtype *ob=player.next;ob;ob=ob->next) { if(ob->active) ++active;else ++inactive; }
+            for(unsigned i=0;i<statcount;++i) if(statobjlist[i].shapenum!=-1) ++used;
+            (void)snprintf(text,sizeof(text),"Total statics :%u\nIn use statics:%u\nDoors         :%u\nTotal actors  :%u\nActive actors :%u",statcount,used,doornum,active+inactive,active);
+            return GameMessage(text);
+        }
+        if(Keyboard[0x2d]) return GameMessage("Extra stuff!");
+        if(Keyboard[0x11]) {
+            warp_input[0]=0;
+            if(!GameMessage("Warp to which level(1-10):")) return false;
+            state=UI_WARP;return true;
+        }
+        if(Keyboard[0x19]) { state=UI_MESSAGE;IN_ClearKeysDown();return true; }
+        if(Keyboard[0x10]) return Transition(UI_DONE,ticks,10);
+    }
+    *handled=false;return true;
 }
 static bool StepDemoLoop(uint64_t ticks)
 {
@@ -192,6 +309,7 @@ static bool StepDemoLoop(uint64_t ticks)
             continue;
         }
         if(state==UI_SIGNON) {
+            if(IN_PressPending(0x32)) return DemoLoopJukebox(ticks,(unsigned)((ticks/7U)%3U));
             if(IN_AnyPressed()) {
                 if(!SignonPrompt("Working...",10)) return false;
                 if(!Transition(signon_return,ticks,10)) return false;
@@ -211,18 +329,32 @@ static bool StepDemoLoop(uint64_t ticks)
         }
         break;
     }
+    if(state==UI_GAME && GameLoading()) return StepPreloadGraphics(ticks) || GameError();
     if(VL_Fading()) return true;
     if(state==UI_DEMO) {
         if(!GameStep(ticks) || Demo_Finished()) { GameStop();return Transition(UI_TITLE,ticks,30); }
         return true;
     }
     if(state==UI_SIGNON || Attract()) return true;
-    if((state==UI_CONTROLS || state==UI_SOUND) && TickMenuCursor(ticks)) {
-        if(!(state==UI_CONTROLS?DrawControlsMenu():DrawSoundSettings())) return false;
+    if((state==UI_CONTROLS || state==UI_SOUND || state==UI_SAVE || state==UI_LOAD) && TickMenuCursor(ticks)) {
+        if(state==UI_CONTROLS && !DrawControlsMenu()) return false;
+        if(state==UI_SOUND && !DrawSoundSettings()) return false;
     }
+    if((state==UI_MENU || state==UI_SOUND || state==UI_CONTROLS || state==UI_DISPLAY || state==UI_VIEW || state==UI_EPISODE || state==UI_DIFFICULTY) && IN_ConsumePress(sc_Pause))
+        SD_SetMusicPaused(!SD_MusicPaused());
     if (state == UI_GAME) {
+        if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */
+        if(GameCanSave()) {
+            bool handled;if(!HiddenKeys(ticks,&handled)) return false;if(handled) return true;
+        }
+        if(GameCanSave() && IN_ConsumePress(sc_Pause)) {
+            FinishPaletteShifts();
+            if(!GameDrawPaused() || !VWB_DrawPic(128,64,PAUSEDPIC)) return false;
+            pause_previous=SD_MusicPaused();SD_SetMusicPaused(true);
+            IN_ClearKeysDown();state=UI_PAUSE;return true;
+        }
         if(GameCanSave()) {
             panel_return=UI_GAME;choosequick=false;
             if(IN_ConsumePress(0x3b)) { FinishPaletteShifts();return Transition(UI_BOSS,ticks,10); }
@@ -242,7 +374,11 @@ static bool StepDemoLoop(uint64_t ticks)
         }
         if (GameCanSave() && (CT_Pressed(CT_MENU) || IN_ConsumePress(sc_Escape))) { FinishPaletteShifts();return Transition(UI_MENU,ticks,10); }
         if (!GameStep(ticks)) return GameError();
-        if (GameFinished()) { GameStop(); return Transition(UI_SCORES,ticks,10); }
+        if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
+        if (GameFinished()) {
+            score_rank=HighScores_Insert((uint32_t)gamestate.score,(unsigned)gamestate.mapon+1,(unsigned)gamestate.episode);
+            GameStop();return Transition(UI_RESULTS,ticks,30);
+        }
         return true;
     }
     if (state == UI_MENU) {
@@ -254,14 +390,12 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action == changeview) return Transition(UI_VIEW,ticks,10);
         if (action == control) return Transition(UI_CONTROLS,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
-        if (action == newgame) { quickslot=-1;return Transition(UI_EPISODE,ticks,10); }
+        if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {
-            state = UI_CONFIRM; IN_ClearKeysDown();
-            /* Keep dialog choice outside gameplay RNG. */
-            if (!Message("Dost thou wish to\nleave with such hasty\nabandon?")) return false;
-            cursor_x = PrintX; cursor_y = PrintY; blink = false; blink_next = ticks + 10;
+            state = UI_CONFIRM;
+            return BeginConfirmation(QuitMessage(ticks),ticks);
         }
     } else if (state==UI_SAVE || state==UI_LOAD) {
         int action=HandleSaveMenu(ticks);
@@ -286,12 +420,63 @@ static bool StepDemoLoop(uint64_t ticks)
     } else if(state==UI_BOSS) {
         if(IN_ConsumePress(sc_Escape)) { SD_SetEnabled(boss_music,boss_effects);return ReturnPanel(ticks); }
     } else if(state==UI_QUICK) {
-        bool yes=IN_ConsumePress(sc_Y),no=IN_ConsumePress(sc_N)|IN_ConsumePress(sc_Escape);
-        if(yes || no || (quick_action==QUICK_ERROR && IN_AnyPressed())) {
+        int answer=quick_action==QUICK_ERROR?(IN_AnyPressed()?-1:0):HandleConfirmation(ticks);
+        if(answer==-3) return false;
+        if(answer) {
+            bool yes=answer>0;
             if(yes && quick_action==QUICK_QUIT) return Transition(UI_DONE,ticks,10);
-            if(yes && quick_action==QUICK_END) { GameStop();gamestate.lives=0;quickslot=-1;return Transition(UI_HIGHSCORES,ticks,10); }
-            if(yes && quick_action==QUICK_LOAD && !Save_Load((unsigned)quickslot,ticks)) return QuickDialog(QUICK_ERROR,ticks);
+            if(quick_action==QUICK_NEW) return Transition(yes?UI_DIFFICULTY:UI_MENU,ticks,10);
+            if(yes && quick_action==QUICK_END) {
+                /* CP_EndGame returns ex_died with zero lives to GameLoop. */
+                gamestate.lives=0;gamestate.died=true;killerobj=NULL;
+                quickslot=-1;resuming=true;return Transition(UI_GAME,ticks,10);
+            }
+            if(yes && quick_action==QUICK_LOAD) return QuickActivity(false,NULL,ticks);
             resuming=quick_return==UI_GAME;return Transition(quick_return,ticks,10);
+        }
+    } else if(state==UI_DISK) {
+        if(ticks<disk_at) return true;
+        if(disk_done) {
+            IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;
+            if(!GameDrawPaused()) return GameError();
+            return !GamePreloadPending() || StartPreloadGraphics(ticks) || GameError();
+        }
+        if(!DrawSaveActivity(disk_saving,true)) return false;
+        bool ok=disk_saving?Save_Write((unsigned)quickslot,disk_name,true):Save_Load((unsigned)quickslot,ticks);
+        if(!ok) { state=UI_GAME;return QuickDialog(QUICK_ERROR,ticks); }
+        disk_done=true;disk_at=ticks+1;IN_ClearKeysDown();
+    } else if(state==UI_JUKEBOX) {
+        bool redraw=TickMenuCursor(ticks);int direction=MenuNavigation();
+        if(direction) { jukebox_choice=(jukebox_choice+(direction<0?5U:1U))%6;MenuCursorMoved();redraw=true;(void)SD_PlaySound(MOVEGUN1SND,0,0); }
+        if(IN_ConsumePress(sc_Enter) || IN_ConsumePress(sc_Space)) {
+            jukebox_playing=(int)jukebox_choice;SD_StartMusic((int)jukebox_tracks[jukebox_bank*6+jukebox_choice]);
+            (void)SD_PlaySound(SHOOTSND,0,0);redraw=true;
+        }
+        if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return Transition(UI_TITLE,ticks,10); }
+        if(redraw && !DrawJukebox()) return false;
+    } else if(state==UI_WARP) {
+        if(IN_ConsumePress(sc_Escape)) { IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused(); }
+        if(IN_ConsumePress(sc_Enter)) {
+            unsigned floor=0;for(const char *p=warp_input;*p;++p) floor=floor*10U+(unsigned)(*p-'0');
+            if(floor>=1 && floor<=10) { if(!GameWarp(ticks,floor)) return GameError(); }
+            else { IN_ClearKeysDown();GamePauseClock(ticks); }
+            state=UI_GAME;
+            if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
+            return GameDrawPaused();
+        }
+        size_t n=strlen(warp_input);bool redraw=false;
+        if(IN_ConsumePress(0x0e) && n) { warp_input[--n]=0;redraw=true; }
+        char ch;while((ch=IN_NextASCII())!=0) if(ch>='0' && ch<='9' && n<2) { warp_input[n++]=ch;warp_input[n]=0;redraw=true; }
+        if(redraw) {
+            char prompt[80];(void)snprintf(prompt,sizeof(prompt),"Warp to which level(1-10):\n%s",warp_input);
+            if(!GameDrawPaused() || !MessageAtHeight(prompt,160)) return false;
+        }
+    } else if(state==UI_MESSAGE) {
+        if(IN_AnyPressed()) { IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused(); }
+    } else if(state==UI_PAUSE) {
+        if(IN_AnyPressed()) {
+            SD_SetMusicPaused(pause_previous);IN_ClearKeysDown();
+            GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused();
         }
     } else if (state == UI_SOUND) {
         int action=HandleSoundSettings();
@@ -302,22 +487,33 @@ static bool StepDemoLoop(uint64_t ticks)
         int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
+        if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);
+        if(action==1 && !choosing_episode) quickslot=-1;
         if (action==1) return Transition(choosing_episode ? UI_DIFFICULTY : UI_GAME,ticks,10);
+    } else if(state==UI_RESULTS) {
+        if(score_error) { if(IN_AnyPressed()) return Transition(UI_TITLE,ticks,30); }
+        else if(score_rank>=0) {
+            int result=HandleHighScoreEntry(ticks);if(result<0) return false;
+            if(result) {
+                score_rank=-1;
+                if(!HighScores_Save()) {
+                    score_error=true;IN_ClearKeysDown();
+                    return Message("Cannot save high scores.\nRanking retained this session.\nPress a key to continue.");
+                }
+                return Transition(UI_TITLE,ticks,30);
+            }
+        } else if(IN_AnyPressed() || ticks>=deadline) return Transition(UI_TITLE,ticks,30);
     } else if (state == UI_ERROR && IN_AnyPressed()) {
         return Transition(UI_MENU,ticks,10);
     } else if (state == UI_SCORES && IN_AnyPressed()) {
         return Transition(UI_MENU,ticks,10);
     } else if (state == UI_CONFIRM) {
-        if (IN_ConsumePress(sc_Y)) return Transition(UI_DONE,ticks,10);
-        else if (IN_ConsumePress(sc_N) || IN_ConsumePress(sc_Escape)) {
-            state = UI_MENU; IN_ClearKeysDown();
-            if (!SetupControlPanel(ticks)) return false;
-        } else if (ticks >= blink_next) {
-            uint64_t count = (ticks - blink_next) / 10 + 1;
-            blink_next += count * 10;
-            if (count % 2) blink = !blink;
-            VWB_Bar(cursor_x,cursor_y,8,13,TEXTCOLOR);
-            if (blink) { PrintX = cursor_x; PrintY = cursor_y; fontcolor = 0; if (!US_Print("_")) return false; }
+        int answer=HandleConfirmation(ticks);
+        if(answer==-3) return false;
+        if(answer>0) return Transition(UI_DONE,ticks,10);
+        if(answer<0) {
+            state=UI_MENU;
+            if(!SetupControlPanel(ticks)) return false;
         }
     }
     IN_ClearPressed();CT_EndTic();

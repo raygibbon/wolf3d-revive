@@ -42,6 +42,8 @@ static void Key(bool down,bool repeat)
 static void Prompt(const char *text,unsigned char color)
 {
     memcpy(expected,raw,sizeof(raw));
+    for(unsigned y=82;y<84;++y) memset(expected+y*320+164,14,12);
+    for(unsigned y=151;y<153;++y) memset(expected+y*320+164,14,12);
     for(unsigned y=189;y<200;++y) memset(expected+y*320,raw[0],300);
     CHECK(CA_CacheGrChunk(STARTFONT));const unsigned char *font=grsegs[STARTFONT];
     unsigned height=font[0]+256U*font[1],width=0;
@@ -91,6 +93,7 @@ int main(int argc,char **argv)
     CHECK(argc==5);MM_Startup();CHECK(CA_Startup(argv[1]) && SD_Startup(48000) && VL_Startup() && VL_SetPalette(gamepal,768));
     int count;SDL_Window **windows=SDL_GetWindows(&count);CHECK(windows && count==1);window=windows[0];SDL_free(windows);
     renderer=SDL_GetRenderer(window);CHECK(renderer);CHECK(SDL_AddEventWatch(Watch,NULL));
+    DemoLoopStartupDevices(true,true,true);
     CHECK(DemoLoopStartup(0,false) && DemoLoopIntro(0));ui_state next=DemoLoopState();
     CHECK(next==UI_TITLE || next==UI_RATING);
     unsigned rng=US_RndIndex();uint32_t time=gamestate.TimeCount;

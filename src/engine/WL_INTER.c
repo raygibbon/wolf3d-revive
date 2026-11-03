@@ -1,25 +1,30 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_INTER.C DrawHighScores: original default table from ID_US_1.C.
-   No save/config import or score-entry gameplay has been ported. */
+   Native scores keep original qualification and fixed-width number glyphs. */
 #include "WL_MENU.h"
 #include "ID_VH.h"
 #include "ID_CA.h"
 #include "ID_US_1.h"
+#include "WL_HIGHSCORES.h"
+#include <stdio.h>
 bool DrawHighScores(void)
 {
-    static const char *names[] = {"id software-'92", "Adrian Carmack", "John Carmack", "Kevin Cloud", "Tom Hall", "John Romero", "Jay Wilbur"};
-    const char level[] = {(char)130,0};
-    const char score[] = {(char)130,(char)129,(char)129,(char)129,(char)129,0};
+    const high_score *scores=HighScores_Table();
     ClearMScreen(); DrawStripes(10);
     if (!VWB_DrawPic(48,0,HIGHSCORESPIC) || !VWB_DrawPic(32,68,C_NAMEPIC) ||
         !VWB_DrawPic(160,68,C_LEVELPIC) || !VWB_DrawPic(224,68,C_SCOREPIC)) return false;
     fontnumber = 0; fontcolor = 15;
     for (int i = 0; i < 7; ++i) {
-        int width, height;
+        int width, height;char level[16],score[16],episode[16];
+        (void)snprintf(level,sizeof(level),"%u",scores[i].completed);
+        (void)snprintf(score,sizeof(score),"%u",scores[i].score);
+        (void)snprintf(episode,sizeof(episode),"E%u/L",scores[i].episode+1);
+        for(char *p=level;*p;++p) *p=(char)((unsigned char)*p+129U-'0');
+        for(char *p=score;*p;++p) *p=(char)((unsigned char)*p+129U-'0');
         PrintX = 32; PrintY = 76 + 16*i;
-        if (!US_Print(names[i]) || !VW_MeasurePropString(level,&width,&height)) return false;
+        if (!US_Print(scores[i].name) || !VW_MeasurePropString(level,&width,&height)) return false;
         PrintX = 22*8-width-6;
-        if (!US_Print("E1/L") || !US_Print(level) || !VW_MeasurePropString(score,&width,&height)) return false;
+        if (!US_Print(episode) || !US_Print(level) || !VW_MeasurePropString(score,&width,&height)) return false;
         PrintX = 34*8-8-width;
         if (!US_Print(score)) return false;
     }
@@ -209,6 +214,75 @@ bool StepLevelIntermission(uint64_t ticks,bool acknowledge,bool *leave)
         for(unsigned stage=1;stage<=3;++stage) if(completion.stage<stage)
             VWB_Bar(29*8,(12+(int)stage*2)*8,64,16,127);
         if(!Breathe(ticks)) return false;
+    }
+    return true;
+}
+
+/* WL_INTER.C PreloadGraphics/PreloadUpdate, resumed by the frontend so SDL
+   keeps polling events. Native heap caching replaces DOS main/EMS/XMS limits.
+   Count only present, uncached VSWAP pages, just as PM_Preload does. */
+#include "ID_PM.h"
+#include "WL_SAVE.h"
+static struct {
+    unsigned phase,page,current,total;
+    uint64_t until;
+} preload;
+bool GameLoading(void) { return preload.phase!=0; }
+bool GameLoadingScreen(void) { return preload.phase!=0 && preload.phase<5; }
+void ResetPreloadGraphics(void) { memset(&preload,0,sizeof(preload)); }
+void PreloadUpdate(unsigned current,unsigned total)
+{
+    unsigned w=total?(unsigned)(UINT64_C(214)*current/total):0;
+    VWB_Bar(53,101,214,2,0);
+    if(w) {
+        VWB_Bar(53,101,(int)w,2,0x37);
+        VWB_Bar(53,101,(int)w-1,1,0x32);
+    }
+}
+bool StartPreloadGraphics(uint64_t ticks)
+{
+    ResetPreloadGraphics();GamePreloadConsumed();
+    VWB_Bar(0,0,320,160,127);
+    if(!VWB_DrawPic(48,56,GETPSYCHEDPIC)) return false;
+    for(unsigned p=0;p<ChunksInFile;++p)
+        if(PM_PagePresent(p) && !PM_PageCached(p)) ++preload.total;
+    preload.phase=1;preload.until=ticks+30;IN_ClearKeysDown();
+    return VL_FadeOut(0,0,0,0,ticks) && VL_FadeIn(gamepal,30,ticks);
+}
+bool StepPreloadGraphics(uint64_t ticks)
+{
+    VL_FadeStep(ticks);
+    if(preload.phase==1) {
+        if(ticks<preload.until) return true;
+        preload.phase=2;
+    }
+    if(preload.phase==2) {
+        /* At most 32 actual page reads per frontend update. No invented
+           percentage or artificial minimum loading duration. */
+        unsigned loaded=0;
+        while(preload.page<ChunksInFile && loaded<32) {
+            unsigned p=preload.page++;
+            if(!PM_PagePresent(p) || PM_PageCached(p)) continue;
+            if(!PM_GetPage(p,NULL)) return false;
+            ++loaded;++preload.current;PreloadUpdate(preload.current,preload.total);
+        }
+        if(preload.page<ChunksInFile) return true;
+        preload.phase=3;preload.until=ticks+70;IN_ClearKeysDown();
+    }
+    if(preload.phase==3) {
+        if(ticks<preload.until && !IN_AnyPressed()) return true;
+        IN_ClearKeysDown();preload.phase=4;preload.until=ticks+30;
+        return VL_FadeOut(0,0,0,30,ticks);
+    }
+    if(preload.phase==4 && ticks>=preload.until) {
+        /* DOS restores the border while black before revealing the level. */
+        if(!GameDrawPaused()) return false;
+        /* Select gameplay geometry while black, before its first fade frame. */
+        preload.phase=5;preload.until=ticks+30;
+        return VL_FadeIn(gamepal,30,ticks);
+    }
+    if(preload.phase==5 && ticks>=preload.until) {
+        ResetPreloadGraphics();IN_ClearKeysDown();GamePauseClock(ticks);
     }
     return true;
 }

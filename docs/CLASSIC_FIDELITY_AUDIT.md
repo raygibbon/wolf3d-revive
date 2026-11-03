@@ -1,8 +1,10 @@
 # Classic DOS fidelity restoration
 
 Classic targets the original DOS rules; this branch does **not** claim complete
-DOS equivalence. Work is on `feature/classic-fidelity-restoration`, PR #5.
-See [implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
+DOS equivalence. The initial restoration was `feature/classic-fidelity-restoration`,
+PR #5. Current completion work is on `feature/12-dos-fidelity-completion`;
+see the [Milestone 12 checklist and verification matrix](MILESTONE12_DOS_FIDELITY_BACKLOG.md)
+and [initial implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
 
 ## Restored in this pass
 
@@ -40,21 +42,27 @@ See [implementation and verification](CLASSIC_FIDELITY_RESTORATION.md).
    other release layouts is not implemented. The retained owned help article
    contains picture references that do not fit this GOODTIMES picture layout;
    it is not silently remapped or drawn out of bounds.
-3. End Game releases the current game and returns to high scores/attract mode.
-   The original Game Over card sequence, high-score name entry/persistence,
-   exact randomized quit phrases, quick-operation Saving/Loading interstitials
-   and some confirmation animation/sounds still need work. Dialog selection
-   intentionally does not consume gameplay RNG.
+3. Milestone 12 restores all nine quit sayings with the original C selection
+   precedence, confirmation blinking/release/sounds, Pause, new-game refusal,
+   high-score qualification/editing/persistence and Saving/Loading pictures.
+   End Game now follows final death into qualification and attract mode.
+   `WL_GAME.C GameLoop` has **no separate Game Over card** in this edition.
+   The 20 executed-DOS dialog frames match pixel-for-pixel. Disk-flip timing
+   follows native operation phases, not DOS serialization chunks; UI entropy
+   intentionally stays separate from gameplay RNG.
 4. Six portable save slots and format version 1 remain; original DOS ten-slot
    files are not introduced. Settings, including view size, now persist separately
    in [Milestone 6F TOML preferences](MILESTONE6F.md).
 5. Full VGA/CRT pixel equivalence is not established. Milestone 6G corrects
    actor projection to DOS `centerx=width/2-1` and verifies traced visibility at
    the default size. Safe clipping of death-fizzle edge pixels remains.
-6. Cheats/debug options, release-specific help/menu layouts, complete original
-   mouse-driven control-panel navigation, and exhaustive keyboard/menu/audio
-   parity remain unaudited or incomplete. Classic/Modern here are input
-   presets, not a new Enhanced gameplay mode.
+6. Milestone 12 adds MLI/BAT, Robert's Jukebox, supported portable debug keys,
+   device-capability sign-on lights, DOS mouse navigation and text editing.
+   Physical ISA/gameport/EMS/XMS diagnostics and native joystick/gamepad input
+   remain unsupported. Non-GOODTIMES/SPEAR/localized menus need matching data
+   and separate verification. Full physical DOS audio/CRT parity remains open.
+   Classic/Modern are input presets; Enhanced is a presentation/renderer mode,
+   sharing the original simulation. No separate gameplay mode was introduced.
 
 ## Protection and verification
 
@@ -65,3 +73,13 @@ keys, pause/return, quick-operation errors, demo headers/cadence/input isolation
 missing/corrupt streams and owned data. Full regression, sanitizer and available
 Windows results and hardware limitations are recorded in
 [CLASSIC_FIDELITY_RESTORATION.md](CLASSIC_FIDELITY_RESTORATION.md).
+
+Milestone 12 additionally covers editor repeats, atomic high-score files,
+original-DOS dialog pixels under DOSBox, native 1920×1200 aspect readback and
+strict Linux/MinGW builds. Current full-suite results and precise remaining
+limits are recorded in the linked milestone document.
+
+Final Milestone 12 validation passed 146 normal and 146 ASan/UBSan tests without
+skips or findings, plus the final completion-timing follow-ups. WOLFSRC remains
+unchanged; see the milestone matrix for executed-DOS, native display and Wine
+results and the physical hardware/edition limitations.

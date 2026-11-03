@@ -14,8 +14,11 @@ static save_info entries[SAVE_SLOTS];
 static unsigned selected;
 static bool saving;
 unsigned SaveMenuSelected(void) { return selected; }
-static enum { PICK_SLOT,OVERWRITE,EDIT_NAME,SLOT_ERROR } phase;
+static enum { PICK_SLOT,OVERWRITE,EDIT_NAME,SLOT_ERROR,SLOT_WORK } phase;
+bool SaveMenuEditing(void) { return phase==EDIT_NAME; }
 static char name[SAVE_DESCRIPTION];
+static uint64_t work_at;
+static bool work_done;
 static bool DrawSlots(void)
 {
     ClearMScreen();DrawStripes(10);
@@ -73,9 +76,18 @@ int HandleSaveMenu(uint64_t ticks)
         if(IN_AnyPressed()) { phase=PICK_SLOT;IN_ClearKeysDown();if(!DrawSlots()) return -3; }
         return 0;
     }
+    if(phase==SLOT_WORK) {
+        if(ticks<work_at) return 0;
+        if(work_done) return 1;
+        if(!DrawSaveActivity(saving,true)) return -3;
+        bool ok=saving?Save_Write(selected,name,entries[selected].status!=SAVE_EMPTY):Save_Load(selected,ticks);
+        if(!ok) return Error(CA_Error())?0:-3;
+        work_done=true;work_at=ticks+1;IN_ClearKeysDown();return 0;
+    }
     if(phase==OVERWRITE) {
-        if(IN_ConsumePress(sc_Y)) { if(!BeginName()) return -3; }
-        else if(IN_ConsumePress(sc_N) || IN_ConsumePress(sc_Escape)) { phase=PICK_SLOT;IN_ClearKeysDown();if(!DrawSlots()) return -3; }
+        int answer=HandleConfirmation(ticks);if(answer==-3) return -3;
+        if(answer>0) { if(!BeginName()) return -3; }
+        else if(answer<0) { phase=PICK_SLOT;if(!DrawSlots()) return -3; }
         return 0;
     }
     if(phase==EDIT_NAME) {
@@ -92,23 +104,24 @@ int HandleSaveMenu(uint64_t ticks)
         }
         if(IN_ConsumePress(sc_Enter)) {
             if(!*name) (void)snprintf(name,sizeof(name),"E%d Floor %d",gamestate.episode+1,gamestate.mapon+1);
-            if(!Save_Write(selected,name,entries[selected].status!=SAVE_EMPTY)) return Error(CA_Error())?0:-3;
-            (void)SD_PlaySound(SHOOTSND,0,0);return 1;
+            phase=SLOT_WORK;work_at=ticks+1;work_done=false;IN_ClearKeysDown();
+            (void)SD_PlaySound(SHOOTSND,0,0);return DrawSaveActivity(true,false)?0:-3;
         }
         return !redraw || DrawSlots()?0:-3;
     }
     if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
-    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     if(up || down) { selected=(selected+(up?SAVE_SLOTS-1U:1U))%SAVE_SLOTS;(void)SD_PlaySound(MOVEGUN1SND,0,0);if(!DrawSlots()) return -3; }
     if(IN_ConsumePress(sc_Enter) || IN_ConsumePress(sc_Space)) {
         if(saving) {
             if(!GameCanSave()) return Error("No active game can be saved.")?0:-3;
             if(entries[selected].status==SAVE_EMPTY) return BeginName()?0:-3;
             phase=OVERWRITE;IN_ClearKeysDown();fontnumber=1;
-            return Message(entries[selected].status==SAVE_VALID?"Overwrite this save?\nY / N":"Replace this invalid save?\nY / N")?0:-3;
+            return BeginConfirmation(entries[selected].status==SAVE_VALID?"There's already a game\nsaved at this position.\n      Overwrite?":"Replace this invalid save?\nY / N",ticks)?0:-3;
         }
-        if(!Save_Load(selected,ticks)) return Error(CA_Error())?0:-3;
-        return 1;
+        if(entries[selected].status!=SAVE_VALID) return Error("This slot cannot be loaded.")?0:-3;
+        phase=SLOT_WORK;work_at=ticks+1;work_done=false;IN_ClearKeysDown();
+        (void)SD_PlaySound(SHOOTSND,0,0);return DrawSaveActivity(false,false)?0:-3;
     }
     return 0;
 }

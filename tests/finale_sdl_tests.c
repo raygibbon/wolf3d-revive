@@ -13,11 +13,12 @@
 #include <stdlib.h>
 #include <math.h>
 #define CHECK(x) do { if (!(x)) { fprintf(stderr,"%d: %s (%s; %s)\n",__LINE__,#x,CA_Error(),VL_Error());exit(1); } } while (0)
+#include "finish_loading.h"
 static uint64_t ticks;
 static unsigned ep;
 static void Step(void)
 {
-    CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));Audio_Pump();CHECK(VW_UpdateScreen());
+    CHECK(!VL_PollQuit());CHECK(DemoLoop(++ticks));if(GameLoading()) TestFinishLoading(ticks);Audio_Pump();CHECK(VW_UpdateScreen());
     CHECK(DemoLoopState()!=UI_ERROR);
 }
 static void Steps(unsigned count) { while (count--) Step(); }
@@ -87,7 +88,7 @@ static void CollectKeyAndExit(void)
 static void Episode(bool owned)
 {
     CHECK(DemoLoopStartGame(ticks));Steps(11);
-    CHECK(GameStartSelected(ticks,ep,2));ShutdownGameLevel();gamestate.mapon=8;CHECK(SetupGameLevel());SD_StartMusic(SD_LevelMusic(ep,8));
+    CHECK(GameStartSelected(ticks,ep,2));ShutdownGameLevel();gamestate.mapon=8;CHECK(SetupGameLevel());CHECK(StartPreloadGraphics(ticks));TestFinishLoading(ticks);SD_StartMusic(SD_LevelMusic(ep,8));
     const int bosses[]={bossobj,schabbobj,mechahitlerobj,giftobj,gretelobj,fatobj};
     objtype *boss=Find(bosses[ep]);CHECK(boss);Arrange(boss);Capture("boss-start");
     GiveWeapon(wp_chaingun);gamestate.ammo=99;int initial=boss->hitpoints;Key(SDL_SCANCODE_LCTRL,true);
@@ -119,9 +120,11 @@ static void Episode(bool owned)
     unsigned map=(unsigned)(ep*10+8);CHECK(CA_Map()->number==map);
     Tap(SDL_SCANCODE_RETURN);Capture("ending-page1");
     Tap(SDL_SCANCODE_RIGHT);Capture("ending-page2");
-    Tap(SDL_SCANCODE_LEFT);Tap(SDL_SCANCODE_ESCAPE);Steps(21);
-    CHECK(DemoLoopState()==UI_SCORES && !CA_Map() && !player.next);
-    Tap(SDL_SCANCODE_RETURN);Steps(21);CHECK(DemoLoopState()==UI_MENU);
+    Tap(SDL_SCANCODE_LEFT);Tap(SDL_SCANCODE_ESCAPE);Steps(61);
+    CHECK(DemoLoopState()==UI_RESULTS && !CA_Map() && !player.next);
+    Tap(SDL_SCANCODE_ESCAPE);Steps(61);
+    if(DemoLoopState()==UI_RESULTS) { Tap(SDL_SCANCODE_SPACE);Steps(61); }
+    CHECK(DemoLoopState()==UI_TITLE);
     printf("E%u controlled %s weapon fight, finale, two article pages and menu return passed.\n",ep+1,owned ? "owned" : "synthetic");
 }
 int main(int argc,char **argv)

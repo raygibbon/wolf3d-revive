@@ -34,12 +34,21 @@ bool BeginControlsMenu(void);
 bool ResumeControlsMenu(void);
 bool DrawControlsMenu(void);
 int HandleControlsMenu(void);
+bool DrawSaveActivity(bool saving,bool second);
 bool BeginSaveMenu(bool saving);
 int HandleSaveMenu(uint64_t ticks);
 unsigned SaveMenuSelected(void);
+bool SaveMenuEditing(void);
 bool DrawSoundSettings(void);
 bool BeginSoundSettings(void);
 int HandleSoundSettings(void);
 bool Message(const char *text);
+bool MessageAtHeight(const char *text,unsigned height);
+/* Separate UI entropy: DOS quit selection must never advance gameplay RNG. */
+const char *MenuQuitMessage(unsigned first,unsigned second);
+bool BeginConfirmation(const char *text,uint64_t ticks);
+bool BeginConfirmationAtHeight(const char *text,uint64_t ticks,unsigned height);
+/* -3 error, -1 cancelled, 0 pending, 1 accepted; waits for answer release. */
+int HandleConfirmation(uint64_t ticks);
 bool DrawHighScores(void);
 #endif
