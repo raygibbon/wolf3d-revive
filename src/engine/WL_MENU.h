@@ -17,6 +17,7 @@ typedef struct { int active; const char *string; } CP_itemtype;
 extern CP_iteminfo MainItems;
 extern CP_itemtype MainMenu[MENU_COUNT];
 int MenuCursorPicture(void);
+int MenuNavigation(void); /* Up/down edges and original 20-tick held repeat. */
 void MenuCursorMoved(void);
 void ResetMenuCursor(uint64_t ticks);
 bool TickMenuCursor(uint64_t ticks);

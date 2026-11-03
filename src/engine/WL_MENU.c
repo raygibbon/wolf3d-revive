@@ -19,14 +19,26 @@ CP_itemtype MainMenu[MENU_COUNT] = {
     {1,"Change View"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
 };
 static int shape = C_CURSOR1PIC;
-static uint64_t gun_next, move_next;
+static uint64_t gun_next, move_next,menu_time,navigation_next;
 static bool gun_first;
 int MenuCursorPicture(void) { return shape; }
 void MenuCursorMoved(void) { shape=C_CURSOR1PIC; }
 void ResetMenuCursor(uint64_t ticks)
-{ shape=C_CURSOR1PIC;gun_first=true;gun_next=ticks+9; }
+{ shape=C_CURSOR1PIC;gun_first=true;gun_next=ticks+9;menu_time=navigation_next=ticks; }
+int MenuNavigation(void)
+{
+    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    bool held=Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow];
+    if(!held) navigation_next=menu_time;
+    if(up || down || (held && menu_time>=navigation_next)) {
+        navigation_next=menu_time+20;
+        return up || (!down && Keyboard[sc_UpArrow])?-1:1;
+    }
+    return 0;
+}
 bool TickMenuCursor(uint64_t ticks)
 {
+    menu_time=ticks;
     if (ticks >= gun_next) {
         /* Original first 8-tic blink, then alternate 8/70-tic intervals. */
         if (gun_first) { shape = C_CURSOR2PIC; gun_next += 9; gun_first = false; }
@@ -234,7 +246,7 @@ bool BeginSoundSettings(void)
 { sound_choice=volume_choice=0;volume_page=false;MenuCursorMoved();IN_ClearKeysDown();return DrawSoundSettings(); }
 int HandleSoundSettings(void)
 {
-    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
     bool enter=IN_ConsumePress(sc_Enter)|IN_ConsumePress(sc_Space);
     if(IN_ConsumePress(sc_Escape)) {

@@ -89,7 +89,10 @@ static void Menus(const char *directory)
 {
     CHECK(SetupControlPanel(0));Capture(directory,"main");
     CT_Reset(CT_CLASSIC);ResetMenuCursor(0);CHECK(BeginControlsMenu());ControlOracle(0,false,C_CURSOR1PIC);Capture(directory,"control-off");
-    Control(sc_DownArrow);ControlOracle(5,false,C_CURSOR1PIC); /* All unavailable device rows skipped. */
+    IN_KeyEvent(sc_DownArrow,true);CHECK(HandleControlsMenu()==0);ControlOracle(5,false,C_CURSOR1PIC);
+    (void)TickMenuCursor(19);CHECK(HandleControlsMenu()==0);ControlOracle(5,false,C_CURSOR1PIC);
+    (void)TickMenuCursor(20);CHECK(HandleControlsMenu()==0);ControlOracle(0,false,C_CURSOR1PIC);
+    IN_KeyEvent(sc_DownArrow,false);Control(sc_DownArrow);ControlOracle(5,false,C_CURSOR1PIC);
     Control(sc_UpArrow);Control(sc_Enter);ControlOracle(0,true,C_CURSOR1PIC);
     Control(sc_DownArrow);ControlOracle(4,true,C_CURSOR1PIC);Control(sc_Enter);
     unsigned sensitivity=CT_Sensitivity();Control(sc_RightArrow);CHECK(CT_Sensitivity()==sensitivity+1);

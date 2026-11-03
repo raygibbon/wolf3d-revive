@@ -115,7 +115,7 @@ static int HandleOptions(void)
         if(bindings_page) { bindings_page=false;return Draw()?0:-3; }
         return -1;
     }
-    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
     bool enter=IN_ConsumePress(sc_Enter);
     if(up || down) { MenuCursorMoved();(void)SD_PlaySound(MOVEGUN1SND,0,0); }
@@ -157,7 +157,7 @@ int HandleControlsMenu(void)
         if(page==CONTROL_ROOT) return -1;
         page=CONTROL_ROOT;IN_ClearKeysDown();return Draw()?0:-3;
     }
-    bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
+    int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
     bool enter=IN_ConsumePress(sc_Enter)|IN_ConsumePress(sc_Space);
     if(enter) (void)SD_PlaySound(SHOOTSND,0,0);
