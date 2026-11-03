@@ -15,7 +15,7 @@
 #include "WL_DEMO.h"
 #include <stdio.h>
 #include <string.h>
-static ui_state state, next_state;
+static ui_state state, next_state, signon_return;
 static bool leaving;
 static uint64_t deadline, transition_end, blink_next;
 static int cursor_x, cursor_y;
@@ -107,6 +107,25 @@ bool DemoLoopStartup(uint64_t ticks, bool menu)
     if (!VL_FadeOut(0,0,0,0,ticks)) return false;
     return ChangeScreen(menu ? UI_MENU : UI_TITLE,ticks);
 }
+bool DemoLoopSignon(const char *path,uint64_t ticks)
+{
+    /* Original DOS introscn was linked into the executable, not WL6.
+       A user-supplied 320x200 raw indexed image can restore its appearance.
+       Never synthesize DOS hardware detection data. */
+    if(!path || GameRunning()) return true;
+    FILE *file=fopen(path,"rb");
+    if(!file) return true; /* Optional art: existing rating/title still work. */
+    unsigned char pixels[320U*200U];
+    size_t count=fread(pixels,1,sizeof(pixels),file);
+    int extra=fgetc(file),read_error=ferror(file);
+    (void)fclose(file);
+    if(read_error || count!=sizeof(pixels) || extra!=EOF)
+        return CA_Fail("Sign-on image must contain exactly 64000 indexed pixels");
+    signon_return=state;
+    memcpy(framebuffer,pixels,sizeof(pixels));
+    state=UI_SIGNON;leaving=false;IN_ClearKeysDown();
+    return VL_FadeIn(gamepal,10,ticks);
+}
 bool DemoLoopIntro(uint64_t ticks)
 {
     /* WL_INTER.C PG13: the sign-on image linked into DOS is a different asset.
@@ -155,6 +174,13 @@ static bool StepDemoLoop(uint64_t ticks)
             if (!ChangeScreen(next_state,transition_end)) return false;
             continue;
         }
+        if(state==UI_SIGNON) {
+            if(IN_AnyPressed()) {
+                if(!Transition(signon_return,ticks,10)) return false;
+                continue;
+            }
+            break;
+        }
         if(state==UI_RATING && (IN_AnyPressed() || ticks>=deadline)) {
             if(!Transition(UI_TITLE,ticks>=deadline?deadline:ticks,30)) return false;
             continue;
@@ -172,7 +198,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(!GameStep(ticks) || Demo_Finished()) { GameStop();return Transition(UI_TITLE,ticks,30); }
         return true;
     }
-    if(Attract()) return true;
+    if(state==UI_SIGNON || Attract()) return true;
     if((state==UI_CONTROLS || state==UI_SOUND) && TickMenuCursor(ticks)) {
         if(!(state==UI_CONTROLS?DrawControlsMenu():DrawSoundSettings())) return false;
     }
