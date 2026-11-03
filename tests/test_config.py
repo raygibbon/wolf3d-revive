@@ -78,6 +78,16 @@ class ConfigTests(unittest.TestCase):
         s=self.run_config('roundtrip');self.assertTrue(s['fullscreen']);self.assertTrue(s['integer']);self.assertEqual((s['width'],s['height']),(1000,600))
         parsed=tomllib.loads(self.path.read_text());self.assertEqual(parsed['schema_version'],1);self.assertEqual(parsed['classic_controls']['bind_0_0'],8);self.assertEqual(parsed['modern_controls']['bind_0_0'],22)
         self.write('[display]\nwindow_width=1\nwindow_height=1\ninteger_scaling=true');tiny=self.run_config();self.assertEqual((tiny['width'],tiny['height'],tiny['integer']),(1,1,1))
+    def test_window_aspects_survive_restart(self):
+        for width,height in ((640,480),(960,720),(1280,960),(960,540),(1280,720),(1600,900),(1920,1080),
+                             (960,600),(1280,800),(1600,1000),(1920,1200),(1680,720),(2560,1080),
+                             (1920,540),(2560,720),(1001,601)):
+            with self.subTest(size=(width,height)):
+                self.write(f'[display]\nwindow_width={width}\nwindow_height={height}\nrenderer="high_resolution"\naspect_ratio="16:10"\ninteger_scaling=true\n')
+                self.run_config('migrate')
+                restored=self.run_config()
+                self.assertEqual((restored['width'],restored['height'],restored['aspect'],restored['integer'],restored['high_resolution']),
+                                 (width,height,3,1,1))
     def test_atomic_failures_preserve_file(self): self.run_config('atomic');self.assertEqual(list(self.user.glob('*.tmp-*')),[])
     @unittest.skipIf(os.name=='nt','POSIX permission test')
     def test_read_only_preferences_preserved(self):

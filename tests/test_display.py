@@ -37,3 +37,6 @@ class DisplayTests(unittest.TestCase):
     def test_geometry_and_failures(self): self.run_display('geometry')
     def test_display_gameplay(self): self.run_display('game')
     def test_owned_display(self): self.run_display('game', owned=True)
+
+    def test_aspect_transitions(self): self.run_display('transitions')
+    def test_owned_aspect_transitions(self): self.run_display('transitions', owned=True)

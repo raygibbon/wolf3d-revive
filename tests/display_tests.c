@@ -19,6 +19,10 @@
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static uint64_t ticks;
+static const int presets[][2]={
+    {640,480},{960,720},{1280,960},{960,600},{1280,800},{1600,1000},{1920,1200},
+    {960,540},{1280,720},{1600,900},{1920,1080},{1680,720},{2560,1080},{1920,540},{2560,720}
+};
 static display_settings Settings(void) { display_settings s;CHECK(VL_DisplayGet(&s));return s; }
 static void Pump(void) { CHECK(!VL_PollQuit());CHECK(VW_UpdateScreen()); }
 static void AwaitDisplay(void)
@@ -53,8 +57,9 @@ static void Geometry(void)
     for(unsigned y=0;y<200;++y) for(unsigned x=0;x<320;++x) framebuffer[y*320+x]=(uint8_t)(x<160?1:2);
     Pump();uint64_t uploads=VL_TextureUploads();
     const int sizes[][2]={{1000,600},{600,1000},{1920,1080},{640,480},{319,239},{160,120},{13,9},{1,1},{960,720}};
-    for(unsigned mode=0;mode<2;++mode) for(unsigned i=0;i<sizeof(sizes)/sizeof(sizes[0]);++i) {
-        display_settings s=Settings();s.integer=mode!=0;Set(s);Resize(sizes[i][0],sizes[i][1]);
+    for(unsigned mode=0;mode<2;++mode) for(unsigned i=0;i<sizeof(sizes)/sizeof(sizes[0])+15;++i) {
+        display_settings s=Settings();s.integer=mode!=0;Set(s);
+        const int *size=i<15?presets[i]:sizes[i-15];Resize(size[0],size[1]);
         int w,h;CHECK(SDL_GetRenderOutputSize(renderer,&w,&h));CHECK(w>0 && h>0);
         int pw,ph;CHECK(SDL_GetWindowSizeInPixels(window,&pw,&ph));CHECK(w==pw && h==ph);
         CHECK(SDL_GetWindowFlags(window)&SDL_WINDOW_HIGH_PIXEL_DENSITY);
@@ -127,20 +132,23 @@ static void Game(void)
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);Step(21);
     CHECK(DemoLoopState()==UI_DISPLAY);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN); /* Window size */
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==960);
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==960 && Settings().height==600);
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==800);
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1600 && Settings().height==1000);
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1920 && Settings().height==1200);
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==960 && Settings().height==540);
-    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==720);
+    for(unsigned direction=0;direction<2;++direction) for(unsigned i=1;i<=15;++i) {
+        Tap(direction?SDL_SCANCODE_LEFT:SDL_SCANCODE_RIGHT);
+        unsigned index=(1+(direction?15-i:i))%15;
+        CHECK(Settings().width==presets[index][0] && Settings().height==presets[index][1]);
+        CHECK(!Settings().high_resolution && !Settings().integer && Settings().aspect==0);
+    }
+    Resize(1001,601);Tap(SDL_SCANCODE_LEFT);CHECK(Settings().width==2560 && Settings().height==720);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==640 && Settings().height==480);
+    Resize(1001,601);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==640 && Settings().height==480);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==960 && Settings().height==720);
     Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(DemoLoopState()==UI_CONTROLS);
     Tap(SDL_SCANCODE_UP);Tap(SDL_SCANCODE_RETURN); /* DOS Customize controls -> modern options. */
     for(unsigned n=0;n<6;++n) Tap(SDL_SCANCODE_DOWN);
     Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);Capture("display-settings");
     Tap(SDL_SCANCODE_RETURN);CHECK(Settings().fullscreen);Tap(SDL_SCANCODE_RETURN);CHECK(!Settings().fullscreen);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(Settings().integer);
-    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().scale==4);
+    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==960);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(Settings().high_resolution);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().render_width==1280);
     Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(!Settings().integer && Settings().scale==3 && !Settings().high_resolution);
@@ -175,11 +183,69 @@ static void Game(void)
     CHECK(before.fullscreen==after.fullscreen && before.integer==after.integer && before.width==after.width);
     puts("Display menu, capture/focus, pause/resume, simulation/RNG and save compatibility passed.");
 }
+/* Watch SDL's window events as well as dimensions: even a transient resize
+   during a menu transition violates window/presentation independence. */
+static unsigned resize_events;
+static bool SDLCALL WatchResize(void *unused,SDL_Event *event)
+{
+    (void)unused;
+    if(event->type==SDL_EVENT_WINDOW_RESIZED || event->type==SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) ++resize_events;
+    return true;
+}
+static void Canvas(bool world,unsigned ratio)
+{
+    int lw,lh,w,h;SDL_RendererLogicalPresentation mode;
+    CHECK(SDL_GetRenderLogicalPresentation(renderer,&lw,&lh,&mode));
+    CHECK(SDL_GetRenderOutputSize(renderer,&w,&h));
+    if(!world) {
+        CHECK(lw==320 && lh==240);
+        CHECK(mode==SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+    } else {
+        static const double ratios[]={0,4.0/3,16.0/9,16.0/10,21.0/9,32.0/9};
+        double expected=ratio?ratios[ratio]:fmax(4.0/3,fmin(32.0/9,(double)w/h));
+        CHECK(fabs((double)lw/lh-expected)<0.02);
+        CHECK(mode==SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
+        CHECK(fabs((double)rect.w-w)<=2 || fabs((double)rect.h-h)<=2);
+    }
+}
+static void Transitions(void)
+{
+    Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(DemoLoopStartup(0,true));Step(11);
+    CHECK(DemoLoopStartGame(ticks));Step(11);
+    const int sizes[][3]={{960,720,1},{960,540,2},{960,600,3},{1680,720,4},{2560,720,5},{1001,601,3}};
+    CHECK(SDL_AddEventWatch(WatchResize,NULL));
+    for(unsigned i=0;i<6;++i) for(unsigned automatic=0;automatic<2;++automatic) {
+        display_settings d=Settings();d.scale=0;d.width=sizes[i][0];d.height=sizes[i][1];
+        d.high_resolution=d.integer=true;d.aspect=automatic?0:(unsigned)sizes[i][2];Set(d);
+        CHECK(SDL_SyncWindow(window));Pump();
+        int w,h;CHECK(SDL_GetWindowSize(window,&w,&h));
+        printf("Transition window requested %dx%d, actual %dx%d, aspect %u\n",d.width,d.height,w,h,d.aspect);
+        /* WM limits may clamp native windows. Dummy SDL must apply exactly. */
+        if(!strcmp(SDL_GetCurrentVideoDriver(),"dummy")) CHECK(w==d.width && h==d.height);
+        Canvas(true,d.aspect);resize_events=0;
+        Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(DemoLoopState()==UI_MENU);Canvas(false,0);
+        MainItems.curpos=control;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_CONTROLS);Canvas(false,0);
+        Tap(SDL_SCANCODE_UP);Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);Canvas(false,0);
+        Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(DemoLoopState()==UI_CONTROLS);
+        Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(DemoLoopState()==UI_MENU);
+        MainItems.curpos=backtodemo;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_GAME);Canvas(true,d.aspect);
+        int after_w,after_h;CHECK(SDL_GetWindowSize(window,&after_w,&after_h));
+        CHECK(w==after_w && h==after_h && resize_events==0);
+        d=Settings();CHECK(d.width==w && d.height==h && d.integer && d.high_resolution);
+        /* Fullscreen keeps the independent windowed dimensions and settings. */
+        d.fullscreen=true;Set(d);CHECK(Settings().width==w && Settings().height==h);
+        d=Settings();d.fullscreen=false;Set(d);CHECK(Settings().width==w && Settings().height==h);
+        Resize(w-1,h-1);CHECK(Settings().width==w-1 && Settings().height==h-1);
+    }
+    SDL_RemoveEventWatch(WatchResize,NULL);GameStop();Display_Connect(NULL,NULL);
+    puts("All aspects, Auto, menu integer scaling, resize-free transitions, manual resize and fullscreen restoration passed.");
+}
 int main(int argc,char **argv)
 {
     CHECK(argc==4);MM_Startup();CHECK(VL_Startup());
     int n;SDL_Window **windows=SDL_GetWindows(&n);CHECK(windows && n==1);window=windows[0];SDL_free(windows);renderer=SDL_GetRenderer(window);CHECK(renderer);
     if(!strcmp(argv[3],"geometry")) Geometry();
-    else { CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(Save_SetDirectory(argv[2]));Game();GameStop();CA_Shutdown(); }
+    else { CHECK(CA_Startup(argv[1]));CHECK(VL_SetPalette(gamepal,768));CHECK(Save_SetDirectory(argv[2]));if(!strcmp(argv[3],"transitions")) Transitions();else Game();GameStop();CA_Shutdown(); }
     VL_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());return 0;
 }
