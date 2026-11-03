@@ -123,8 +123,19 @@ static void Game(void)
 {
     Display_Connect(VL_DisplayGet,VL_DisplaySet);CHECK(DemoLoopStartup(0,true));Step(11);
     MainItems.curpos=control;Tap(SDL_SCANCODE_RETURN);Step(21);
-    Tap(SDL_SCANCODE_DOWN);if(CT_MouseEnabled()) Tap(SDL_SCANCODE_DOWN);
-    Tap(SDL_SCANCODE_RETURN); /* DOS Customize controls -> modern options. */
+    /* Display is reachable directly from the original Control screen. */
+    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);Step(21);
+    CHECK(DemoLoopState()==UI_DISPLAY);
+    Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_DOWN); /* Window size */
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==960);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==960 && Settings().height==600);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==800);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1600 && Settings().height==1000);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1920 && Settings().height==1200);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==960 && Settings().height==540);
+    Tap(SDL_SCANCODE_RIGHT);CHECK(Settings().width==1280 && Settings().height==720);
+    Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(DemoLoopState()==UI_CONTROLS);
+    Tap(SDL_SCANCODE_UP);Tap(SDL_SCANCODE_RETURN); /* DOS Customize controls -> modern options. */
     for(unsigned n=0;n<6;++n) Tap(SDL_SCANCODE_DOWN);
     Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_DISPLAY);Capture("display-settings");
     Tap(SDL_SCANCODE_RETURN);CHECK(Settings().fullscreen);Tap(SDL_SCANCODE_RETURN);CHECK(!Settings().fullscreen);
