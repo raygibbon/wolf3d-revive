@@ -2,6 +2,7 @@
 #include "WL_DISPLAY.h"
 #include "WL_MENU.h"
 #include "ID_IN.h"
+#include "ID_CA.h"
 #include "ID_VH.h"
 #include "ID_US_1.h"
 #include <stdio.h>
@@ -15,7 +16,8 @@ static bool Text(int x,int y,const char *s) { PrintX=x;PrintY=y;return US_Print(
 static bool Draw(const display_settings *s)
 {
     ClearMScreen();DrawStripes(10);DrawWindow(20,34,280,144,BKGDCOLOR);
-    fontnumber=1;fontcolor=TEXTCOLOR;if(!Text(87,14,"Display")) return false;
+    fontnumber=1;fontcolor=TEXTCOLOR;int w,h;
+    if(!VW_MeasurePropString("Display",&w,&h) || !Text((320-w)/2,14,"Display")) return false;
     fontnumber=0;
     static const char *const labels[]={"Fullscreen","Scaling","Window size","Rendering","3D resolution","Aspect ratio","VSync","Filter","Smooth rendering","Reset defaults"};
     for(unsigned i=0;i<10;++i) {
@@ -31,11 +33,11 @@ static bool Draw(const display_settings *s)
         else if(i==7) (void)snprintf(value,sizeof(value),"%s",s->linear?"Linear":"Nearest");
         else if(i==8) (void)snprintf(value,sizeof(value),"%s",s->smooth?"On":"Off");
         else (void)snprintf(value,sizeof(value),"Enter");
-        if(!Text(30,39+(int)i*11,labels[i]) || !Text(176,39+(int)i*11,value)) return false;
+        if(!Text(56,39+(int)i*11,labels[i]) || !Text(176,39+(int)i*11,value)) return false;
     }
     fontcolor=TEXTCOLOR;
     if(!Text(26,166,*s->error?"Display change failed; try again.":(s->integer && (s->pixel_width<320 || s->pixel_height<240)?"Small window uses fit scaling.":(s->smooth && !s->high_resolution?"Smooth needs High Resolution.":"F12 saves a screenshot.")))) return false;
-    return Text(20,182,"Arrows change; Enter selects.");
+    return VWB_DrawPic(24,37+(int)selected*11,C_CURSOR1PIC) && VWB_DrawPic(112,184,C_MOUSELBACKPIC);
 }
 bool BeginDisplayMenu(void)
 {

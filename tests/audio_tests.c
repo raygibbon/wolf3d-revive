@@ -131,15 +131,18 @@ static void GameplayIndependence(void)
 }
 static void SettingsMenu(void)
 {
-    SD_SetEnabled(true,true);SD_SetVolumes(70,85);CHECK(DrawSoundSettings());
+    SD_SetEnabled(true,true);SD_SetVolumes(70,85);CHECK(BeginSoundSettings());
     IN_KeyEvent(sc_Enter,true);IN_KeyEvent(sc_Enter,false);CHECK(HandleSoundSettings()==0);
-    unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);CHECK(!mon && eon);
+    unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);CHECK(mon && !eon);
+    /* Navigate past the supported AdLib row into the volume subpage. */
+    for(unsigned i=0;i<2;++i) { IN_KeyEvent(sc_DownArrow,true);IN_KeyEvent(sc_DownArrow,false);CHECK(HandleSoundSettings()==0); }
+    IN_KeyEvent(sc_Enter,true);IN_KeyEvent(sc_Enter,false);CHECK(HandleSoundSettings()==0);
+    IN_KeyEvent(sc_LeftArrow,true);IN_KeyEvent(sc_LeftArrow,false);CHECK(HandleSoundSettings()==0);
+    SD_GetSettings(&m,&e,&mon,&eon);CHECK(m==65 && e==85);
+    IN_KeyEvent(sc_Escape,true);IN_KeyEvent(sc_Escape,false);CHECK(HandleSoundSettings()==0);
     IN_KeyEvent(sc_DownArrow,true);IN_KeyEvent(sc_DownArrow,false);CHECK(HandleSoundSettings()==0);
     IN_KeyEvent(sc_Enter,true);IN_KeyEvent(sc_Enter,false);CHECK(HandleSoundSettings()==0);
     SD_GetSettings(&m,&e,&mon,&eon);CHECK(!mon && !eon);
-    IN_KeyEvent(sc_DownArrow,true);IN_KeyEvent(sc_DownArrow,false);CHECK(HandleSoundSettings()==0);
-    IN_KeyEvent(sc_LeftArrow,true);IN_KeyEvent(sc_LeftArrow,false);CHECK(HandleSoundSettings()==0);
-    SD_GetSettings(&m,&e,&mon,&eon);CHECK(m==65 && e==85);
     IN_KeyEvent(sc_Escape,true);IN_KeyEvent(sc_Escape,false);CHECK(HandleSoundSettings()==-1);
     IN_ClearKeysDown();
 }

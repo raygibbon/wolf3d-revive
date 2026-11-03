@@ -20,6 +20,7 @@ bool CAL_HuffExpand(const w3r_byte *source, size_t source_length,
 bool CA_Startup(const char *data_dir);
 void CA_Shutdown(void);
 bool CA_CacheGrChunk(int chunk);
+bool CA_GrChunkPresent(int chunk);
 bool CA_CacheScreen(int chunk);
 const char *CA_Error(void);
 bool CA_Fail(const char *format, ...);
