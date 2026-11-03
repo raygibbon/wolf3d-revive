@@ -38,6 +38,7 @@ bool DrawSaveActivity(bool saving,bool second);
 bool BeginSaveMenu(bool saving);
 int HandleSaveMenu(uint64_t ticks);
 unsigned SaveMenuSelected(void);
+bool SaveMenuEditing(void);
 bool DrawSoundSettings(void);
 bool BeginSoundSettings(void);
 int HandleSoundSettings(void);

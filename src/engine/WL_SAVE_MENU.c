@@ -15,6 +15,7 @@ static unsigned selected;
 static bool saving;
 unsigned SaveMenuSelected(void) { return selected; }
 static enum { PICK_SLOT,OVERWRITE,EDIT_NAME,SLOT_ERROR,SLOT_WORK } phase;
+bool SaveMenuEditing(void) { return phase==EDIT_NAME; }
 static char name[SAVE_DESCRIPTION];
 static uint64_t work_at;
 static bool work_done;

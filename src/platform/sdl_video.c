@@ -439,7 +439,10 @@ bool VL_PollQuit(void)
         else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
             IN_SDLMouseButton(event.button.button,event.type==SDL_EVENT_MOUSE_BUTTON_DOWN);
         else if(event.type==SDL_EVENT_KEY_DOWN || event.type==SDL_EVENT_KEY_UP) {
-            if(!Shortcut(&event.key) && (event.type==SDL_EVENT_KEY_UP || !event.key.repeat)) IN_SDLKey((unsigned)event.key.scancode,event.type==SDL_EVENT_KEY_DOWN);
+            if(!Shortcut(&event.key)) {
+                if(event.type==SDL_EVENT_KEY_DOWN && event.key.repeat) IN_SDLRepeat((unsigned)event.key.scancode);
+                else IN_SDLKey((unsigned)event.key.scancode,event.type==SDL_EVENT_KEY_DOWN);
+            }
         }
 
     }

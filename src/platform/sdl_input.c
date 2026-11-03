@@ -3,7 +3,8 @@
 #include "engine/ID_IN.h"
 #include "engine/WL_CONTROLS.h"
 #include "engine/WL_MAIN.h"
-#include <math.h>
+#include "engine/WL_MENU.h"
+#include <float.h>
 #include <SDL3/SDL.h>
 #include <string.h>
 static bool physical[SDL_SCANCODE_COUNT],mousebuttons[8],focused=true,captured,capture_failed;
@@ -46,7 +47,7 @@ static void Pulse(unsigned scan)
 void IN_SDLPointerMotion(double x,double y)
 {
     if(captured) { IN_SDLMouseMotion(x);return; }
-    if(!focused || !PointerMenu() || !CT_MouseEnabled() || !isfinite(x) || !isfinite(y)) return;
+    if(!focused || !PointerMenu() || !CT_MouseEnabled() || !(x>=-DBL_MAX && x<=DBL_MAX && y>=-DBL_MAX && y<=DBL_MAX)) return;
     menu_x+=x;menu_y+=y;
     /* WL_MENU.C ReadAnyControl: strict 60-count threshold, horizontal wins. */
     unsigned scan=menu_x< -60?sc_LeftArrow:menu_x>60?sc_RightArrow:menu_y< -60?sc_UpArrow:menu_y>60?sc_DownArrow:0U;
@@ -109,6 +110,17 @@ void IN_SDLFocusLost(void)
     focused=false;menu_x=menu_y=0;
     if(captured && capture_window) (void)SDL_SetWindowRelativeMouseMode(capture_window,false);
     captured=false;capture_failed=false;memset(physical,0,sizeof(physical));memset(mousebuttons,0,sizeof(mousebuttons));IN_ClearKeysDown();
+}
+/* DOS IRQ keyboard input delivered typematic make codes to US_LineInput.
+   Use native repeat events only in editors, never for gameplay or dialogs. */
+void IN_SDLRepeat(unsigned code)
+{
+    if(code>=SDL_SCANCODE_COUNT || !focused || !physical[code]) return;
+    ui_state state=DemoLoopState();
+    if(state!=UI_RESULTS && state!=UI_WARP && !(state==UI_SAVE && SaveMenuEditing())) return;
+    unsigned scan=IN_MapSDLScancode(code);
+    if(!IN_ScanASCII(scan) && scan!=0x0e && scan!=0x53 && scan!=0x47 && scan!=0x4f && scan!=sc_LeftArrow && scan!=sc_RightArrow) return;
+    IN_MenuKeyEvent(scan,false);IN_MenuKeyEvent(scan,true);
 }
 void IN_SDLKey(unsigned code, bool down)
 {

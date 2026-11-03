@@ -150,3 +150,13 @@ SetupControlPanel, Message and DrawLSAction, then exports all four VGA planes
 under DOSBox. No original drawing routine is replaced. `test_dos_ui_reference.py`
 compares every pixel against Revive, using only privately supplied owned WL6
 archives; its temporary commercial files/captures are removed afterwards.
+
+### Portable input follow-up
+
+MinGW's math classification macro narrowed double arguments under strict
+conversion warnings. Mouse-motion validation now uses portable double limits,
+with NaN/infinity regression coverage. SDL typematic events are admitted only
+for editable text/navigation in names and warp input, matching the role of DOS
+keyboard make repeats; gameplay, menu confirmation and held-key isolation keep
+their existing event rules. All 11 focused Classic cases passed (52.051 s).
+Source edits are frozen for the final full normal and sanitizer runs below.

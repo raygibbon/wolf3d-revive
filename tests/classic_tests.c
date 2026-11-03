@@ -187,6 +187,7 @@ static void Interface(void)
     Start();uint32_t time=gamestate.TimeCount;unsigned rng=US_RndIndex();
     Tap(SDL_SCANCODE_ESCAPE);Step(20);CHECK(DemoLoopState()==UI_MENU);
     CT_SetMouse(true);MainItems.curpos=changeview;CHECK(DrawMainMenu());
+    IN_SDLPointerMotion(NAN,0);IN_SDLPointerMotion(0,INFINITY);Step(1);CHECK(MainItems.curpos==changeview);
     IN_SDLPointerMotion(0,60);Step(1);CHECK(MainItems.curpos==changeview);
     IN_SDLPointerMotion(0,1);Step(1);CHECK(MainItems.curpos==viewscores);
     IN_SDLPointerMotion(61,-100);Step(1);CHECK(MainItems.curpos==viewscores); /* Horizontal wins. */
@@ -204,7 +205,14 @@ static void Interface(void)
     CHECK(gamestate.TimeCount==time && US_RndIndex()==rng);
     CHECK(DrawSaveActivity(true,false));w3r_byte disk[VL_PIXELS];memcpy(disk,framebuffer,sizeof(disk));
     CHECK(DrawSaveActivity(true,true) && memcmp(disk,framebuffer,sizeof(disk)));
-    CT_SetMouse(false);GameStop();
+    CT_SetMouse(false);
+    /* A held native key repeats in DOS name entry, but never confirms a page. */
+    Start();gamestate.lives=0;gamestate.score=20000;gamestate.died=true;
+    for(unsigned i=0;i<600 && DemoLoopState()==UI_GAME;++i) Step(1);
+    CHECK(DemoLoopState()==UI_RESULTS);Step(20);
+    IN_SDLKey(SDL_SCANCODE_A,true);IN_SDLRepeat(SDL_SCANCODE_A);IN_SDLRepeat(SDL_SCANCODE_A);IN_SDLKey(SDL_SCANCODE_A,false);Step(1);
+    Tap(SDL_SCANCODE_RETURN);CHECK(!strcmp(HighScores_Table()[0].name,"aaa"));
+    GameStop();
     puts("DOS mouse threshold/priority/buttons, confirmation isolation, menu Pause, shifted text and disk artwork passed.");
 }
 static void Chord(unsigned a,unsigned b,unsigned c)

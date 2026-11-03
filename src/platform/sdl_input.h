@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 unsigned IN_MapSDLScancode(unsigned code);
 void IN_SDLKey(unsigned code, bool down);
+void IN_SDLRepeat(unsigned code);
 void IN_SDLFocusLost(void);
 void IN_SDLFocusGained(void);
 void IN_SDLReset(void);
