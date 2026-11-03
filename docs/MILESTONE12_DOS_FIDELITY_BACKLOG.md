@@ -16,7 +16,8 @@ regression verification and physical DOS comparison.
 - [x] Original Pause picture at (128,64), music off/on, input clearing and clock
   freeze (`WL_PLAY.C CheckKeys` → `UI_PAUSE`). Verified by synthetic and owned-data Classic regressions.
 - [x] New-game confirmation after episode selection, before skill selection
-  (`CP_NewGame`, `CURGAME` → `QUICK_NEW`). Verified by synthetic and owned-data Classic regressions.
+  (`CP_NewGame`, `CURGAME` → `QUICK_NEW`). Declining returns to the main menu;
+  quick-save selection resets only after accepting a difficulty. Verified by synthetic and owned-data Classic regressions.
 - [ ] Menu transitions/audio: existing dark-red menu fades, movement/select/
   Escape sounds retained. Exhaustive physical DOS audio comparison pending.
 
@@ -60,11 +61,14 @@ and exhaustive text-entry parity remain in Batch D.
   uses monotonic time instead of DOS hundredths; exit returns to title.
 - [x] MLI and BAT (`WL_PLAY.C CheckKeys` → `HiddenKeys`): exact inventory,
   zero score, +42000 tics, original text, paused acknowledgement/input isolation.
-- [ ] Debug functions: `--goobers`, original Backspace+LeftShift+Alt unlock,
-  Tab+G/H/I/E/F/C/P/Q implemented (god mode, hurt, items, end level, coordinates,
-  counts, picture pause, quit). Damage bypass is false by default and isolated
-  from demos; it is session-only, preserving save format. Warp/shape viewer,
-  memory diagnostic, border-register and timing debugger functions remain.
+- [x] Portable debug scope audited: `--goobers`, original Backspace+LeftShift+Alt unlock,
+  Tab+G/H/I/E/F/C/P/Q/W/X implemented (god mode, hurt, items, end level, coordinates,
+  counts, picture pause, quit, episode-local warp and original placeholder). Damage bypass is false by default and isolated
+  from demos; it is session-only, preserving save format. Warp validates floors 1–10, preserves inventory and resets entry score, floor
+  counters and music through normal setup. The DOS page-cache shape/memory
+  viewers (EMS/XMS/address/last-hit fields), VGA border-register control and
+  simulation/VBL timing debuggers are not emulated; these hardware diagnostics
+  have no equivalent in the portable fixed-step engine.
 
 Verification: `test_classic.py` all 10 tests passed (44.546 s); `test_signon.py`
 all 16 passed (13.197 s), strict C11. Coverage includes MLI penalty/RNG, BAT,
@@ -87,7 +91,8 @@ Physical DOS audio timing and non-WL6 edition layouts remain unverified.
   No pointer warp, absolute hit-testing or stretched coordinates introduced.
 - [x] Keyboard review: save slots gain existing held-navigation repeat; shifted
   US punctuation, uppercase and Caps Lock are captured when typed. Menus retain
-  original hotkeys and key-repeat filtering; menu Pause toggles music. Gameplay
+  original hotkeys and key-repeat filtering; menu Pause toggles transient music playback without changing preferences or
+  restarting the IMF stream (`CheckPause`/`SD_MusicOff`/`SD_MusicOn`). Gameplay
   dialogs use 160-pixel message height, full menus 200, and original Message's
   final-line padding rule. Non-US text input/IME remains unimplemented.
 - [x] Controller audit: current engine has no SDL joystick/gamepad binding or
@@ -125,3 +130,23 @@ release gating, Pause clock/RNG isolation, new-game confirmation, F1–F10,
 all viewport sizes and four full demo durations. Exhaustive audio and save
 overwrite parity remain unchecked above. Batch B focused checks passed; Batch D focused checks passed; full normal/sanitizer suites running. Private logs belong under ignored `build/`; owned data
 is available locally but must never be committed. No commercial assets added.
+
+### Source-review follow-ups
+
+Portable debug warp and complete object counts are covered by the hidden-feature
+regression. God mode now suppresses health loss while retaining the original
+flash/status effects. New-game refusal/main-menu return and quick-slot reset
+were corrected against CP_NewGame. The focused Classic suite passed all 11
+cases (44.956 s), audio 5 synthetic cases passed (owned case skipped in that
+focused invocation), and all three synthetic/owned controls cases passed
+(14.098 s). The latter now holds a mouse button across menu entry: a fresh
+menu click is intentionally actionable after Batch D.
+
+An actual DOS executable oracle now passes **20 full 320×200 frames with zero
+pixel differences**: all nine quit messages at WindowH 200 and 160, and original
+Loading/Saving windows. `scripts/ui_reference.py` checks historical EXE/MAP
+hashes before private instrumentation; `ui_reference.s` calls original
+SetupControlPanel, Message and DrawLSAction, then exports all four VGA planes
+under DOSBox. No original drawing routine is replaced. `test_dos_ui_reference.py`
+compares every pixel against Revive, using only privately supplied owned WL6
+archives; its temporary commercial files/captures are removed afterwards.

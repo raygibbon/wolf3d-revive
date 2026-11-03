@@ -311,6 +311,6 @@ Invalid/future score files are preserved; session rankings still work.
 Hold M during startup, press M at sign-on, or use `--jukebox` for Robert's
 Jukebox. M+L+I grants the original inventory while zeroing score and adding ten
 minutes; B+A+T displays the Keen Easter egg. `--goobers` permits the original
-Backspace+LeftShift+Alt debug unlock, followed by Tab+G/H/I/E/F/C/P/Q.
+Backspace+LeftShift+Alt debug unlock, followed by Tab+G/H/I/E/F/C/P/Q/W/X.
 See [the fidelity checklist](MILESTONE12_DOS_FIDELITY_BACKLOG.md) for exact
 supported scope, intentional native systems and outstanding comparisons.

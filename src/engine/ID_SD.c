@@ -34,7 +34,7 @@ void SD_FlushOutput(void) { ++output_generation; }
 uint64_t SD_OutputGeneration(void) { return output_generation; }
 static OPL *chip;
 static unsigned output_rate,music_volume=70,effects_volume=85;
-static bool music_enabled=true,effects_enabled=true,digitized_mode;
+static bool music_enabled=true,effects_enabled=true,digitized_mode,music_paused;
 
 static sd_status status;
 void SD_SetDigitizedMode(bool enabled)
@@ -56,7 +56,7 @@ static void Gains(void)
 {
     if (!chip) return;
     for (unsigned ch=0;ch<14;++ch) {
-        float volume=(float)(ch==0 ? (effects_enabled?effects_volume:0) : (music_enabled?music_volume:0))/100.0f;
+        float volume=(float)(ch==0 ? (effects_enabled?effects_volume:0) : (music_enabled && !music_paused?music_volume:0))/100.0f;
         float pan[2]={volume,volume};OPL_setPanFine(chip,ch,pan);
     }
 }
@@ -85,10 +85,16 @@ static void MusicOff(void)
     Write(0xbd,0);
     for(unsigned i=1;i<=10;++i) Write(0xb0+i,0);
 }
+bool SD_MusicPaused(void) { return music_paused; }
+void SD_SetMusicPaused(bool paused)
+{
+    if(paused && !music_paused) MusicOff();
+    music_paused=paused;Gains();
+}
 void SD_StartMusic(int track)
 {
     if(!chip) return;
-    MusicOff();status.music=track>=0 && track<27?track:-1;
+    music_paused=false;Gains();MusicOff();status.music=track>=0 && track<27?track:-1;
     music_pos=0;music_time=next_event=0;
 }
 void SD_SetEnabled(bool music,bool effects)
@@ -109,7 +115,7 @@ void SD_Shutdown(void)
     if(swap) (void)MM_FreePtr(&swap);
     memset(chunks,0,sizeof(chunks));memset(digi,0,sizeof(digi));
     memset(&status,0,sizeof(status));status.music=status.sound=status.digitized=-1;
-    fx_data=NULL;fx_pos=fx_length=0;output_rate=0;
+    fx_data=NULL;fx_pos=fx_length=0;output_rate=0;music_paused=false;
 }
 static bool LoadAudio(void)
 {
@@ -224,7 +230,7 @@ static void Tick(void)
             if(fx_pos==fx_length) { fx_data=NULL;Write(0xb0,0);status.sound=-1;status.sound_priority=0; }
         }
     }
-    if(status.music>=0 && music_enabled) {
+    if(status.music>=0 && music_enabled && !music_paused) {
         const uint8_t *song=chunks[MUSIC_BASE+(unsigned)status.music].data;
         size_t length=CA_LE16(song);
         while(music_pos<length && next_event<=music_time) {

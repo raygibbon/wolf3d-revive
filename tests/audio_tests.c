@@ -37,6 +37,17 @@ static void Timing(void)
         SD_StartMusic(-1);SD_GetStatus(&s);CHECK(s.registers[0xb1]==0 && s.music==-1);
     }
 }
+static void PauseMusic(void)
+{
+    Reset(48000);SD_StartMusic(0);SD_Render(pcm,24000);
+    SD_SetMusicPaused(true);CHECK(SD_MusicPaused());
+    unsigned m,e;bool mon,eon;SD_GetSettings(&m,&e,&mon,&eon);CHECK(mon && eon && m==70 && e==85);
+    sd_status before,after;SD_GetStatus(&before);SD_Render(pcm,48000);SD_GetStatus(&after);
+    CHECK(after.loops==before.loops && after.music==before.music && after.writes==before.writes);
+    SD_SetMusicPaused(false);SD_Render(pcm,24000);SD_GetStatus(&after);
+    CHECK(!SD_MusicPaused() && after.loops==1); /* Resumes halfway; does not restart. */
+    SD_SetMusicPaused(true);SD_StartMusic(1);CHECK(!SD_MusicPaused());
+}
 static void Effects(void)
 {
     Reset(48000);SD_SetDigitizedMode(false);SD_StartMusic(0);
@@ -180,7 +191,7 @@ int main(int argc,char **argv)
         for(int song=0;song<27;++song) { SD_StartMusic(song);SD_Render(pcm,48000);CHECK(Energy(pcm,48000,0)>0); }
         for(unsigned sound=0;sound<LASTSOUND;++sound) { SD_StopSound();CHECK(SD_PlaySound((soundnames)sound,0,0));SD_Render(pcm,4800); }
         Device(false);
-    } else { Timing();Effects();Volume();PositionAndRNG();SettingsMenu();Device(false); }
+    } else { Timing();PauseMusic();Effects();Volume();PositionAndRNG();SettingsMenu();Device(false); }
     Audio_Shutdown();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());SDL_Quit();
     puts("Audio resources, scheduling, PCM, priorities, position, volume and lifecycle passed.");return 0;
 }

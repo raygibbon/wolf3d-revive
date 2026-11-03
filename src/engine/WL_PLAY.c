@@ -63,6 +63,17 @@ bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed)
     deathphase=deathwait=0;finished=intermission=false;
     lasttimecount=ticks;running=true; IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
 }
+/* WL_DEBUG.C Tab-W returns ex_warped to GameLoop: preserve inventory and
+   episode, restore entry score, then perform the ordinary level setup. */
+bool GameWarp(uint64_t ticks,unsigned floor)
+{
+    if(!GameCanSave() || floor<1 || floor>10) return CA_Fail("Invalid debug warp");
+    ShutdownGameLevel();gamestate.mapon=(int)floor-1;gamestate.score=gamestate.oldscore;
+    US_InitRndT((unsigned)(ticks&255U));
+    if(!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop();return false; }
+    SD_StartMusic(SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon));
+    deathphase=deathwait=0;lasttimecount=ticks;IN_ClearKeysDown();WL_PresentReset();WL_PresentCapture(ticks);return true;
+}
 void GameStop(void) { WL_PresentReset(); Demo_Stop();CT_SetGameplay(false);SD_StopSound();SD_StartMusic(-1); victorypage=0;ResetEndText(); FinishPaletteShifts();running=intermission=false; ShutdownGameLevel(); }
 /* WL_GAME.C Died and ID_VH.C FizzleFade, resumed one original tic at a
    time instead of blocking the SDL event loop. The 17-bit polynomial and

@@ -67,6 +67,7 @@ bool NewGame(unsigned difficulty,unsigned episode);
 bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed);
 bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty);
 bool GameStart(uint64_t ticks);
+bool GameWarp(uint64_t ticks,unsigned floor);
 typedef enum { ex_playing,ex_completed,ex_secretlevel,ex_victorious } exit_t;
 extern exit_t playstate;
 bool GameIntermission(void);

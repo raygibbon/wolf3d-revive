@@ -38,11 +38,11 @@ void GiveWeapon(int weapon)
 }
 void TakeDamage(int points,objtype *attacker)
 {
-    if (gamestate.died || gamestate.victoryflag || GameGodMode() || points<0) return;
+    if (gamestate.died || gamestate.victoryflag || points<0) return;
     if (gamestate.difficulty==0) points/=4;
     gotgatgun=false;
     StartDamageFlash(points);
-    gamestate.health-=points;
+    if(!GameGodMode()) gamestate.health-=points;
     if (gamestate.health<=0) { gamestate.health=0;gamestate.died=true;
         if (attacker) { killersnapshot=*attacker;killerobj=&killersnapshot; } else killerobj=NULL; }
 }

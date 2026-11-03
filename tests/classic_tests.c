@@ -106,13 +106,14 @@ static void Keys(const char *slots)
     FKey(SDL_SCANCODE_F5,UI_VIEW);Tap(SDL_SCANCODE_RIGHT);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME && ViewSize()==16);Border();Capture("classic-size16");
     for(unsigned key=58;key<=68;++key) CHECK(!CT_Bind(CT_FIRE,0,key));
     Start();uint32_t paused_time=gamestate.TimeCount;unsigned paused_rng=US_RndIndex();
-    Tap(SDL_SCANCODE_PAUSE);CHECK(DemoLoopState()==UI_PAUSE && !CT_Gameplay());
+    Tap(SDL_SCANCODE_PAUSE);CHECK(DemoLoopState()==UI_PAUSE && !CT_Gameplay() && SD_MusicPaused());
     Step(140);CHECK(gamestate.TimeCount==paused_time && US_RndIndex()==paused_rng);
-    Tap(SDL_SCANCODE_SPACE);CHECK(DemoLoopState()==UI_GAME && gamestate.TimeCount==paused_time);
-    Tap(SDL_SCANCODE_ESCAPE);Step(20);MainItems.curpos=newgame;
+    Tap(SDL_SCANCODE_SPACE);CHECK(DemoLoopState()==UI_GAME && gamestate.TimeCount==paused_time && !SD_MusicPaused());
+    Tap(SDL_SCANCODE_ESCAPE);Step(20);MainMenu[newgame].active=1;MainItems.curpos=newgame;
     Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_EPISODE);
     Tap(SDL_SCANCODE_RETURN);CHECK(DemoLoopState()==UI_QUICK);
-    Tap(SDL_SCANCODE_N);Step(20);CHECK(DemoLoopState()==UI_EPISODE && GameRunning());
+    Tap(SDL_SCANCODE_N);Step(20);CHECK(DemoLoopState()==UI_MENU && GameRunning());
+    Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_EPISODE);
     Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Step(20);CHECK(DemoLoopState()==UI_DIFFICULTY);
     CHECK(gamestate.TimeCount==paused_time && US_RndIndex()==paused_rng);
     Start();FKey(SDL_SCANCODE_F2,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(22);CHECK(DemoLoopState()==UI_GAME);
@@ -193,8 +194,8 @@ static void Interface(void)
     IN_SDLMouseButton(SDL_BUTTON_LEFT,true);IN_SDLMouseButton(SDL_BUTTON_LEFT,false);Step(1);CHECK(DemoLoopState()==UI_CONFIRM);
     Tap(SDL_SCANCODE_N);CHECK(DemoLoopState()==UI_MENU);
     unsigned m,e;bool on,fx;SD_GetSettings(&m,&e,&on,&fx);
-    Tap(SDL_SCANCODE_PAUSE);bool changed,ef;SD_GetSettings(&m,&e,&changed,&ef);CHECK(changed!=on && ef==fx);
-    Tap(SDL_SCANCODE_PAUSE);SD_GetSettings(&m,&e,&changed,&ef);CHECK(changed==on);
+    Tap(SDL_SCANCODE_PAUSE);bool changed,ef;SD_GetSettings(&m,&e,&changed,&ef);CHECK(changed==on && ef==fx && SD_MusicPaused());
+    Tap(SDL_SCANCODE_PAUSE);SD_GetSettings(&m,&e,&changed,&ef);CHECK(changed==on && !SD_MusicPaused());
     IN_ClearKeysDown();IN_MenuKeyEvent(0x2a,true);IN_MenuKeyEvent(0x1e,true);IN_MenuKeyEvent(0x1e,false);
     IN_MenuKeyEvent(0x02,true);IN_MenuKeyEvent(0x02,false);IN_MenuKeyEvent(0x2a,false);
     CHECK(IN_NextASCII()=='A' && IN_NextASCII()=='!' && !IN_NextASCII());
@@ -224,7 +225,13 @@ static void Hidden(void)
     Tap(SDL_SCANCODE_RETURN);Chord(0x0f,0x22,0);CHECK(DemoLoopState()==UI_MESSAGE && GameGodMode());
     TakeDamage(16,NULL);CHECK(gamestate.health==100);
     Tap(SDL_SCANCODE_RETURN);Chord(0x0f,0x22,0);CHECK(!GameGodMode());Tap(SDL_SCANCODE_RETURN);
-    Chord(0x0f,0x23,0);CHECK(gamestate.health==84);DemoLoopAllowDebug(false);
+    Chord(0x0f,0x23,0);CHECK(gamestate.health==84);
+    gamestate.oldscore=500;gamestate.score=999;
+    Chord(0x0f,0x11,0);CHECK(DemoLoopState()==UI_WARP);Step(70);CHECK(gamestate.score==999);
+    Tap(SDL_SCANCODE_2);Tap(SDL_SCANCODE_RETURN);CHECK(DemoLoopState()==UI_GAME && gamestate.mapon==1);
+    CHECK(gamestate.score==500 && gamestate.health==84 && gamestate.TimeCount==0);
+    CHECK(!GameWarp(ticks,0) && !GameWarp(ticks,11) && gamestate.mapon==1);
+    DemoLoopAllowDebug(false);
     GameStop();
     static const int first[]={3,8,6};
     for(unsigned bank=0;bank<3;++bank) {

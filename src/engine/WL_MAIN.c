@@ -21,6 +21,7 @@ static ui_state state, next_state, signon_return;
 static bool leaving;
 static bool startup_mouse,startup_synth,startup_digi,allow_debug,debug_unlocked,godmode;
 static unsigned jukebox_bank,jukebox_choice;
+static char warp_input[3];
 static int jukebox_playing=-1;
 void DemoLoopStartupDevices(bool mouse,bool synthesis,bool digitized)
 { startup_mouse=mouse;startup_synth=synthesis;startup_digi=digitized; }
@@ -39,7 +40,7 @@ static const char *QuitMessage(uint64_t ticks)
 }
 static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
-static bool boss_music,boss_effects,choosequick;
+static bool boss_music,boss_effects,choosequick,pause_previous;
 static int quickslot=-1;
 static bool disk_saving,disk_done;
 static uint64_t disk_at;
@@ -47,7 +48,7 @@ static char disk_name[SAVE_DESCRIPTION];
 static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_NEW,QUICK_ERROR } quick_action;
 static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO || state==UI_RATING; }
 ui_state DemoLoopState(void) { return state; }
-void DemoLoopPrepareExit(void) { if(state==UI_BOSS || state==UI_PAUSE) SD_SetEnabled(boss_music,boss_effects); }
+void DemoLoopPrepareExit(void) { if(state==UI_BOSS) SD_SetEnabled(boss_music,boss_effects);if(state==UI_PAUSE) SD_SetMusicPaused(pause_previous); }
 
 static bool GameError(void)
 {
@@ -277,7 +278,17 @@ static bool HiddenKeys(uint64_t ticks,bool *handled)
             return GameMessage(text);
         }
         if(Keyboard[0x2e]) {
-            (void)snprintf(text,sizeof(text),"Actors: %u\nStatic objects: %u",objcount,statcount);return GameMessage(text);
+            unsigned active=0,inactive=0,used=0;
+            for(objtype *ob=player.next;ob;ob=ob->next) { if(ob->active) ++active;else ++inactive; }
+            for(unsigned i=0;i<statcount;++i) if(statobjlist[i].shapenum!=-1) ++used;
+            (void)snprintf(text,sizeof(text),"Total statics :%u\nIn use statics:%u\nDoors         :%u\nTotal actors  :%u\nActive actors :%u",statcount,used,doornum,active+inactive,active);
+            return GameMessage(text);
+        }
+        if(Keyboard[0x2d]) return GameMessage("Extra stuff!");
+        if(Keyboard[0x11]) {
+            warp_input[0]=0;
+            if(!GameMessage("Warp to which level(1-10):")) return false;
+            state=UI_WARP;return true;
         }
         if(Keyboard[0x19]) { state=UI_MESSAGE;IN_ClearKeysDown();return true; }
         if(Keyboard[0x10]) return Transition(UI_DONE,ticks,10);
@@ -325,9 +336,8 @@ static bool StepDemoLoop(uint64_t ticks)
         if(state==UI_CONTROLS && !DrawControlsMenu()) return false;
         if(state==UI_SOUND && !DrawSoundSettings()) return false;
     }
-    if(state!=UI_GAME && state!=UI_PAUSE && IN_ConsumePress(sc_Pause)) {
-        unsigned m,e;bool music,effects;SD_GetSettings(&m,&e,&music,&effects);SD_SetEnabled(!music,effects);
-    }
+    if((state==UI_MENU || state==UI_SOUND || state==UI_CONTROLS || state==UI_DISPLAY || state==UI_VIEW || state==UI_EPISODE || state==UI_DIFFICULTY) && IN_ConsumePress(sc_Pause))
+        SD_SetMusicPaused(!SD_MusicPaused());
     if (state == UI_GAME) {
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */
@@ -337,8 +347,8 @@ static bool StepDemoLoop(uint64_t ticks)
         if(GameCanSave() && IN_ConsumePress(sc_Pause)) {
             FinishPaletteShifts();
             if(!GameDrawPaused() || !VWB_DrawPic(128,64,PAUSEDPIC)) return false;
-            unsigned m,e;SD_GetSettings(&m,&e,&boss_music,&boss_effects);
-            SD_SetEnabled(false,boss_effects);IN_ClearKeysDown();state=UI_PAUSE;return true;
+            pause_previous=SD_MusicPaused();SD_SetMusicPaused(true);
+            IN_ClearKeysDown();state=UI_PAUSE;return true;
         }
         if(GameCanSave()) {
             panel_return=UI_GAME;choosequick=false;
@@ -374,7 +384,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action == changeview) return Transition(UI_VIEW,ticks,10);
         if (action == control) return Transition(UI_CONTROLS,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
-        if (action == newgame) { quickslot=-1;return Transition(UI_EPISODE,ticks,10); }
+        if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {
@@ -409,7 +419,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(answer) {
             bool yes=answer>0;
             if(yes && quick_action==QUICK_QUIT) return Transition(UI_DONE,ticks,10);
-            if(yes && quick_action==QUICK_NEW) return Transition(UI_DIFFICULTY,ticks,10);
+            if(quick_action==QUICK_NEW) return Transition(yes?UI_DIFFICULTY:UI_MENU,ticks,10);
             if(yes && quick_action==QUICK_END) {
                 /* CP_EndGame returns ex_died with zero lives to GameLoop. */
                 gamestate.lives=0;gamestate.died=true;killerobj=NULL;
@@ -436,11 +446,26 @@ static bool StepDemoLoop(uint64_t ticks)
         }
         if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return Transition(UI_TITLE,ticks,10); }
         if(redraw && !DrawJukebox()) return false;
+    } else if(state==UI_WARP) {
+        if(IN_ConsumePress(sc_Escape)) { IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused(); }
+        if(IN_ConsumePress(sc_Enter)) {
+            unsigned floor=0;for(const char *p=warp_input;*p;++p) floor=floor*10U+(unsigned)(*p-'0');
+            if(floor>=1 && floor<=10) { if(!GameWarp(ticks,floor)) return GameError(); }
+            else { IN_ClearKeysDown();GamePauseClock(ticks); }
+            state=UI_GAME;return GameDrawPaused();
+        }
+        size_t n=strlen(warp_input);bool redraw=false;
+        if(IN_ConsumePress(0x0e) && n) { warp_input[--n]=0;redraw=true; }
+        char ch;while((ch=IN_NextASCII())!=0) if(ch>='0' && ch<='9' && n<2) { warp_input[n++]=ch;warp_input[n]=0;redraw=true; }
+        if(redraw) {
+            char prompt[80];(void)snprintf(prompt,sizeof(prompt),"Warp to which level(1-10):\n%s",warp_input);
+            if(!GameDrawPaused() || !MessageAtHeight(prompt,160)) return false;
+        }
     } else if(state==UI_MESSAGE) {
         if(IN_AnyPressed()) { IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused(); }
     } else if(state==UI_PAUSE) {
         if(IN_AnyPressed()) {
-            SD_SetEnabled(boss_music,boss_effects);IN_ClearKeysDown();
+            SD_SetMusicPaused(pause_previous);IN_ClearKeysDown();
             GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused();
         }
     } else if (state == UI_SOUND) {
@@ -453,6 +478,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
         if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);
+        if(action==1 && !choosing_episode) quickslot=-1;
         if (action==1) return Transition(choosing_episode ? UI_DIFFICULTY : UI_GAME,ticks,10);
     } else if(state==UI_RESULTS) {
         if(score_error) { if(IN_AnyPressed()) return Transition(UI_TITLE,ticks,10); }

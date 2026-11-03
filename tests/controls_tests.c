@@ -121,8 +121,8 @@ static void SDLControls(void)
     int32_t x=player.x;Key(SDL_SCANCODE_E,true);Step(1);CHECK(player.x==x);
     Event(SDL_EVENT_WINDOW_FOCUS_GAINED);Step(1);CHECK(IN_SDLCaptured());
     Key(SDL_SCANCODE_E,true);Step(1);CHECK(player.x>x);Key(SDL_SCANCODE_E,false);Step(1);
-    CHECK(CT_Bind(CT_MENU,1,SDL_SCANCODE_P));Tap(SDL_SCANCODE_P);Step(21);CHECK(DemoLoopState()==UI_MENU && !IN_SDLCaptured());
-    uint32_t time=gamestate.TimeCount;Mouse(1,true);Key(SDL_SCANCODE_E,true);Step(70);CHECK(gamestate.TimeCount==time);
+    CHECK(CT_Bind(CT_MENU,1,SDL_SCANCODE_P));Mouse(1,true);Tap(SDL_SCANCODE_P);Step(21);CHECK(DemoLoopState()==UI_MENU && !IN_SDLCaptured());
+    uint32_t time=gamestate.TimeCount;Key(SDL_SCANCODE_E,true);Step(70);CHECK(gamestate.TimeCount==time);
     MainItems.curpos=backtodemo;Tap(SDL_SCANCODE_RETURN);Step(21);CHECK(DemoLoopState()==UI_GAME && IN_SDLCaptured());
     CHECK(!CT_Down(CT_FIRE) && !CT_Down(CT_FORWARD));
     Mouse(1,false);Key(SDL_SCANCODE_E,false);Step(1);GameStop();CHECK(VW_UpdateScreen());CHECK(!IN_SDLCaptured());VL_Shutdown();
