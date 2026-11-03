@@ -14,6 +14,7 @@
 #include "engine/ID_SD.h"
 #include "platform/sdl_video.h"
 #include "platform/sdl_input.h"
+#include "platform/sdl_input.h"
 #include <SDL3/SDL.h>
 #include <math.h>
 #include <stdio.h>
@@ -114,18 +115,18 @@ static void Keys(const char *slots)
     Tap(SDL_SCANCODE_N);Step(20);CHECK(DemoLoopState()==UI_EPISODE && GameRunning());
     Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Step(20);CHECK(DemoLoopState()==UI_DIFFICULTY);
     CHECK(gamestate.TimeCount==paused_time && US_RndIndex()==paused_rng);
-    Start();FKey(SDL_SCANCODE_F2,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME);
-    gamestate.ammo=2;FKey(SDL_SCANCODE_F3,UI_LOAD);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==8);
+    Start();FKey(SDL_SCANCODE_F2,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(22);CHECK(DemoLoopState()==UI_GAME);
+    gamestate.ammo=2;FKey(SDL_SCANCODE_F3,UI_LOAD);Tap(SDL_SCANCODE_RETURN);Step(22);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==8);
     char initial_path[4096];(void)snprintf(initial_path,sizeof(initial_path),"%s/slot1.w3s",slots);CHECK(remove(initial_path)==0);
     CHECK(!GameStartSelected(ticks,UINT32_MAX,2) && !GameRunning());
     Start();gamestate.died=true;Tap(SDL_SCANCODE_F2);CHECK(DemoLoopState()==UI_GAME && !GameCanSave());
-    Start();FKey(SDL_SCANCODE_F8,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(20);CHECK(DemoLoopState()==UI_GAME);
-    gamestate.ammo=3;Tap(SDL_SCANCODE_F8);CHECK(DemoLoopState()==UI_GAME);
+    Start();FKey(SDL_SCANCODE_F8,UI_SAVE);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_RETURN);Step(22);CHECK(DemoLoopState()==UI_GAME);
+    gamestate.ammo=3;Tap(SDL_SCANCODE_F8);CHECK(DemoLoopState()==UI_DISK);Step(2);CHECK(DemoLoopState()==UI_GAME);
     gamestate.ammo=7;Tap(SDL_SCANCODE_F9);CHECK(DemoLoopState()==UI_QUICK);Tap(SDL_SCANCODE_N);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==7);
     Tap(SDL_SCANCODE_F9);Tap(SDL_SCANCODE_Y);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);
     /* Revalidate on confirmation: corrupting the selected file must retain game. */
     Tap(SDL_SCANCODE_F9);char path[4096];(void)snprintf(path,sizeof(path),"%s/slot1.w3s",slots);FILE *f=fopen(path,"wb");CHECK(f);CHECK(fclose(f)==0);
-    Tap(SDL_SCANCODE_Y);CHECK(DemoLoopState()==UI_QUICK && GameRunning());Tap(SDL_SCANCODE_SPACE);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);
+    Tap(SDL_SCANCODE_Y);Step(1);CHECK(DemoLoopState()==UI_QUICK && GameRunning());Tap(SDL_SCANCODE_SPACE);Step(20);CHECK(DemoLoopState()==UI_GAME && gamestate.ammo==3);
     Tap(SDL_SCANCODE_F7);CHECK(DemoLoopState()==UI_QUICK);Tap(SDL_SCANCODE_N);Step(20);CHECK(GameRunning() && DemoLoopState()==UI_GAME);
     Tap(SDL_SCANCODE_F10);CHECK(DemoLoopState()==UI_QUICK);Tap(SDL_SCANCODE_ESCAPE);Step(20);CHECK(GameRunning() && DemoLoopState()==UI_GAME);
     Tap(SDL_SCANCODE_F7);Tap(SDL_SCANCODE_Y);Step(20);CHECK(gamestate.died && gamestate.lives==0);
@@ -179,6 +180,31 @@ static void Demos(void)
     SDL_Event focus={0};focus.type=SDL_EVENT_WINDOW_FOCUS_LOST;CHECK(SDL_PushEvent(&focus));Mouse(true);Step(20);CHECK(DemoLoopState()==UI_DEMO);
     focus.type=SDL_EVENT_WINDOW_FOCUS_GAINED;CHECK(SDL_PushEvent(&focus));Mouse(false);Mouse(true);Mouse(false);Step(60);CHECK(DemoLoopState()==UI_MENU && !Demo_Active());
     puts("Original demo decoding, bounds, duration, deterministic cadence, input isolation and attract abort passed.");
+}
+static void Interface(void)
+{
+    Start();uint32_t time=gamestate.TimeCount;unsigned rng=US_RndIndex();
+    Tap(SDL_SCANCODE_ESCAPE);Step(20);CHECK(DemoLoopState()==UI_MENU);
+    CT_SetMouse(true);MainItems.curpos=changeview;CHECK(DrawMainMenu());
+    IN_SDLPointerMotion(0,60);Step(1);CHECK(MainItems.curpos==changeview);
+    IN_SDLPointerMotion(0,1);Step(1);CHECK(MainItems.curpos==viewscores);
+    IN_SDLPointerMotion(61,-100);Step(1);CHECK(MainItems.curpos==viewscores); /* Horizontal wins. */
+    IN_SDLMouseButton(SDL_BUTTON_RIGHT,true);IN_SDLMouseButton(SDL_BUTTON_RIGHT,false);Step(1);CHECK(DemoLoopState()==UI_CONFIRM);
+    IN_SDLMouseButton(SDL_BUTTON_LEFT,true);IN_SDLMouseButton(SDL_BUTTON_LEFT,false);Step(1);CHECK(DemoLoopState()==UI_CONFIRM);
+    Tap(SDL_SCANCODE_N);CHECK(DemoLoopState()==UI_MENU);
+    unsigned m,e;bool on,fx;SD_GetSettings(&m,&e,&on,&fx);
+    Tap(SDL_SCANCODE_PAUSE);bool changed,ef;SD_GetSettings(&m,&e,&changed,&ef);CHECK(changed!=on && ef==fx);
+    Tap(SDL_SCANCODE_PAUSE);SD_GetSettings(&m,&e,&changed,&ef);CHECK(changed==on);
+    IN_ClearKeysDown();IN_MenuKeyEvent(0x2a,true);IN_MenuKeyEvent(0x1e,true);IN_MenuKeyEvent(0x1e,false);
+    IN_MenuKeyEvent(0x02,true);IN_MenuKeyEvent(0x02,false);IN_MenuKeyEvent(0x2a,false);
+    CHECK(IN_NextASCII()=='A' && IN_NextASCII()=='!' && !IN_NextASCII());
+    IN_MenuKeyEvent(0x3a,true);IN_MenuKeyEvent(0x3a,false);IN_MenuKeyEvent(0x30,true);IN_MenuKeyEvent(0x30,false);
+    CHECK(IN_NextASCII()=='B');IN_MenuKeyEvent(0x3a,true);IN_MenuKeyEvent(0x3a,false);IN_ClearKeysDown();
+    CHECK(gamestate.TimeCount==time && US_RndIndex()==rng);
+    CHECK(DrawSaveActivity(true,false));w3r_byte disk[VL_PIXELS];memcpy(disk,framebuffer,sizeof(disk));
+    CHECK(DrawSaveActivity(true,true) && memcmp(disk,framebuffer,sizeof(disk)));
+    CT_SetMouse(false);GameStop();
+    puts("DOS mouse threshold/priority/buttons, confirmation isolation, menu Pause, shifted text and disk artwork passed.");
 }
 static void Chord(unsigned a,unsigned b,unsigned c)
 { IN_KeyEvent(a,true);IN_KeyEvent(b,true);if(c) IN_KeyEvent(c,true);Step(1); }
@@ -252,7 +278,8 @@ static void Scores(const char *directory,bool reading)
 int main(int argc,char **argv)
 {
     CHECK(argc==4);MM_Startup();CHECK(CA_Startup(argv[1]));CHECK(VL_Startup());CHECK(VL_SetPalette(gamepal,768));Display_Connect(VL_DisplayGet,VL_DisplaySet);
-    if(!strcmp(argv[3],"hidden")) Hidden();
+    if(!strcmp(argv[3],"interface")) Interface();
+    else if(!strcmp(argv[3],"hidden")) Hidden();
     else if(!strcmp(argv[3],"scores") || !strcmp(argv[3],"scores-read")) Scores(argv[2],!strcmp(argv[3],"scores-read"));
     else if(!strcmp(argv[3],"keys")) Keys(argv[2]);
     else { CHECK(Save_SetDirectory(argv[2]));if(!strcmp(argv[3],"view")) Views();else if(!strcmp(argv[3],"missing") || !strcmp(argv[3],"corrupt")) Missing();else Demos(); }

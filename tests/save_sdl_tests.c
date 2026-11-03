@@ -20,7 +20,7 @@ static void Tap(SDL_Scancode code)
     SDL_Event e={0};e.key.scancode=code;e.type=SDL_EVENT_KEY_DOWN;CHECK(SDL_PushEvent(&e));
     e.type=SDL_EVENT_KEY_UP;CHECK(SDL_PushEvent(&e));Step();
 }
-static void Menu(int choice) { MainItems.curpos=choice;Tap(SDL_SCANCODE_RETURN);Steps(21); }
+static void Menu(int choice) { MainItems.curpos=choice;Tap(SDL_SCANCODE_RETURN);Steps(23); }
 static void Capture(const char *name)
 {
     const char *dir=getenv("WOLF3D_CAPTURE_DIR");if(!dir) return;
@@ -35,28 +35,28 @@ int main(int argc,char **argv)
     CHECK(GameProbe());MainMenu[newgame].active=1;MainItems.curpos=newgame;
     CHECK(DemoLoopStartup(0,true));Steps(11);
     if(!strcmp(argv[3],"read")) {
-        Menu(loadgame);CHECK(DemoLoopState()==UI_LOAD);Tap(SDL_SCANCODE_RETURN);Steps(21);
+        Menu(loadgame);CHECK(DemoLoopState()==UI_LOAD);Tap(SDL_SCANCODE_RETURN);Steps(23);
         CHECK(DemoLoopState()==UI_GAME && GameRunning() && gamestate.score==8842 && gamestate.health==76 && gamestate.ammo==62);
         sd_status audio;SD_GetStatus(&audio);CHECK(audio.music==SD_LevelMusic(0,0));
     } else {
         CHECK(DemoLoopStartGame(ticks));Steps(11);
         gamestate.score=8842;gamestate.health=76;gamestate.ammo=62;
-        Tap(SDL_SCANCODE_ESCAPE);Steps(21);CHECK(DemoLoopState()==UI_MENU && GameRunning() && CA_Map());
+        Tap(SDL_SCANCODE_ESCAPE);Steps(23);CHECK(DemoLoopState()==UI_MENU && GameRunning() && CA_Map());
         uint32_t clock=gamestate.TimeCount;Steps(70);CHECK(gamestate.TimeCount==clock);
         Menu(savegame);CHECK(DemoLoopState()==UI_SAVE);Capture("save-slots");
         Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_A);Tap(SDL_SCANCODE_1);Capture("save-description");
-        Tap(SDL_SCANCODE_RETURN);Steps(21);CHECK(DemoLoopState()==UI_MENU);
+        Tap(SDL_SCANCODE_RETURN);Steps(23);CHECK(DemoLoopState()==UI_MENU);
         save_info info;Save_ReadInfo(0,&info);CHECK(info.status==SAVE_VALID && !strcmp(info.description,"a1"));
         Menu(savegame);Tap(SDL_SCANCODE_RETURN);Capture("save-overwrite");Tap(SDL_SCANCODE_N);
         Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Tap(SDL_SCANCODE_BACKSPACE);Tap(SDL_SCANCODE_B);Tap(SDL_SCANCODE_ESCAPE);
         Save_ReadInfo(0,&info);CHECK(!strcmp(info.description,"a1"));
-        Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Tap(SDL_SCANCODE_B);Tap(SDL_SCANCODE_RETURN);Steps(21);
+        Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Tap(SDL_SCANCODE_B);Tap(SDL_SCANCODE_RETURN);Steps(23);
         Save_ReadInfo(0,&info);CHECK(!strcmp(info.description,"a1b"));
         gamestate.score=12345;Menu(loadgame);CHECK(DemoLoopState()==UI_LOAD);Capture("load-slots");
         Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);CHECK(DemoLoopState()==UI_LOAD && gamestate.score==12345);
-        Tap(SDL_SCANCODE_ESCAPE);Tap(SDL_SCANCODE_UP);Tap(SDL_SCANCODE_RETURN);Steps(21);
+        Tap(SDL_SCANCODE_ESCAPE);Tap(SDL_SCANCODE_UP);Tap(SDL_SCANCODE_RETURN);Steps(23);
         CHECK(DemoLoopState()==UI_GAME && gamestate.score==8842 && gamestate.health==76 && gamestate.ammo==62);
-        Tap(SDL_SCANCODE_ESCAPE);Steps(21);Menu(loadgame);Tap(SDL_SCANCODE_ESCAPE);Steps(21);
+        Tap(SDL_SCANCODE_ESCAPE);Steps(23);Menu(loadgame);Tap(SDL_SCANCODE_ESCAPE);Steps(23);
         CHECK(DemoLoopState()==UI_MENU && GameRunning());
         char path[4128];uint8_t bad[96]={0};
         CHECK(strlen(savepath)<sizeof(path)-20);
@@ -69,9 +69,9 @@ int main(int argc,char **argv)
         Save_ReadInfo(2,&info);CHECK(info.status==SAVE_UNSUPPORTED);
         Menu(loadgame);Capture("load-invalid-slots");Tap(SDL_SCANCODE_DOWN);Tap(SDL_SCANCODE_RETURN);
         CHECK(DemoLoopState()==UI_LOAD && gamestate.score==8842);Tap(SDL_SCANCODE_ESCAPE);
-        Tap(SDL_SCANCODE_ESCAPE);Steps(21);Menu(savegame);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_N);
+        Tap(SDL_SCANCODE_ESCAPE);Steps(23);Menu(savegame);Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_N);
         Save_ReadInfo(1,&info);CHECK(info.status==SAVE_CORRUPT);
-        Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Tap(SDL_SCANCODE_B);Tap(SDL_SCANCODE_RETURN);Steps(21);
+        Tap(SDL_SCANCODE_RETURN);Tap(SDL_SCANCODE_Y);Tap(SDL_SCANCODE_B);Tap(SDL_SCANCODE_RETURN);Steps(23);
         Save_ReadInfo(1,&info);CHECK(info.status==SAVE_VALID && !strcmp(info.description,"b"));
         Menu(backtodemo);CHECK(DemoLoopState()==UI_GAME);
     }

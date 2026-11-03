@@ -66,7 +66,7 @@ def game_files(directory):
         chunks[index]=bytearray(graph[offset:end])
     dims=bytearray(bytes(int(f'{v:08b}'[::-1],2) for v in chunks[0][4:]))
     struct.pack_into('<HH',dims,(86-3)*4,320,40)
-    for chunk in (*range(19,23),*range(30,38),*range(43,86),*range(91,135)):
+    for chunk in (*range(19,26),*range(30,38),*range(43,86),*range(91,135)):
         width,height=(48,24) if 91<=chunk<=94 else (8,16) if chunk<=108 else (24,32)
         if chunk in (95,96,97):width,height=8,16
         if chunk<43: width,height=(48,24)

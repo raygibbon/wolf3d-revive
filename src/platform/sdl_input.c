@@ -2,10 +2,14 @@
 #include "sdl_input.h"
 #include "engine/ID_IN.h"
 #include "engine/WL_CONTROLS.h"
+#include "engine/WL_MAIN.h"
+#include <math.h>
 #include <SDL3/SDL.h>
 #include <string.h>
 static bool physical[SDL_SCANCODE_COUNT],mousebuttons[8],focused=true,captured,capture_failed;
 static SDL_Window *capture_window;
+static double menu_x,menu_y;
+static ui_state mouse_state;
 static char capture_error[256];
 bool IN_SDLFocused(void) { return focused; }
 void IN_SDLDiscardInput(void) { memset(physical,0,sizeof(physical));IN_ClearKeysDown(); }
@@ -30,12 +34,35 @@ void IN_SDLCapture(SDL_Window *window,bool gameplay)
     SDL_FlushEvent(SDL_EVENT_MOUSE_MOTION);
 }
 void IN_SDLMouseMotion(double x) { if(captured && focused) CT_MouseMotion(x); }
+static bool PointerMenu(void)
+{
+    ui_state state=DemoLoopState();
+    if(state!=mouse_state) { menu_x=menu_y=0;mouse_state=state; }
+    return state==UI_MENU || state==UI_EPISODE || state==UI_DIFFICULTY || state==UI_SOUND ||
+        state==UI_CONTROLS || state==UI_DISPLAY || state==UI_VIEW || state==UI_SAVE || state==UI_LOAD || state==UI_JUKEBOX;
+}
+static void Pulse(unsigned scan)
+{ if(!Keyboard[scan]) { IN_MenuKeyEvent(scan,true);IN_MenuKeyEvent(scan,false); } }
+void IN_SDLPointerMotion(double x,double y)
+{
+    if(captured) { IN_SDLMouseMotion(x);return; }
+    if(!focused || !PointerMenu() || !CT_MouseEnabled() || !isfinite(x) || !isfinite(y)) return;
+    menu_x+=x;menu_y+=y;
+    /* WL_MENU.C ReadAnyControl: strict 60-count threshold, horizontal wins. */
+    unsigned scan=menu_x< -60?sc_LeftArrow:menu_x>60?sc_RightArrow:menu_y< -60?sc_UpArrow:menu_y>60?sc_DownArrow:0U;
+    if(scan) { Pulse(scan);menu_x=menu_y=0; }
+}
 void IN_SDLMouseButton(unsigned button,bool down)
 {
     if(button>=8 || mousebuttons[button]==down) return;
     mousebuttons[button]=down;
     if(captured && focused) CT_MouseButton(button,down);
-    else if(focused && down) IN_AckEvent();
+    else if(focused && down) {
+        if(PointerMenu() && CT_MouseEnabled()) {
+            if(button==SDL_BUTTON_LEFT) Pulse(sc_Enter);
+            else if(button==SDL_BUTTON_RIGHT) Pulse(sc_Escape);
+        } else IN_AckEvent();
+    }
 }
 unsigned IN_MapSDLScancode(unsigned code)
 {
@@ -55,6 +82,18 @@ unsigned IN_MapSDLScancode(unsigned code)
         case SDL_SCANCODE_RIGHT: case SDL_SCANCODE_KP_6: return sc_RightArrow;
         case SDL_SCANCODE_BACKSPACE: return 0x0e;
         case SDL_SCANCODE_TAB: return 0x0f;
+        case SDL_SCANCODE_CAPSLOCK: return 0x3a;
+        case SDL_SCANCODE_MINUS: return 0x0c;
+        case SDL_SCANCODE_EQUALS: return 0x0d;
+        case SDL_SCANCODE_LEFTBRACKET: return 0x1a;
+        case SDL_SCANCODE_RIGHTBRACKET: return 0x1b;
+        case SDL_SCANCODE_SEMICOLON: return 0x27;
+        case SDL_SCANCODE_APOSTROPHE: return 0x28;
+        case SDL_SCANCODE_GRAVE: return 0x29;
+        case SDL_SCANCODE_BACKSLASH: return 0x2b;
+        case SDL_SCANCODE_COMMA: return 0x33;
+        case SDL_SCANCODE_PERIOD: return 0x34;
+        case SDL_SCANCODE_SLASH: return 0x35;
         case SDL_SCANCODE_HOME: return 0x47;
         case SDL_SCANCODE_END: return 0x4f;
         case SDL_SCANCODE_DELETE: return 0x53;
@@ -67,7 +106,7 @@ unsigned IN_MapSDLScancode(unsigned code)
 }
 void IN_SDLFocusLost(void)
 {
-    focused=false;
+    focused=false;menu_x=menu_y=0;
     if(captured && capture_window) (void)SDL_SetWindowRelativeMouseMode(capture_window,false);
     captured=false;capture_failed=false;memset(physical,0,sizeof(physical));memset(mousebuttons,0,sizeof(mousebuttons));IN_ClearKeysDown();
 }

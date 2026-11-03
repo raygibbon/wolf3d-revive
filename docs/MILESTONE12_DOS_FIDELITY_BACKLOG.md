@@ -74,11 +74,38 @@ Physical DOS audio timing and non-WL6 edition layouts remain unverified.
 
 ## Batch D — interface
 
-- [ ] Save/load interstitials and overwrite confirmation parity.
-- [ ] Mouse-driven DOS control-panel navigation.
-- [ ] Keyboard repeat, hotkeys, edit cursor and menu return paths.
-- [ ] Controller options/support audit.
-- [ ] Edition-specific help/menu layouts and intentional modernizations.
+- [x] `DrawLSAction`/`DiskFlopAnim` → original Saving/Loading windows and both
+  disk pictures. Separate nonblocking start/work/finish phases for slot and
+  quick operations, no simulation/RNG advancement. Portable atomic I/O remains
+  synchronous within its work phase; disk-flip cadence follows those phases,
+  not DOS serialization-chunk timing. Six existing slots/save version retained.
+- [x] Overwrite uses original `GAMESVD`, shared blink/release/sounds. Invalid
+  slot errors retain native validation and explanatory messages.
+- [x] Mouse menu navigation follows `ReadAnyControl`: accumulated movement,
+  strict >60-count threshold, horizontal priority, left accept/right cancel.
+  Honors mouse-enabled preference; confirmation answers remain keyboard-only.
+  No pointer warp, absolute hit-testing or stretched coordinates introduced.
+- [x] Keyboard review: save slots gain existing held-navigation repeat; shifted
+  US punctuation, uppercase and Caps Lock are captured when typed. Menus retain
+  original hotkeys and key-repeat filtering; menu Pause toggles music. Gameplay
+  dialogs use 160-pixel message height, full menus 200, and original Message's
+  final-line padding rule. Non-US text input/IME remains unimplemented.
+- [x] Controller audit: current engine has no SDL joystick/gamepad binding or
+  calibration layer. DOS gameport/Gravis rows are not advertised as functional.
+  Restoring usable controller input requires a separate native input feature;
+  no fake device detection/settings were added.
+- [x] Edition audit: this port selects GOODTIMES registered WL6 layout. F1 boss
+  screen, six episodes and original 320×200 UI are retained. Shareware locks,
+  SPEAR/JAPAN/SPANISH layouts and non-GOODTIMES help need matching archive
+  layouts and verification; no art/chunk remapping is guessed. Native sound
+  volumes, display/preferences, binding editor and six portable slots remain
+  intentional modernizations independent of Enhanced rendering.
+
+Verification: all 11 Classic synthetic/owned cases passed (45.112 s); all 13
+save tests passed (41.183 s), strict C11 warnings-as-errors. New checks exercise
+mouse thresholds/priority/buttons, keyboard-only confirmation, shifted text,
+menu music toggle, both disk frames, quick operation failures and restart/load.
+Synthetic fixtures gained invented disk chunks; no commercial assets added.
 
 ## Batch E — verification matrix
 
@@ -96,5 +123,5 @@ Batch A: `test_classic.py` passed all eight synthetic/owned cases (33.981 s),
 strict C11 warnings as errors. Tests cover nine sayings, confirmation blink and
 release gating, Pause clock/RNG isolation, new-game confirmation, F1–F10,
 all viewport sizes and four full demo durations. Exhaustive audio and save
-overwrite parity remain unchecked above. Batch B focused checks passed; continue with Batch D. Private logs belong under ignored `build/`; owned data
+overwrite parity remain unchecked above. Batch B focused checks passed; Batch D focused checks passed; full normal/sanitizer suites running. Private logs belong under ignored `build/`; owned data
 is available locally but must never be committed. No commercial assets added.

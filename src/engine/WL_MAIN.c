@@ -41,6 +41,9 @@ static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
 static bool boss_music,boss_effects,choosequick;
 static int quickslot=-1;
+static bool disk_saving,disk_done;
+static uint64_t disk_at;
+static char disk_name[SAVE_DESCRIPTION];
 static enum { QUICK_END,QUICK_LOAD,QUICK_QUIT,QUICK_NEW,QUICK_ERROR } quick_action;
 static bool Attract(void) { return state <= UI_HIGHSCORES || state==UI_DEMO || state==UI_RATING; }
 ui_state DemoLoopState(void) { return state; }
@@ -93,7 +96,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
         if(score_rank>=0) { if(!BeginHighScoreEntry(score_rank,ticks+10)) return false; }
         else if(!DrawHighScores()) return false;
     }
-    if(screen==UI_CONTROLS || screen==UI_SOUND) ResetMenuCursor(ticks);
+    if(screen==UI_CONTROLS || screen==UI_SOUND || screen==UI_SAVE || screen==UI_LOAD) ResetMenuCursor(ticks);
     if(screen==UI_DISPLAY && !BeginDisplayMenu()) return false;
     if(screen==UI_CONTROLS && !(previous==UI_DISPLAY?ResumeControlsMenu():BeginControlsMenu())) return false;
     if (screen == UI_SOUND && !BeginSoundSettings()) return false;
@@ -195,9 +198,15 @@ static bool QuickDialog(int action,uint64_t ticks)
     if(!text) {
         save_info info;Save_ReadInfo((unsigned)quickslot,&info);
         char message[128];(void)snprintf(message,sizeof(message),"Load Game called\n\"%s\"? (Y/N)",info.description);
-        return BeginConfirmation(message,ticks);
+        return BeginConfirmationAtHeight(message,ticks,quick_return==UI_GAME?160U:200U);
     }
-    return action==QUICK_ERROR?Message(text):BeginConfirmation(text,ticks);
+    return action==QUICK_ERROR?MessageAtHeight(text,quick_return==UI_GAME?160U:200U):BeginConfirmationAtHeight(text,ticks,quick_return==UI_GAME?160U:200U);
+}
+static bool QuickActivity(bool saving,const char *name,uint64_t ticks)
+{
+    disk_saving=saving;disk_done=false;disk_at=ticks+1;
+    (void)snprintf(disk_name,sizeof(disk_name),"%s",name?name:"");
+    state=UI_DISK;IN_ClearKeysDown();return DrawSaveActivity(saving,false);
 }
 static bool QuickSave(uint64_t ticks)
 {
@@ -206,12 +215,11 @@ static bool QuickSave(uint64_t ticks)
         quickslot=-1;choosequick=true;panel_return=UI_GAME;return Transition(UI_SAVE,ticks,10);
     }
     IN_ClearKeysDown();GamePauseClock(ticks);
-    if(!Save_Write((unsigned)quickslot,info.description,true)) return QuickDialog(QUICK_ERROR,ticks);
-    return true;
+    return QuickActivity(true,info.description,ticks);
 }
 static bool GameMessage(const char *text)
 {
-    FinishPaletteShifts();if(!GameDrawPaused() || !Message(text)) return false;
+    FinishPaletteShifts();if(!GameDrawPaused() || !MessageAtHeight(text,160)) return false;
     state=UI_MESSAGE;IN_ClearKeysDown();return true;
 }
 /* WL_MAIN.C DoJukebox: registered WL6 has three time-selected six-song banks. */
@@ -313,8 +321,12 @@ static bool StepDemoLoop(uint64_t ticks)
         return true;
     }
     if(state==UI_SIGNON || Attract()) return true;
-    if((state==UI_CONTROLS || state==UI_SOUND) && TickMenuCursor(ticks)) {
-        if(!(state==UI_CONTROLS?DrawControlsMenu():DrawSoundSettings())) return false;
+    if((state==UI_CONTROLS || state==UI_SOUND || state==UI_SAVE || state==UI_LOAD) && TickMenuCursor(ticks)) {
+        if(state==UI_CONTROLS && !DrawControlsMenu()) return false;
+        if(state==UI_SOUND && !DrawSoundSettings()) return false;
+    }
+    if(state!=UI_GAME && state!=UI_PAUSE && IN_ConsumePress(sc_Pause)) {
+        unsigned m,e;bool music,effects;SD_GetSettings(&m,&e,&music,&effects);SD_SetEnabled(!music,effects);
     }
     if (state == UI_GAME) {
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
@@ -403,9 +415,18 @@ static bool StepDemoLoop(uint64_t ticks)
                 gamestate.lives=0;gamestate.died=true;killerobj=NULL;
                 quickslot=-1;resuming=true;return Transition(UI_GAME,ticks,10);
             }
-            if(yes && quick_action==QUICK_LOAD && !Save_Load((unsigned)quickslot,ticks)) return QuickDialog(QUICK_ERROR,ticks);
+            if(yes && quick_action==QUICK_LOAD) return QuickActivity(false,NULL,ticks);
             resuming=quick_return==UI_GAME;return Transition(quick_return,ticks,10);
         }
+    } else if(state==UI_DISK) {
+        if(ticks<disk_at) return true;
+        if(disk_done) {
+            IN_ClearKeysDown();GamePauseClock(ticks);state=UI_GAME;return GameDrawPaused();
+        }
+        if(!DrawSaveActivity(disk_saving,true)) return false;
+        bool ok=disk_saving?Save_Write((unsigned)quickslot,disk_name,true):Save_Load((unsigned)quickslot,ticks);
+        if(!ok) { state=UI_GAME;return QuickDialog(QUICK_ERROR,ticks); }
+        disk_done=true;disk_at=ticks+1;IN_ClearKeysDown();
     } else if(state==UI_JUKEBOX) {
         bool redraw=TickMenuCursor(ticks);int direction=MenuNavigation();
         if(direction) { jukebox_choice=(jukebox_choice+(direction<0?5U:1U))%6;MenuCursorMoved();redraw=true;(void)SD_PlaySound(MOVEGUN1SND,0,0); }

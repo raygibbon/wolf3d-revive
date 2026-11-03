@@ -61,6 +61,8 @@ class ClassicTests(unittest.TestCase):
                 subprocess.run([str(self.binary), str(data), str(slots), 'scores-read'], env=env, check=True)
             if mode == 'view': self.assertEqual((slots / 'slot1.w3s').read_bytes()[96:], (slots / 'slot2.w3s').read_bytes()[96:])
 
+    def test_interface(self): self.run_display('interface')
+
     def test_hidden_features(self): self.run_display('hidden')
 
     def test_high_scores(self): self.run_display('scores')
