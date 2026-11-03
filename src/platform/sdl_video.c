@@ -207,7 +207,7 @@ bool VL_DisplaySet(const display_settings *s)
     if(s->scale) { window_w=(int)s->scale*320;window_h=(int)s->scale*240; }
     else { window_w=s->width;window_h=s->height; }
     if(s->fullscreen!=Fullscreen()) {
-        IN_SDLCapture(window,false);IN_SDLDiscardInput();
+        IN_SDLCapture(window,false,false);IN_SDLDiscardInput();
         bool denied=Fail(4);
         if(Fail(1) || (!denied && ((s->fullscreen && !SDL_SetWindowFullscreenMode(window,NULL)) || !SDL_SetWindowFullscreen(window,s->fullscreen)))) {
             window_w=old_w;window_h=old_h;integer_scale=old_integer;
@@ -221,7 +221,7 @@ bool VL_DisplaySet(const display_settings *s)
             char error[160];(void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
             (void)ApplyPresentation();(void)SDL_SetError("%s",error);return SettingsFailure(&candidate);
         }
-        IN_SDLCapture(window,false);IN_SDLDiscardInput();
+        IN_SDLCapture(window,false,false);IN_SDLDiscardInput();
         pending=size_pending=true;target=false;request_deadline=SDL_GetTicks()+3000;
     }
     if(replace) { FreeHigh(&high);high=candidate; }
@@ -400,7 +400,7 @@ static bool VL_DrawScreen(void)
     return SDL_RenderTexture(renderer,texture,NULL,NULL);
 }
 
-static void SyncCapture(void) { RefreshDisplay();IN_SDLCapture(window,CT_Gameplay() && !pending); }
+static void SyncCapture(void) { RefreshDisplay();IN_SDLCapture(window,CT_Gameplay() && !pending,!pending); }
 bool VW_UpdateScreen(void)
 {
     SyncCapture();Audio_Pump();
@@ -426,13 +426,6 @@ bool VL_Capture(const char *path)
     return ok;
 }
 
-static void MenuPointer(float x,float y)
-{
-    float logical_x,logical_y;
-    if(SDL_RenderCoordinatesFromWindow(renderer,x,y,&logical_x,&logical_y))
-        IN_SDLPointerMotion(logical_x,logical_y*(200.0/240.0));
-}
-
 bool VL_PollQuit(void)
 {
     SyncCapture();
@@ -442,14 +435,9 @@ bool VL_PollQuit(void)
         if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) quit = true;
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST) { memset(consumed,0,sizeof(consumed));IN_SDLFocusLost(); }
         else if (event.type == SDL_EVENT_WINDOW_FOCUS_GAINED) IN_SDLFocusGained();
-        else if (event.type == SDL_EVENT_MOUSE_MOTION) {
-            if(IN_SDLCaptured()) IN_SDLMouseMotion(event.motion.xrel);
-            else MenuPointer(event.motion.x,event.motion.y);
-        }
-        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
-            if(!IN_SDLCaptured()) MenuPointer(event.button.x,event.button.y);
+        else if (event.type == SDL_EVENT_MOUSE_MOTION) IN_SDLPointerMotion(event.motion.xrel,event.motion.yrel);
+        else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
             IN_SDLMouseButton(event.button.button,event.type==SDL_EVENT_MOUSE_BUTTON_DOWN);
-        }
         else if(event.type==SDL_EVENT_KEY_DOWN || event.type==SDL_EVENT_KEY_UP) {
             if(!Shortcut(&event.key)) {
                 if(event.type==SDL_EVENT_KEY_DOWN && event.key.repeat) IN_SDLRepeat((unsigned)event.key.scancode);

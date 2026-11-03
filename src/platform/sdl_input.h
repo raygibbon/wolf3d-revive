@@ -11,11 +11,11 @@ void IN_SDLFocusGained(void);
 void IN_SDLReset(void);
 void IN_SDLDiscardInput(void);
 bool IN_SDLFocused(void);
-void IN_SDLCapture(SDL_Window *window,bool gameplay);
+void IN_SDLCapture(SDL_Window *window,bool gameplay,bool menus);
 void IN_SDLMouseMotion(double x);
-/* Absolute position in the original 320x200 menu framebuffer. */
 void IN_SDLPointerMotion(double x,double y);
 void IN_SDLMouseButton(unsigned button,bool down);
+/* Gameplay capture; menu capture never enables gameplay mouse actions. */
 bool IN_SDLCaptured(void);
 const char *IN_SDLCaptureError(void);
 #endif

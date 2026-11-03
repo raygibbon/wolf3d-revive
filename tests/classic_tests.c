@@ -190,44 +190,19 @@ static void Interface(void)
     Start();uint32_t time=gamestate.TimeCount;unsigned rng=US_RndIndex();
     Tap(SDL_SCANCODE_ESCAPE);Step(20);CHECK(DemoLoopState()==UI_MENU);
     CT_SetMouse(true);MainItems.curpos=changeview;CHECK(DrawMainMenu());
-    IN_SDLPointerMotion(NAN,0);IN_SDLPointerMotion(0,INFINITY);Step(1);CHECK(MainItems.curpos==changeview);
-    IN_SDLPointerMotion(120,55+viewscores*13+5);Step(1);CHECK(MainItems.curpos==viewscores);
-    IN_SDLPointerMotion(121,55+viewscores*13+5);Step(1);CHECK(MainItems.curpos==viewscores);
-    Step(100);CHECK(MainItems.curpos==viewscores); /* Stationary pointer cannot drift. */
-    Tap(SDL_SCANCODE_DOWN);Step(5);CHECK(MainItems.curpos==backtodemo); /* Keyboard keeps ownership until new mouse input. */
-    IN_SDLPointerMotion(120,55+changeview*13+5);Step(1);CHECK(MainItems.curpos==changeview);
-    IN_SDLPointerMotion(319,55+quit*13+5);Step(1);CHECK(MainItems.curpos==changeview);
-    /* Exercise the actual SDL window-to-logical transform, including bars. */
     int count=0;SDL_Window **windows=SDL_GetWindows(&count);CHECK(windows && count==1);
-    SDL_Window *window=windows[0];SDL_free(windows);SDL_Renderer *renderer=SDL_GetRenderer(window);CHECK(renderer);
-    const int sizes[][2]={{960,720},{1280,720},{1280,800},{1001,601},{2560,720}};
-    for(unsigned i=0;i<sizeof(sizes)/sizeof(sizes[0]);++i) for(unsigned integer=0;integer<2;++integer) {
-        display_settings display;CHECK(VL_DisplayGet(&display));display.integer=integer!=0;CHECK(VL_DisplaySet(&display));
-        CHECK(SDL_SetWindowSize(window,sizes[i][0],sizes[i][1]));CHECK(SDL_SyncWindow(window));Step(1);
-        for(int row=changeview;row<=quit;++row) {
-            float x,y;CHECK(SDL_RenderCoordinatesToWindow(renderer,120,(float)(55+row*13+5)*1.2f,&x,&y));
-            SDL_Event motion={0};motion.type=SDL_EVENT_MOUSE_MOTION;motion.motion.x=x;motion.motion.y=y;
-            motion.motion.xrel=999;motion.motion.yrel=-999;CHECK(SDL_PushEvent(&motion));Step(1);
-            CHECK(MainItems.curpos==row);Step(2);CHECK(MainItems.curpos==row);
-        }
-        SDL_FRect rect;CHECK(SDL_GetRenderLogicalPresentationRect(renderer,&rect));
-        if(rect.x>0) {
-            SDL_Event motion={0};motion.type=SDL_EVENT_MOUSE_MOTION;motion.motion.x=0;motion.motion.y=100;
-            CHECK(SDL_PushEvent(&motion));Step(1);CHECK(MainItems.curpos==quit);
-            SDL_Event click={0};click.type=SDL_EVENT_MOUSE_BUTTON_DOWN;click.button.button=SDL_BUTTON_LEFT;click.button.x=0;click.button.y=100;
-            CHECK(SDL_PushEvent(&click));click.type=SDL_EVENT_MOUSE_BUTTON_UP;CHECK(SDL_PushEvent(&click));Step(1);CHECK(DemoLoopState()==UI_MENU);
-        }
-    }
-    /* Disabled rows and clicks in borders cannot activate the old selection. */
-    MainMenu[soundmenu].active=0;MainItems.curpos=quit;CHECK(DrawMainMenu());
-    IN_SDLPointerMotion(120,55+soundmenu*13+5);
-    IN_SDLMouseButton(SDL_BUTTON_LEFT,true);IN_SDLMouseButton(SDL_BUTTON_LEFT,false);Step(1);
-    CHECK(DemoLoopState()==UI_MENU && MainItems.curpos==quit);
-    /* Button coordinates select the clicked row even without a motion event. */
-    float click_x,click_y;CHECK(SDL_RenderCoordinatesToWindow(renderer,120,(float)(55+control*13+5)*1.2f,&click_x,&click_y));
-    SDL_Event click={0};click.type=SDL_EVENT_MOUSE_BUTTON_DOWN;click.button.button=SDL_BUTTON_LEFT;click.button.x=click_x;click.button.y=click_y;
-    CHECK(SDL_PushEvent(&click));click.type=SDL_EVENT_MOUSE_BUTTON_UP;CHECK(SDL_PushEvent(&click));Step(21);CHECK(DemoLoopState()==UI_CONTROLS);
-    Tap(SDL_SCANCODE_ESCAPE);Step(21);CHECK(DemoLoopState()==UI_MENU);
+    SDL_Window *window=windows[0];SDL_free(windows);
+    Step(1);CHECK(!IN_SDLCaptured() && SDL_GetWindowRelativeMouseMode(window));
+    /* Focus release must restore the desktop mouse; regain restores DOS menus. */
+    IN_SDLFocusLost();CHECK(!SDL_GetWindowRelativeMouseMode(window));
+    IN_SDLFocusGained();Step(1);CHECK(SDL_GetWindowRelativeMouseMode(window));
+    IN_SDLPointerMotion(NAN,0);IN_SDLPointerMotion(0,INFINITY);Step(1);CHECK(MainItems.curpos==changeview);
+    IN_SDLPointerMotion(0,60);Step(1);CHECK(MainItems.curpos==changeview);
+    IN_SDLPointerMotion(0,1);Step(1);CHECK(MainItems.curpos==viewscores);
+    IN_SDLPointerMotion(61,-100);Step(1);CHECK(MainItems.curpos==viewscores); /* Horizontal wins. */
+    Step(100);CHECK(MainItems.curpos==viewscores); /* No movement means no drift. */
+    CT_SetMouse(false);Step(1);CHECK(!SDL_GetWindowRelativeMouseMode(window));
+    CT_SetMouse(true);Step(1);CHECK(SDL_GetWindowRelativeMouseMode(window));
     IN_SDLMouseButton(SDL_BUTTON_RIGHT,true);IN_SDLMouseButton(SDL_BUTTON_RIGHT,false);Step(1);CHECK(DemoLoopState()==UI_CONFIRM);
     IN_SDLMouseButton(SDL_BUTTON_LEFT,true);IN_SDLMouseButton(SDL_BUTTON_LEFT,false);Step(1);CHECK(DemoLoopState()==UI_CONFIRM);
     Tap(SDL_SCANCODE_N);CHECK(DemoLoopState()==UI_MENU);
@@ -250,7 +225,7 @@ static void Interface(void)
     IN_SDLKey(SDL_SCANCODE_A,true);IN_SDLRepeat(SDL_SCANCODE_A);IN_SDLRepeat(SDL_SCANCODE_A);IN_SDLKey(SDL_SCANCODE_A,false);Step(1);
     Tap(SDL_SCANCODE_RETURN);CHECK(!strcmp(HighScores_Table()[0].name,"aaa"));
     GameStop();
-    puts("Pointer-aligned menu rows/scaling/buttons, confirmation isolation, menu Pause, shifted text and disk artwork passed.");
+    puts("DOS mouse threshold/priority/buttons, confirmation isolation, menu Pause, shifted text and disk artwork passed.");
 }
 static void Chord(unsigned a,unsigned b,unsigned c)
 { IN_KeyEvent(a,true);IN_KeyEvent(b,true);if(c) IN_KeyEvent(c,true);Step(1); }

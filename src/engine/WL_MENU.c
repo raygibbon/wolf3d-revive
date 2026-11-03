@@ -99,12 +99,6 @@ static void MoveGun(int direction)
 int HandleMenu(uint64_t ticks)
 {
     bool redraw = false;
-    int hit=IN_MenuPointerRow(68,55,178,13,MENU_COUNT);
-    if(hit>=0 && !MainMenu[hit].active) IN_MenuPointerReject();
-    if(hit>=0 && MainMenu[hit].active && hit!=MainItems.curpos) {
-        MainItems.curpos=hit;MenuCursorMoved();redraw=true;
-        (void)SD_PlaySound(MOVEGUN1SND,0,0);
-    }
     bool up = IN_ConsumePress(sc_UpArrow), down = IN_ConsumePress(sc_DownArrow);
     if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks >= move_next)) {
         int direction = (up || (!down && Keyboard[sc_UpArrow])) ? -1 : 1;
@@ -193,11 +187,6 @@ bool DrawNewSelection(bool episode,unsigned choice)
 int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice)
 {
     unsigned count=episode ? 6U : 4U;
-    int hit=IN_MenuPointerRow(episode?6:45,episode?23:100,episode?308:225,episode?26:13,count);
-    if(hit>=0 && (unsigned)hit!=*choice) {
-        *choice=(unsigned)hit;(void)SD_PlaySound(MOVEGUN1SND,0,0);
-        if(!DrawNewSelection(episode,*choice)) return -3;
-    }
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks>=move_next)) {
         *choice=(*choice+((up || (!down && Keyboard[sc_UpArrow])) ? count-1 : 1))%count;
@@ -258,17 +247,6 @@ bool BeginSoundSettings(void)
 { sound_choice=volume_choice=0;volume_page=false;MenuCursorMoved();IN_ClearKeysDown();return DrawSoundSettings(); }
 int HandleSoundSettings(void)
 {
-    int hit=-1;
-    if(volume_page) hit=IN_MenuPointerRow(40,80,240,26,2);
-    else {
-        hit=IN_MenuPointerRow(40,20,250,13,3);
-        int music=IN_MenuPointerRow(40,150,250,13,2);
-        if(music>=0) hit=music+3;
-    }
-    unsigned *selected=volume_page?&volume_choice:&sound_choice;
-    bool hover=hit>=0 && (unsigned)hit!=*selected;
-    if(hover) { *selected=(unsigned)hit;MenuCursorMoved();(void)SD_PlaySound(MOVEGUN1SND,0,0); }
-
     int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
     bool enter=IN_ConsumePress(sc_Enter)|IN_ConsumePress(sc_Space);
@@ -300,7 +278,7 @@ int HandleSoundSettings(void)
         }
         (void)SD_PlaySound(SHOOTSND,0,0);
     }
-    if((hover || up || down || left || right || enter) && !DrawSoundSettings()) return -3;
+    if((up || down || left || right || enter) && !DrawSoundSettings()) return -3;
     return 0;
 }
 

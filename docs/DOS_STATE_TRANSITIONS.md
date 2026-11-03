@@ -2,7 +2,6 @@
 
 Scope: registered GOODTIMES WL6 historical source and native SDL3 engine. This is a reviewed directed-route inventory, not an exhaustive enumeration of every branch/input combination.
 Evidence records distinguish source review, native regression assertions and execution of the checksum-verified original DOS executable. Current run results are in [Milestone 13](MILESTONE13_FINAL_FIDELITY.md).
-Pointer-alignment follow-up: native menus select the row under the visible pointer using the corrected 4:3 canvas and letterbox transform. This intentionally replaces DOS counter-threshold mouse stepping; keyboard and relative gameplay input remain separate.
 
 ## How to read the evidence
 
@@ -96,7 +95,7 @@ Close with: Document compatibility boundary; keep corruption, atomic failure and
 
 ### hardware — P2: Portable hardware, input and debug adaptations
 
-No ISA/gameport/EMS/XMS detection, BIOS text mode, controller calibration or DOS timing/cache debug emulation. Native display/binding panels and startup plumbing differ. Native menu mouse selection follows the visible pointer rather than DOS relative counter thresholds; this is an intentional usability adaptation.
+No ISA/gameport/EMS/XMS detection, BIOS text mode, controller calibration or DOS timing/cache debug emulation. Native display/binding panels and startup plumbing differ.
 
 Source/implementation: [IntroScreen](../WOLFSRC/WL_MENU.C#L2882); [DemoLoopStartupDevices](../src/engine/WL_MAIN.c#L26)
 
@@ -118,7 +117,7 @@ Close with: Retain intentional separation and test original saying selection pre
 
 The current wide-accumulator ×4 FM gain, synth and native volume controls are not calibrated against physical OPL/Sound Blaster output. Scheduling/priority tests do not establish loudness parity. DOS UpdateFace skips RNG while GETGATLINGSND is playing; the native engine intentionally retains audio-independent face/RNG updates. The four reference demos use DOS sound off. DOS Died also calls SD_WaitSoundDone after acknowledgement; native death has no separate sound-completion gate. The existing fizzle/wait usually outlasts the effect, but early acknowledgement versus FM completion is not independently verified.
 
-Source/implementation: [CP_Sound](../WOLFSRC/WL_MENU.C#L67); [BeginSoundSettings](../src/engine/WL_MENU.c#L257)
+Source/implementation: [CP_Sound](../WOLFSRC/WL_MENU.C#L67); [BeginSoundSettings](../src/engine/WL_MENU.c#L246)
 
 Rows: death-ack, panel-sound, return-sound, game-sound, sound-game.
 
@@ -285,7 +284,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **Artwork/layout:** Episode artwork and six rows.
 - **Sound/music:** Menu selection sound.
 - **Input/state:** Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.
-- **Revive:** [StepDemoLoop](../src/engine/WL_MAIN.c#L301); [DrawNewSelection](../src/engine/WL_MENU.c#L166)
+- **Revive:** [StepDemoLoop](../src/engine/WL_MAIN.c#L301); [DrawNewSelection](../src/engine/WL_MENU.c#L160)
 - **Regression evidence:** [classic](#classic). Open findings: presentation.
 
 #### episode-difficulty: episode → difficulty
@@ -1031,7 +1030,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **Artwork/layout:** Original sound labels plus independent native volumes
 - **Sound/music:** Menu effects; boss key mutes music.
 - **Input/state:** Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.
-- **Revive:** [BeginSoundSettings](../src/engine/WL_MENU.c#L257)
+- **Revive:** [BeginSoundSettings](../src/engine/WL_MENU.c#L246)
 - **Regression evidence:** [audio](#audio). Open findings: audio, presentation.
 
 #### return-sound: sound → menu
@@ -1301,7 +1300,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **Artwork/layout:** Original sound labels plus independent native volumes
 - **Sound/music:** Menu effects; boss key mutes music.
 - **Input/state:** Fresh arrows/hotkeys/Enter/Space; Escape returns; clear pending gameplay input.
-- **Revive:** [BeginSoundSettings](../src/engine/WL_MENU.c#L257)
+- **Revive:** [BeginSoundSettings](../src/engine/WL_MENU.c#L246)
 - **Regression evidence:** [audio](#audio). Open findings: audio, presentation.
 
 #### sound-game: sound → gameplay
@@ -1584,7 +1583,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 
 ### interface
 
-**Scope:** Absolute menu pointer alignment across window sizes and integer/fit scaling, click coordinates, disabled rows/borders, idle and keyboard ownership, confirmation isolation, music pause and disk phases.
+**Scope:** DOS mouse thresholds/priority/buttons, separate relative menu capture, focus/enable release and regain, idle stability, keyboard input, music pause and disk phases.
 
 [static void Interface](../tests/classic_tests.c#L188)
 
@@ -1596,7 +1595,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 
 **Scope:** Qualification/ties, editing, cancellation, persistence and corrupt-file protection.
 
-[static void Scores](../tests/classic_tests.c#L295)
+[static void Scores](../tests/classic_tests.c#L270)
 
 **Observed:** Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.
 
@@ -1606,7 +1605,7 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 
 **Scope:** MLI/BAT, portable debug tools and all three jukebox banks.
 
-[static void Hidden](../tests/classic_tests.c#L257)
+[static void Hidden](../tests/classic_tests.c#L232)
 
 **Observed:** Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.
 

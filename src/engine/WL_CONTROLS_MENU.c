@@ -115,15 +115,6 @@ static int HandleOptions(void)
         if(bindings_page) { bindings_page=false;return Draw()?0:-3; }
         return -1;
     }
-    int hit=IN_MenuPointerRow(20,bindings_page?65:52,280,bindings_page?17:16,
-        bindings_page?(CT_ACTIONS-(binding/5)*5<5?CT_ACTIONS-(binding/5)*5:5):(Display_Available()?7U:6U));
-    bool hover=false;
-    if(hit>=0) {
-        unsigned target=bindings_page?(binding/5)*5+(unsigned)hit:(unsigned)hit;
-        unsigned *current=bindings_page?&binding:&row;
-        hover=target!=*current;*current=target;
-    }
-    if(hover) { MenuCursorMoved();(void)SD_PlaySound(MOVEGUN1SND,0,0); }
     int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
     bool enter=IN_ConsumePress(sc_Enter);
@@ -133,7 +124,7 @@ static int HandleOptions(void)
         if(left || right) alternative^=1U;
         if(IN_ConsumePress(0x53)) { (void)CT_Bind((ct_action)binding,alternative,0);return Draw()?0:-3; }
         if(enter) { waiting=true;conflict=false;IN_ClearKeysDown(); }
-        return !(hover || up || down || left || right || enter) || Draw()?0:-3;
+        return !(up || down || left || right || enter) || Draw()?0:-3;
     }
     if(up || down) row=(row+(up?(Display_Available()?6U:5U):1U))%(Display_Available()?7U:6U);
     if(left || right || enter) {
@@ -151,7 +142,7 @@ static int HandleOptions(void)
         if(enter) (void)SD_PlaySound(SHOOTSND,0,0);
         IN_ClearKeysDown();
     }
-    return !(hover || up || down || left || right || enter) || Draw()?0:-3;
+    return !(up || down || left || right || enter) || Draw()?0:-3;
 }
 
 int HandleControlsMenu(void)
@@ -166,11 +157,6 @@ int HandleControlsMenu(void)
         if(page==CONTROL_ROOT) return -1;
         page=CONTROL_ROOT;IN_ClearKeysDown();return Draw()?0:-3;
     }
-    if(page==CONTROL_SENSITIVITY) (void)IN_MenuPointerRow(10,80,300,30,1);
-    int hit=page==CONTROL_ROOT?IN_MenuPointerRow(16,70,284,13,7):-1;
-    if(hit>=0 && !ControlActive((unsigned)hit)) IN_MenuPointerReject();
-    bool hover=hit>=0 && ControlActive((unsigned)hit) && (unsigned)hit!=control_row;
-    if(hover) { control_row=(unsigned)hit;MenuCursorMoved();(void)SD_PlaySound(MOVEGUN1SND,0,0); }
     int direction=MenuNavigation();bool up=direction<0,down=direction>0;
     bool left=IN_ConsumePress(sc_LeftArrow),right=IN_ConsumePress(sc_RightArrow);
     bool enter=IN_ConsumePress(sc_Enter)|IN_ConsumePress(sc_Space);
@@ -191,5 +177,5 @@ int HandleControlsMenu(void)
             else if(control_row==6 && enter && Display_Available()) return 2;
         }
     }
-    return !(hover || up || down || left || right || enter) || Draw()?0:-3;
+    return !(up || down || left || right || enter) || Draw()?0:-3;
 }

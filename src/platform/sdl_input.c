@@ -4,10 +4,13 @@
 #include "engine/WL_CONTROLS.h"
 #include "engine/WL_MAIN.h"
 #include "engine/WL_MENU.h"
+#include <float.h>
 #include <SDL3/SDL.h>
 #include <string.h>
-static bool physical[SDL_SCANCODE_COUNT],mousebuttons[8],focused=true,captured,capture_failed;
+static bool physical[SDL_SCANCODE_COUNT],mousebuttons[8],focused=true,captured,menu_captured,capture_failed;
 static SDL_Window *capture_window;
+static double menu_x,menu_y;
+static ui_state mouse_state;
 static char capture_error[256];
 bool IN_SDLFocused(void) { return focused; }
 void IN_SDLDiscardInput(void) { memset(physical,0,sizeof(physical));IN_ClearKeysDown(); }
@@ -15,19 +18,25 @@ bool IN_SDLCaptured(void) { return captured; }
 const char *IN_SDLCaptureError(void) { return capture_error; }
 void IN_SDLReset(void) { IN_SDLFocusLost();focused=true;capture_window=NULL;capture_error[0]=0; }
 void IN_SDLFocusGained(void) { focused=true;IN_ClearKeysDown(); }
-void IN_SDLCapture(SDL_Window *window,bool gameplay)
+static bool PointerMenu(void);
+void IN_SDLCapture(SDL_Window *window,bool gameplay,bool menus)
 {
     if(window!=capture_window) capture_failed=false;
     capture_window=window;
     bool want=window && gameplay && focused && CT_MouseEnabled();
-    if(!want) capture_failed=false;
-    if(captured==want || (want && capture_failed)) return;
-    if(window && !SDL_SetWindowRelativeMouseMode(window,want)) {
+    bool menu=menus && window && focused && CT_MouseEnabled() && PointerMenu();
+    bool relative=want || menu;
+    if(!relative) capture_failed=false;
+    if((captured==want && menu_captured==menu) || (relative && capture_failed)) return;
+    if(window && !SDL_SetWindowRelativeMouseMode(window,relative)) {
         (void)SDL_strlcpy(capture_error,SDL_GetError(),sizeof(capture_error));
         SDL_Log("Relative mouse unavailable: %s; keyboard controls remain active",capture_error);
-        captured=false;capture_failed=true;return;
+        captured=menu_captured=false;capture_failed=true;return;
     }
-    captured=want;CT_Clear();
+    /* DOS recenters its mouse counters. Relative menu capture keeps the
+       desktop pointer hidden and avoids stopping at a screen edge, while
+       the original gun cursor remains the sole selection indicator. */
+    captured=want;menu_captured=menu;menu_x=menu_y=0;CT_Clear();
     /* Ignore motion queued before a mode/menu/focus transition. */
     SDL_FlushEvent(SDL_EVENT_MOUSE_MOTION);
 }
@@ -35,6 +44,7 @@ void IN_SDLMouseMotion(double x) { if(captured && focused) CT_MouseMotion(x); }
 static bool PointerMenu(void)
 {
     ui_state state=DemoLoopState();
+    if(state!=mouse_state) { menu_x=menu_y=0;mouse_state=state; }
     return state==UI_MENU || state==UI_EPISODE || state==UI_DIFFICULTY || state==UI_SOUND ||
         state==UI_CONTROLS || state==UI_DISPLAY || state==UI_VIEW || state==UI_SAVE || state==UI_LOAD || state==UI_JUKEBOX;
 }
@@ -42,9 +52,12 @@ static void Pulse(unsigned scan)
 { if(!Keyboard[scan]) { IN_MenuKeyEvent(scan,true);IN_MenuKeyEvent(scan,false); } }
 void IN_SDLPointerMotion(double x,double y)
 {
-    if(captured || !focused || !PointerMenu() || !CT_MouseEnabled()) return;
-    if(!(x>=0 && x<320 && y>=0 && y<200)) { IN_MenuPointerEvent(-1,-1);return; }
-    IN_MenuPointerEvent(x,y);
+    if(captured) { IN_SDLMouseMotion(x);return; }
+    if(!focused || !PointerMenu() || !CT_MouseEnabled() || !(x>=-DBL_MAX && x<=DBL_MAX && y>=-DBL_MAX && y<=DBL_MAX)) return;
+    menu_x+=x;menu_y+=y;
+    /* WL_MENU.C ReadAnyControl: strict 60-count threshold, horizontal wins. */
+    unsigned scan=menu_x< -60?sc_LeftArrow:menu_x>60?sc_RightArrow:menu_y< -60?sc_UpArrow:menu_y>60?sc_DownArrow:0U;
+    if(scan) { Pulse(scan);menu_x=menu_y=0; }
 }
 void IN_SDLMouseButton(unsigned button,bool down)
 {
@@ -53,7 +66,7 @@ void IN_SDLMouseButton(unsigned button,bool down)
     if(captured && focused) CT_MouseButton(button,down);
     else if(focused && down) {
         if(PointerMenu() && CT_MouseEnabled()) {
-            if(button==SDL_BUTTON_LEFT) { IN_MenuPointerClick();Pulse(sc_Enter); }
+            if(button==SDL_BUTTON_LEFT) Pulse(sc_Enter);
             else if(button==SDL_BUTTON_RIGHT) Pulse(sc_Escape);
         } else IN_AckEvent();
     }
@@ -100,9 +113,9 @@ unsigned IN_MapSDLScancode(unsigned code)
 }
 void IN_SDLFocusLost(void)
 {
-    focused=false;
-    if(captured && capture_window) (void)SDL_SetWindowRelativeMouseMode(capture_window,false);
-    captured=false;capture_failed=false;memset(physical,0,sizeof(physical));memset(mousebuttons,0,sizeof(mousebuttons));IN_ClearKeysDown();
+    focused=false;menu_x=menu_y=0;
+    if((captured || menu_captured) && capture_window) (void)SDL_SetWindowRelativeMouseMode(capture_window,false);
+    captured=menu_captured=false;capture_failed=false;memset(physical,0,sizeof(physical));memset(mousebuttons,0,sizeof(mousebuttons));IN_ClearKeysDown();
 }
 /* DOS IRQ keyboard input delivered typematic make codes to US_LineInput.
    Use native repeat events only in editors, never for gameplay or dialogs. */

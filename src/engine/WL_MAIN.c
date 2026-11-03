@@ -449,12 +449,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(!disk_saving) GamePreloadConsumed();
         disk_done=true;disk_at=ticks+1;IN_ClearKeysDown();
     } else if(state==UI_JUKEBOX) {
-        bool redraw=TickMenuCursor(ticks);
-        int hit=IN_MenuPointerRow(22,70,280,13,6);
-        if(hit>=0 && (unsigned)hit!=jukebox_choice) {
-            jukebox_choice=(unsigned)hit;MenuCursorMoved();redraw=true;(void)SD_PlaySound(MOVEGUN1SND,0,0);
-        }
-        int direction=MenuNavigation();
+        bool redraw=TickMenuCursor(ticks);int direction=MenuNavigation();
         if(direction) { jukebox_choice=(jukebox_choice+(direction<0?5U:1U))%6;MenuCursorMoved();redraw=true;(void)SD_PlaySound(MOVEGUN1SND,0,0); }
         if(IN_ConsumePress(sc_Enter) || IN_ConsumePress(sc_Space)) {
             jukebox_playing=(int)jukebox_choice;SD_StartMusic((int)jukebox_tracks[jukebox_bank*6+jukebox_choice]);

@@ -331,9 +331,8 @@ files fail the check and the standard unittest suite. This check validates
 traceability and route coverage, not runtime DOS equivalence. Current executed
 DOS and release results are in [Milestone 13](MILESTONE13_FINAL_FIDELITY.md).
 
-Menu mouse selection follows the visible pointer. Letterbox borders and the
-320×200-to-320×240 aspect correction are included in the hit testing, so the
-highlight stays on the pointed row at different window sizes and scaling modes.
-Clicks in black borders or disabled rows do not activate another selection.
-Keyboard navigation retains control until fresh pointer movement or a click;
-gameplay continues to use captured relative mouse movement.
+Menu mouse navigation keeps the DOS movement threshold and gun cursor. With
+mouse input enabled, menus use relative capture to hide the desktop pointer
+and avoid stopping at a screen edge. Focus loss, pending display changes,
+disabling mouse input and shutdown release capture. Keyboard navigation remains
+available; mouse movement in a menu never becomes gameplay movement or firing.

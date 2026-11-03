@@ -35,7 +35,6 @@ static bool DrawPreview(void)
 bool BeginViewMenu(void) { preview=ViewSize();repeat=0;IN_ClearKeysDown();return DrawPreview(); }
 int HandleViewMenu(uint64_t ticks)
 {
-    (void)IN_MenuPointerRow(0,0,320,200,1);
     if(IN_ConsumePress(sc_Escape)) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
     if(IN_ConsumePress(sc_Enter)) {
         if(!NewViewSize(preview)) return -3;

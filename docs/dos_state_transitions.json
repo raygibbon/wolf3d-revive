@@ -2,8 +2,7 @@
   "schema": 1,
   "introduction": [
     "Scope: registered GOODTIMES WL6 historical source and native SDL3 engine. This is a reviewed directed-route inventory, not an exhaustive enumeration of every branch/input combination.",
-    "Evidence records distinguish source review, native regression assertions and execution of the checksum-verified original DOS executable. Current run results are in [Milestone 13](MILESTONE13_FINAL_FIDELITY.md).",
-    "Pointer-alignment follow-up: native menus select the row under the visible pointer using the corrected 4:3 canvas and letterbox transform. This intentionally replaces DOS counter-threshold mouse stepping; keyboard and relative gameplay input remain separate."
+    "Evidence records distinguish source review, native regression assertions and execution of the checksum-verified original DOS executable. Current run results are in [Milestone 13](MILESTONE13_FINAL_FIDELITY.md)."
   ],
   "states": [
     "article",
@@ -3266,7 +3265,7 @@
       ]
     },
     "interface": {
-      "scope": "Absolute menu pointer alignment across window sizes and integer/fit scaling, click coordinates, disabled rows/borders, idle and keyboard ownership, confirmation isolation, music pause and disk phases.",
+      "scope": "DOS mouse thresholds/priority/buttons, separate relative menu capture, focus/enable release and regain, idle stability, keyboard input, music pause and disk phases.",
       "observation": "Assertions available in the linked regression; current execution results are recorded separately in MILESTONE13_FINAL_FIDELITY.md.",
       "limits": "Native operation phases replace DOS disk serialization timing.",
       "refs": [
@@ -3430,7 +3429,7 @@
     "hardware": {
       "priority": "P2",
       "title": "Portable hardware, input and debug adaptations",
-      "finding": "No ISA/gameport/EMS/XMS detection, BIOS text mode, controller calibration or DOS timing/cache debug emulation. Native display/binding panels and startup plumbing differ. Native menu mouse selection follows the visible pointer rather than DOS relative counter thresholds; this is an intentional usability adaptation.",
+      "finding": "No ISA/gameport/EMS/XMS detection, BIOS text mode, controller calibration or DOS timing/cache debug emulation. Native display/binding panels and startup plumbing differ.",
       "close_with": "Document unsupported hardware/editions and verify actual native devices separately.",
       "refs": [
         "WOLFSRC/WL_MENU.C:IntroScreen",
