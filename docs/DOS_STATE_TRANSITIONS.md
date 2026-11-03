@@ -31,7 +31,7 @@ flowchart LR
 The graph describes DOS routes. In particular, death restart bypasses Get Psyched, and established-slot quickload returns to the existing play loop. Differences below remain open.
 
 - **New game**: title → menu → episode → difficulty → setup → psyched → psyched → reveal → gameplay. Rows: title-menu, menu-episode, episode-difficulty, difficulty-setup, setup-psyched, psyched-progress, psyched-reveal, reveal-game.
-- **Death restart**: gameplay → death-turn → red-fizzle → death-ack → restart → reveal → gameplay. Rows: death-turn, death-fizzle, death-ack, death-restart, restart-reveal, reveal-game.
+- **Death restart**: gameplay → death-turn → red-fizzle → death-ack → restart → gameplay. Rows: death-turn, death-fizzle, death-ack, death-restart, restart-reveal.
 - **Final death**: gameplay → death-turn → red-fizzle → death-ack → qualification → name-entry → title. Rows: death-turn, death-fizzle, death-ack, death-final, qualify, name-save.
 - **Secret floor**: gameplay → secret-completion → setup → psyched → reveal → gameplay. Rows: secret-completion, secret-entry, setup-psyched, psyched-reveal, reveal-game.
 - **Ordinary load**: menu → load → disk → setup → psyched → reveal → gameplay. Rows: menu-load, load-work, ordinary-load-setup, setup-psyched, psyched-reveal, reveal-game.
@@ -65,7 +65,7 @@ Close with: Treat as intentional adaptation; compare visual progress formula sep
 
 ### entry-fizzle — P1: Gameplay-entry reveal differs
 
-DOS GameLoop sets fizzlein; Revive reveals gameplay with a 30-tic palette fade after loading/restart. This is an acknowledged visual difference, not pixel parity.
+DOS GameLoop sets fizzlein; Revive uses a 30-tic palette fade after loading and redraws immediately on death restart. Neither reproduces DOS ThreeDRefresh/FizzleFade gameplay-entry reveal. This is an acknowledged visual difference, not pixel parity.
 
 Source/implementation: [GameLoop](../WOLFSRC/WL_GAME.C#L45); [StepPreloadGraphics](../src/engine/WL_INTER.c#L252)
 
@@ -763,13 +763,13 @@ Close with: Measure representative enabled-DOS tracks/effects against a document
 - **Revive:** [Died](../src/engine/WL_PLAY.c#L81)
 - **Regression evidence:** [death](#death), [campaign](#campaign). Open findings: presentation.
 
-#### restart-reveal: restart → reveal
+#### restart-reveal: restart → gameplay
 
 **Trigger:** Level rebuild succeeds **Status:** `partial`.
 
 - **DOS source:** [GameLoop](../WOLFSRC/WL_GAME.C#L45)
-- **Timing:** Native palette reveal.
-- **Palette:** Original gamepal indices; VGA-style DAC interpolation where faded.
+- **Timing:** DOS sets fizzlein for the same-floor restart; Revive redraws the game immediately without a separate reveal phase.
+- **Palette:** Original gamepal; no native restart fade/fizzle.
 - **Artwork/layout:** Original play border/HUD.
 - **Sound/music:** Level track.
 - **Input/state:** Rebase clock.

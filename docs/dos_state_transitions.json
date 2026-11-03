@@ -1338,7 +1338,7 @@
       "id": "restart-reveal",
       "group": "Death",
       "from": "restart",
-      "to": "reveal",
+      "to": "gameplay",
       "trigger": "Level rebuild succeeds",
       "source": [
         "WOLFSRC/WL_GAME.C:GameLoop"
@@ -1347,8 +1347,8 @@
         "src/engine/WL_PLAY.c:Died"
       ],
       "artwork": "Original play border/HUD.",
-      "palette": "Original gamepal indices; VGA-style DAC interpolation where faded.",
-      "timing": "Native palette reveal.",
+      "palette": "Original gamepal; no native restart fade/fizzle.",
+      "timing": "DOS sets fizzlein for the same-floor restart; Revive redraws the game immediately without a separate reveal phase.",
       "sound": "Level track.",
       "input": "Rebase clock.",
       "evidence": [
@@ -3398,7 +3398,7 @@
     "entry-fizzle": {
       "priority": "P1",
       "title": "Gameplay-entry reveal differs",
-      "finding": "DOS GameLoop sets fizzlein; Revive reveals gameplay with a 30-tic palette fade after loading/restart. This is an acknowledged visual difference, not pixel parity.",
+      "finding": "DOS GameLoop sets fizzlein; Revive uses a 30-tic palette fade after loading and redraws immediately on death restart. Neither reproduces DOS ThreeDRefresh/FizzleFade gameplay-entry reveal. This is an acknowledged visual difference, not pixel parity.",
       "close_with": "Implement and independently compare DOS entry fizzle before claiming complete presentation equivalence.",
       "refs": [
         "WOLFSRC/WL_GAME.C:GameLoop",
@@ -3928,8 +3928,7 @@
       "death-fizzle",
       "death-ack",
       "death-restart",
-      "restart-reveal",
-      "reveal-game"
+      "restart-reveal"
     ],
     "Final death": [
       "death-turn",
