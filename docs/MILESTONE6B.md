@@ -217,7 +217,30 @@ listening remain future verification.
 - Animated intermission counting and ENDBONUS1/2, PERCENT100 and NOBONUS
   sequencing are now completed by [Milestone 6C](MILESTONE6C.md).
 - Compare representative melodic/rhythm tracks and simultaneous AL effects
-  against DOS on the same output route. Tune interpolation/levels only from
-  that evidence; the short listening check is not a hardware-fidelity oracle.
+  against DOS on the same output route. The native level calibration below
+  addresses the reported balance; physical DOS A/B validation remains open.
 - Verify packaging, device changes and physical playback on native Windows.
   PC speaker mode is optional and remains unimplemented/unexposed.
+
+## Native FM level follow-up — 2026-11-03
+
+A user listening report found music too quiet even with saved music/effects
+volumes both at 100%. Across the first 15 seconds of each owned WL6 track,
+raw FM music peaks were 645–3162 in the signed 16-bit output; the title track
+peaked at 1138, versus 14336 for the pistol and 24064 for a digitized voice.
+
+`ID_SD.c SD_Render` now applies a fixed 4× (+12.04 dB) gain to the FM bus in
+its 32-bit accumulator after synthesis/interpolation and before digitized
+mixing. This raises both FM music and AdLib effects; digitized samples retain
+their existing levels. Slider values, saved preferences, mute/pause, shared
+OPL register writes, sound priorities and 700/140/70-Hz schedules are unchanged.
+The title peak is now 4552; measured pistol/voice peaks remain unchanged.
+This is native output calibration, not a claim of exact DOS analogue levels.
+
+`tests/audio_tests.c Volume` now bounds the invented IMF tone's output level,
+while `OwnedTracks` renders every complete owned loop at 100% music and rejects
+clipping. All 27 tracks passed; mixed output retains the existing saturating
+16-bit conversion. The six audio tests passed normally (40.079 s) and with ASan/UBSan
+(195.502 s), without skips/findings. All five demo synchronization cases
+passed (39.805 s), covering the four owned recordings in both renderers.
+Strict C11/SDL3 and MinGW compilation passed; PR #16 records this follow-up. Private measurements/logs remain ignored in `build/`.

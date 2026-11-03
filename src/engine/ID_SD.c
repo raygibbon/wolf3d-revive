@@ -256,6 +256,10 @@ void SD_Render(int16_t *stereo,size_t frames)
         }
         int32_t l=chip_previous[0]+(int32_t)((int64_t)(chip_next[0]-chip_previous[0])*(int64_t)chip_phase/(int64_t)output_rate);
         int32_t r=chip_previous[1]+(int32_t)((int64_t)(chip_next[1]-chip_previous[1])*(int64_t)chip_phase/(int64_t)output_rate);
+        /* Match the low-level OPL output to the 16-bit PCM voice range.
+           Apply gain in the wide accumulator, after chip synthesis, so the
+           chip's int16 mixer cannot wrap. Leave digitized samples unchanged. */
+        l*=4;r*=4;
         phase+=700;chip_phase+=49716;
         if(status.digitized>=0) {
             unsigned d=(unsigned)status.digitized;size_t at=(size_t)(digi_phase/(UINT64_C(142)*output_rate));

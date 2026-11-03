@@ -81,6 +81,10 @@ static void Volume(void)
     Reset(48000);SD_StartMusic(0);SD_SetVolumes(0,0);SD_Render(pcm,48000);
     CHECK(!Energy(pcm,48000,0) && !Energy(pcm,48000,1));
     SD_SetVolumes(100,100);SD_StartMusic(0);SD_Render(pcm,48000);CHECK(Energy(pcm,48000,0)>10000);
+    /* The invented single-channel IMF tone must reach a useful PCM level;
+       this catches a return to the OPL core's quiet, uncalibrated output. */
+    int peak=0;for(size_t i=0;i<48000*2;++i) if(abs(pcm[i])>peak) peak=abs(pcm[i]);
+    CHECK(peak>=7000 && peak<=9000);
     SD_SetEnabled(false,false);SD_Render(pcm,48000);SD_Render(pcm,48000);
     CHECK(!Energy(pcm,48000,0) && !SD_PlaySound(HALTSND,0,0));
     SD_SetEnabled(true,true);SD_SetVolumes(0,50);SD_StopSound();
@@ -109,10 +113,12 @@ static void OwnedTracks(void)
         const uint8_t *s=(const uint8_t *)archive+CA_LE32((const uint8_t *)head+(261+song)*4);
         size_t length=CA_LE16(s);uint64_t ticks=0;
         for(size_t pos=0;pos+4<length;pos+=4) ticks+=CA_LE16(s+2+pos+2);
-        Reset(48000);SD_StartMusic((int)song);
+        Reset(48000);SD_SetVolumes(100,0);SD_StartMusic((int)song);
         uint64_t remaining=(ticks*48000+699)/700;
         while(remaining) {
             size_t frames=(size_t)(remaining>48000?48000:remaining);SD_Render(pcm,frames);remaining-=frames;
+            /* Full-volume FM must retain headroom through every owned loop. */
+            for(size_t i=0;i<frames*2;++i) CHECK(pcm[i]!=INT16_MIN && pcm[i]!=INT16_MAX);
         }
         sd_status status;SD_GetStatus(&status);CHECK(!status.loops);
         SD_Render(pcm,1);SD_GetStatus(&status);CHECK(status.loops==1);
