@@ -7,7 +7,9 @@ typedef enum { UI_TITLE, UI_CREDITS, UI_HIGHSCORES, UI_MENU, UI_SCORES, UI_CONFI
 bool DemoLoopStartup(uint64_t ticks, bool menu);
 /* Optional verified archive PG13 picture; normal title/menu API stays unchanged. */
 bool DemoLoopIntro(uint64_t ticks);
-/* Optional user-supplied 320x200 indexed sign-on image. Missing file is safe. */
+/* Optional headerless 320x200 row-major image using gamepal. Call after
+   Startup/Intro for normal startup only; missing art leaves that state intact.
+   Malformed/unreadable art fails before replacing the framebuffer. */
 bool DemoLoopSignon(const char *path,uint64_t ticks);
 bool DemoLoop(uint64_t ticks);
 ui_state DemoLoopState(void);

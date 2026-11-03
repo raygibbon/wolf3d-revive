@@ -15,6 +15,7 @@
 #include "WL_DEMO.h"
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 static ui_state state, next_state, signon_return;
 static bool leaving;
 static uint64_t deadline, transition_end, blink_next;
@@ -68,7 +69,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
         if(!ok) return GameError() && VL_FadeIn(gamepal,10,ticks);
     }
     if ((screen==UI_SAVE || screen==UI_LOAD) && !BeginSaveMenu(screen==UI_SAVE)) return false;
-    if (screen == UI_TITLE) SD_StartMusic(7);
+    if (screen == UI_TITLE || (screen==UI_RATING && previous==UI_SIGNON)) SD_StartMusic(7);
     if (screen == UI_MENU) SD_StartMusic(14);
     if (screen == UI_SCORES || screen == UI_HIGHSCORES) SD_StartMusic(23);
     if(screen==UI_CONTROLS || screen==UI_SOUND) ResetMenuCursor(ticks);
@@ -95,7 +96,7 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     leaving = true; next_state = next; transition_end = ticks + steps;
     IN_ClearKeysDown();
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
-    return VL_FadeOut(Attract() ? 0 : 43,0,0,steps,ticks);
+    return VL_FadeOut(Attract() || state==UI_SIGNON ? 0 : 43,0,0,steps,ticks);
 }
 bool DemoLoopStartGame(uint64_t ticks) { quickslot=-1;episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
@@ -107,23 +108,39 @@ bool DemoLoopStartup(uint64_t ticks, bool menu)
     if (!VL_FadeOut(0,0,0,0,ticks)) return false;
     return ChangeScreen(menu ? UI_MENU : UI_TITLE,ticks);
 }
+/* FinishSignon uses the normal font, centred at y=190. Leave the original
+   memory/card indicators unfilled: DOS resources are not modern measurements. */
+static bool SignonPrompt(const char *text,w3r_byte color)
+{
+    int old_font=fontnumber,old_x=px,old_y=py,width,height;
+    w3r_byte old_color=fontcolor;
+    fontnumber=0;fontcolor=color;
+    bool ok=VW_MeasurePropString(text,&width,&height);
+    if(ok) {
+        VWB_Bar(0,189,300,11,framebuffer[0]);
+        px=(320-width)/2;py=190;ok=VW_DrawPropString(text);
+    }
+    fontnumber=old_font;fontcolor=old_color;px=old_x;py=old_y;return ok;
+}
 bool DemoLoopSignon(const char *path,uint64_t ticks)
 {
     /* Original DOS introscn was linked into the executable, not WL6.
        A user-supplied 320x200 raw indexed image can restore its appearance.
        Never synthesize DOS hardware detection data. */
-    if(!path || GameRunning()) return true;
+    if(!path || GameRunning() || (state!=UI_TITLE && state!=UI_RATING)) return true;
     FILE *file=fopen(path,"rb");
-    if(!file) return true; /* Optional art: existing rating/title still work. */
+    if(!file) return errno==ENOENT ? true : CA_Fail("Cannot open optional SIGNON.RAW");
     unsigned char pixels[320U*200U];
     size_t count=fread(pixels,1,sizeof(pixels),file);
     int extra=fgetc(file),read_error=ferror(file);
-    (void)fclose(file);
+    if(fclose(file)!=0) read_error=1;
     if(read_error || count!=sizeof(pixels) || extra!=EOF)
         return CA_Fail("Sign-on image must contain exactly 64000 indexed pixels");
     signon_return=state;
     memcpy(framebuffer,pixels,sizeof(pixels));
+    if(!SignonPrompt("Press a key",14)) return false;
     state=UI_SIGNON;leaving=false;IN_ClearKeysDown();
+    SD_StartMusic(-1);
     return VL_FadeIn(gamepal,10,ticks);
 }
 bool DemoLoopIntro(uint64_t ticks)
@@ -176,6 +193,7 @@ static bool StepDemoLoop(uint64_t ticks)
         }
         if(state==UI_SIGNON) {
             if(IN_AnyPressed()) {
+                if(!SignonPrompt("Working...",10)) return false;
                 if(!Transition(signon_return,ticks,10)) return false;
                 continue;
             }
