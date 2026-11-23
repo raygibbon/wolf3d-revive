@@ -274,6 +274,7 @@ void VL_Shutdown(void)
     uploaded=false;integer_scale=pending=target=restore_size=size_pending=false;
     window_w=960;window_h=720;applied_mode=SDL_LOGICAL_PRESENTATION_DISABLED;
     display_error[0]=0;memset(consumed,0,sizeof(consumed));IN_SDLFocusLost();
+    vl_active_context = NULL;
 }
 
 bool VL_Startup(void)
@@ -287,7 +288,6 @@ bool VL_StartupWithContext(const game_context_t *ctx)
 {
     const game_identity_t *identity = GameContext_Identity(ctx);
     if (!identity) return false;
-    vl_active_context = ctx;
     char error[512];
     VL_Shutdown();
     SDL_SetMainReady();
@@ -301,6 +301,7 @@ bool VL_StartupWithContext(const game_context_t *ctx)
     if (!texture || !SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST) ||
         !ApplyPresentation()) goto failed;
     IN_SDLReset();uploads = 0;
+    vl_active_context = ctx;
     return true;
 failed:
     (void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
@@ -471,7 +472,6 @@ bool VL_ScreenshotWithContext(const game_context_t *ctx)
 {
     const game_identity_t *identity = GameContext_Identity(ctx);
     if (!identity) return false;
-    vl_active_context = ctx;
     char *dir=SDL_GetPrefPath(NULL,identity->prefs_id);if(!dir) return false;
     char path[4096];bool ok=false;
     /* Monotonic suffix plus existence check prevents overwriting prior shots. */

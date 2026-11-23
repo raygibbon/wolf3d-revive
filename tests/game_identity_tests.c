@@ -138,6 +138,25 @@ int main(void)
     CHECK(strcmp(GameContext_Identity(&def_ctx)->game_id, "wolf3d-revive") == 0);
     CHECK(strcmp(GameContext_Identity(&def_ctx)->prefs_id, "wolf3d-revive") == 0);
 
+    /* 11. Screenshot override must not change active context concept. */
+    /* GameContext_Identity returns the same pointer for the same context. */
+    game_context_t ctx_a, ctx_b;
+    CHECK(GameContext_InitDefault(&ctx_a));
+    game_identity_t id_b = { .game_id = "other", .display_title = "Other", .prefs_id = "other" };
+    CHECK(GameContext_Init(&ctx_b, &id_b));
+    /* Identities are distinct. */
+    CHECK(GameContext_Identity(&ctx_a) != GameContext_Identity(&ctx_b));
+    CHECK(strcmp(GameContext_Identity(&ctx_a)->prefs_id, "wolf3d-revive") == 0);
+    CHECK(strcmp(GameContext_Identity(&ctx_b)->prefs_id, "other") == 0);
+
+    /* 12. Default identity behaviour preserved. */
+    const game_identity_t *def = GameIdentity_Default();
+    CHECK(def != NULL);
+    CHECK(strcmp(def->game_id, "wolf3d-revive") == 0);
+    CHECK(strcmp(def->display_title, "Wolf3D Revive") == 0);
+    CHECK(strcmp(def->prefs_id, "wolf3d-revive") == 0);
+    CHECK(GameIdentity_Valid(def));
+
     printf("game_identity_tests: PASS\n");
     return 0;
 }
