@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_MAIN.C DemoLoop and WL_MENU.C control panel, resumed by monotonic tics.
    Title 15s -> credits 10s -> scores 10s -> validated original demo. */
+#include "engine/game_definition.h"
 #include "WL_MAIN.h"
 #include "WL_MENU.h"
 #include "ID_CA.h"
@@ -228,13 +229,9 @@ static bool GameMessage(const char *text)
 }
 /* WL_MAIN.C DoJukebox: registered WL6 has three time-selected six-song banks. */
 static const unsigned jukebox_tracks[]={3,11,9,12,2,0,8,18,17,4,1,19,6,20,22,21,19,26};
-static const char *const jukebox_names[]={
-    "Get Them!","Searching","P.O.W.","Suspense","War March","Around The Corner!",
-    "Nazi Anthem","Lurking...","Going After Hitler","Pounding Headache","Into the Dungeons","Ultimate Conquest",
-    "Kill the S.O.B.","The Nazi Rap","Twelfth Hour","Zero Hour","Ultimate Conquest","Wolfpack"
-};
 static bool DrawJukebox(void)
 {
+    const game_definition_t *def = GameDefinition_Default();
     ClearMScreen();DrawStripes(10);DrawWindow(22,64,280,91,BKGDCOLOR);
     if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=0x47;int w,h;
@@ -242,7 +239,7 @@ static bool DrawJukebox(void)
     PrintX=(320-w)/2;PrintY=15;if(!US_Print("Robert's Jukebox")) return false;
     for(unsigned i=0;i<6;++i) {
         fontcolor=i==jukebox_choice?HIGHLIGHT:(int)i==jukebox_playing?0x4a:TEXTCOLOR;
-        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(jukebox_names[jukebox_bank*6+i])) return false;
+        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(GameDefinition_JukeboxName(def,jukebox_bank*6+i))) return false;
     }
     return VWB_DrawPic(24,68+(int)jukebox_choice*13,MenuCursorPicture());
 }

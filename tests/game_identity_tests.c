@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #include "engine/game_identity.h"
 #include "engine/game_context.h"
+#include "engine/game_definition.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +83,7 @@ int main(void)
     /* Alternative identity via context. */
     game_identity_t alt2 = { .game_id = "alt-game", .display_title = "Alt Game", .prefs_id = "alt-game" };
     game_context_t alt_ctx;
-    CHECK(GameContext_Init(&alt_ctx, &alt2));
+    CHECK(GameContext_Init(&alt_ctx, &alt2, GameDefinition_Default()));
     CHECK(GameContext_Valid(&alt_ctx));
     const game_identity_t *alt_ctx_id = GameContext_Identity(&alt_ctx);
     CHECK(alt_ctx_id != NULL);
@@ -91,11 +92,11 @@ int main(void)
     /* Invalid identity rejected by context. */
     game_identity_t bad = { .game_id = "", .display_title = "X", .prefs_id = "X" };
     game_context_t bad_ctx;
-    CHECK(!GameContext_Init(&bad_ctx, &bad));
+    CHECK(!GameContext_Init(&bad_ctx, &bad, GameDefinition_Default()));
 
     /* NULL context rejected. */
-    CHECK(!GameContext_Init(NULL, &alt2));
-    CHECK(!GameContext_Init(&alt_ctx, NULL));
+    CHECK(!GameContext_Init(NULL, &alt2, GameDefinition_Default()));
+    CHECK(!GameContext_Init(&alt_ctx, NULL, GameDefinition_Default()));
     CHECK(!GameContext_Valid(NULL));
     CHECK(GameContext_Identity(NULL) == NULL);
 
@@ -105,7 +106,7 @@ int main(void)
     /* 7. Context propagation: selected identity flows through context. */
     game_identity_t custom = { .game_id = "custom-game", .display_title = "Custom Game", .prefs_id = "custom-game" };
     game_context_t custom_ctx;
-    CHECK(GameContext_Init(&custom_ctx, &custom));
+    CHECK(GameContext_Init(&custom_ctx, &custom, GameDefinition_Default()));
     CHECK(GameContext_Valid(&custom_ctx));
     const game_identity_t *propagated = GameContext_Identity(&custom_ctx);
     CHECK(propagated != NULL);
@@ -143,7 +144,7 @@ int main(void)
     game_context_t ctx_a, ctx_b;
     CHECK(GameContext_InitDefault(&ctx_a));
     game_identity_t id_b = { .game_id = "other", .display_title = "Other", .prefs_id = "other" };
-    CHECK(GameContext_Init(&ctx_b, &id_b));
+    CHECK(GameContext_Init(&ctx_b, &id_b, GameDefinition_Default()));
     /* Identities are distinct. */
     CHECK(GameContext_Identity(&ctx_a) != GameContext_Identity(&ctx_b));
     CHECK(strcmp(GameContext_Identity(&ctx_a)->prefs_id, "wolf3d-revive") == 0);

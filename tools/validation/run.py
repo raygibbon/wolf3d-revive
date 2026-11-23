@@ -225,6 +225,18 @@ def build_jobs() -> list[Job]:
         requires=("sdl-sdk", "cc"),
     ))
 
+    # R1.3 - game definition tests
+    jobs.append(Job(
+        id="r13-game-definition",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="Game definition interface headless tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_game_definition.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
     return jobs
 
 

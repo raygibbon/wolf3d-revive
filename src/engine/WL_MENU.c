@@ -2,6 +2,7 @@
 /* WL_MENU.C by John Romero (C) 1992 Id Software, Inc.
    GOODTIMES control-panel slice; blocking HandleMenu is now tic-driven.
    Gameplay-dependent rows retain original disabled rendering and are skipped. */
+#include "engine/game_definition.h"
 #include "WL_MENU.h"
 #include "WL_SAVE.h"
 #include "WL_DISPLAY.h"
@@ -159,27 +160,28 @@ bool MessageAtHeight(const char *text,unsigned area_height)
    the control panel; a selection clears edges before entering the next page. */
 bool DrawNewSelection(bool episode,unsigned choice)
 {
-    static const char *episodes[]={"Escape from Wolfenstein","Operation: Eisenfaust","Die, Fuhrer, Die!","A Dark Secret","Trail of the Madman","Confrontation"};
-    static const char *skills[]={"Can I play, Daddy?","Don't hurt me.","Bring 'em on!","I am Death incarnate!"};
+    const game_definition_t *def = GameDefinition_Default();
     ClearMScreen();
     if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=TEXTCOLOR;
     if (episode) {
         DrawWindow(6,19,308,162,BKGDCOLOR);
         PrintX=72;PrintY=2;if (!US_Print("Which episode to play?")) return false;
-        for (unsigned i=0;i<6;++i) {
+        unsigned count = GameDefinition_EpisodeCount(def);
+        for (unsigned i=0;i<count;++i) {
             if (!VWB_DrawPic(42,23+(int)i*26,C_EPISODE1PIC+(int)i)) return false;
             fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,episodes[i]);
+            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,GameDefinition_EpisodeName(def,i));
             PrintX=98;PrintY=23+(int)i*26;if (!US_Print(label)) return false;
         }
         return VWB_DrawPic(10,24+(int)choice*26,C_CURSOR1PIC);
     }
     PrintX=70;PrintY=68;if (!US_Print("How tough are you?")) return false;
     DrawWindow(45,90,225,67,BKGDCOLOR);
-    for (unsigned i=0;i<4;++i) {
+    unsigned dcount = GameDefinition_DifficultyCount(def);
+    for (unsigned i=0;i<dcount;++i) {
         fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(skills[i])) return false;
+        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(GameDefinition_DifficultyName(def,i))) return false;
     }
     return VWB_DrawPic(50,98+(int)choice*13,C_CURSOR1PIC) &&
         VWB_DrawPic(235,107,C_BABYMODEPIC+(int)choice);
