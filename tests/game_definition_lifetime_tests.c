@@ -47,10 +47,13 @@ int main(void)
         };
         WL_SetGameDefinition(&alt2);
         CHECK(WL_GameDefinition() == &alt2);
+
+        /* Clear while both borrowed definitions are still alive. */
+        WL_SetGameDefinition(NULL);
+        CHECK(WL_GameDefinition() == GameDefinition_Default());
     }
 
-    /* Explicit shutdown/clear cannot leave the borrowed pointer selected. */
-    WL_SetGameDefinition(NULL);
+    /* The selected definition must remain the default after scope exit. */
     CHECK(WL_GameDefinition() == GameDefinition_Default());
 
     /* Legacy jukebox adapter: fixed 3x6 slots, no invented resource indices. */
