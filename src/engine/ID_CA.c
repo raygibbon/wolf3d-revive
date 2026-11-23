@@ -212,14 +212,18 @@ bool CA_StartupWithContent(const legacy_content_t *content)
         w3r_byte probe;
         FILE *file = CA_Open(active_content.directory, name);
         if (!file) {
+            char message[4200];
+            (void)snprintf(message, sizeof(message), "Missing legacy content resource %s in '%s'", name, active_content.directory);
             CA_Shutdown();
-            return CA_Fail("Missing legacy content resource %s in '%s'", name, active_content.directory);
+            return CA_Fail("%s", message);
         }
         bool ok = CA_FileSize(file, name, &size) && CA_Read(file, &probe, 1);
         (void)fclose(file);
         if (!ok) {
+            char message[4200];
+            (void)snprintf(message, sizeof(message), "Unreadable legacy content resource %s in '%s'", name, active_content.directory);
             CA_Shutdown();
-            return CA_Fail("Unreadable legacy content resource %s in '%s'", name, active_content.directory);
+            return CA_Fail("%s", message);
         }
     }
     if (!CAL_SetupGrFile(&active_content)) { CA_Shutdown(); return false; }
