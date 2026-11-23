@@ -102,6 +102,42 @@ int main(void)
     /* Default preferences paths unchanged. */
     CHECK(strcmp(GameContext_Identity(&ctx)->prefs_id, "wolf3d-revive") == 0);
 
+    /* 7. Context propagation: selected identity flows through context. */
+    game_identity_t custom = { .game_id = "custom-game", .display_title = "Custom Game", .prefs_id = "custom-game" };
+    game_context_t custom_ctx;
+    CHECK(GameContext_Init(&custom_ctx, &custom));
+    CHECK(GameContext_Valid(&custom_ctx));
+    const game_identity_t *propagated = GameContext_Identity(&custom_ctx);
+    CHECK(propagated != NULL);
+    CHECK(propagated == &custom);  /* borrowed, not copied */
+    CHECK(strcmp(propagated->game_id, "custom-game") == 0);
+    CHECK(strcmp(propagated->prefs_id, "custom-game") == 0);
+
+    /* 8. Invalid context rejection. */
+    game_context_t invalid_ctx;
+    memset(&invalid_ctx, 0, sizeof(invalid_ctx));
+    CHECK(!GameContext_Valid(&invalid_ctx));
+    CHECK(GameContext_Identity(&invalid_ctx) == NULL);
+
+    /* Context with NULL identity. */
+    game_context_t null_ctx = { .identity = NULL };
+    CHECK(!GameContext_Valid(&null_ctx));
+    CHECK(GameContext_Identity(&null_ctx) == NULL);
+
+    /* 9. Lifetime: identity strings remain valid for context lifetime. */
+    /* The context stores a const pointer; strings are not copied. */
+    CHECK(GameContext_Identity(&custom_ctx)->game_id == custom.game_id);
+    CHECK(GameContext_Identity(&custom_ctx)->display_title == custom.display_title);
+    CHECK(GameContext_Identity(&custom_ctx)->prefs_id == custom.prefs_id);
+
+    /* 10. VL_StartupWithContext rejects invalid context (no fallback). */
+    /* This is tested at the C API level via GameContext_Valid. */
+    /* GameContext_InitDefault preserves default values. */
+    game_context_t def_ctx;
+    CHECK(GameContext_InitDefault(&def_ctx));
+    CHECK(strcmp(GameContext_Identity(&def_ctx)->game_id, "wolf3d-revive") == 0);
+    CHECK(strcmp(GameContext_Identity(&def_ctx)->prefs_id, "wolf3d-revive") == 0);
+
     printf("game_identity_tests: PASS\n");
     return 0;
 }

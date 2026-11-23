@@ -16,8 +16,11 @@ typedef struct {
 const game_identity_t *GameIdentity_Default(void);
 
 /* Validates that all required fields of the given identity are non-null and
-   non-empty. Returns true if valid, false otherwise. Does not modify the
-   input. The caller owns the identity memory. */
+   non-empty, and that game_id and prefs_id are filesystem-safe (no path
+   separators or traversal sequences). Returns true if valid, false otherwise.
+   Does not modify the input. The caller owns the identity memory and all
+   strings; the engine does not copy or free them. Strings must remain valid
+   for the lifetime of any context that references this identity. */
 int GameIdentity_Valid(const game_identity_t *identity);
 
 #endif

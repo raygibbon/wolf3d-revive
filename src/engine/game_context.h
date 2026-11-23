@@ -19,7 +19,10 @@ int GameContext_InitDefault(game_context_t *ctx);
    the identity memory; the context stores a const pointer. */
 int GameContext_Init(game_context_t *ctx, const game_identity_t *identity);
 
-/* Returns the identity held by the context, or NULL if invalid. */
+/* Returns the identity held by the context, or NULL if invalid.
+   The returned pointer is borrowed from the caller-supplied identity and
+   remains valid for as long as the caller's identity memory is valid.
+   The context does not copy or own the identity strings. */
 const game_identity_t *GameContext_Identity(const game_context_t *ctx);
 
 /* Validates that the context holds a valid identity. */

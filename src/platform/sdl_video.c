@@ -21,6 +21,7 @@
 #include <string.h>
 
 static SDL_Window *window;
+static const game_context_t *vl_active_context = NULL;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static w3r_byte rgba[VL_PIXELS * 4], last_frame[VL_PIXELS], last_palette[768];
@@ -277,15 +278,16 @@ void VL_Shutdown(void)
 
 bool VL_Startup(void)
 {
-    game_context_t ctx;
-    if (!GameContext_InitDefault(&ctx)) return false;
-    return VL_StartupWithContext(&ctx);
+    static game_context_t default_ctx;
+    if (!GameContext_InitDefault(&default_ctx)) return false;
+    return VL_StartupWithContext(&default_ctx);
 }
 
 bool VL_StartupWithContext(const game_context_t *ctx)
 {
-    const game_identity_t *identity = ctx ? GameContext_Identity(ctx) : GameIdentity_Default();
-    if (!identity) identity = GameIdentity_Default();
+    const game_identity_t *identity = GameContext_Identity(ctx);
+    if (!identity) return false;
+    vl_active_context = ctx;
     char error[512];
     VL_Shutdown();
     SDL_SetMainReady();
@@ -462,15 +464,14 @@ bool VL_PollQuit(void)
 
 bool VL_Screenshot(void)
 {
-    game_context_t ctx;
-    if (!GameContext_InitDefault(&ctx)) return false;
-    return VL_ScreenshotWithContext(&ctx);
+    return VL_ScreenshotWithContext(vl_active_context);
 }
 
 bool VL_ScreenshotWithContext(const game_context_t *ctx)
 {
-    const game_identity_t *identity = ctx ? GameContext_Identity(ctx) : GameIdentity_Default();
-    if (!identity) identity = GameIdentity_Default();
+    const game_identity_t *identity = GameContext_Identity(ctx);
+    if (!identity) return false;
+    vl_active_context = ctx;
     char *dir=SDL_GetPrefPath(NULL,identity->prefs_id);if(!dir) return false;
     char path[4096];bool ok=false;
     /* Monotonic suffix plus existence check prevents overwriting prior shots. */
