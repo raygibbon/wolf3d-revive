@@ -39,8 +39,18 @@ static const char *QuitMessage(uint64_t ticks)
     unsigned first=ui_random>>24;ui_random=ui_random*1664525U+1013904223U;
     return MenuQuitMessage(first,ui_random>>24);
 }
+/* Selected game definition is a borrowed pointer. SetGameDefinition(NULL)
+   restores the compiled-in default; callers must keep a non-default
+   definition alive for as long as it is selected. */
 static const game_definition_t *wl_game_definition = NULL;
-void WL_SetGameDefinition(const game_definition_t *def) { wl_game_definition = def; }
+const game_definition_t *WL_GameDefinition(void)
+{
+    return wl_game_definition ? wl_game_definition : GameDefinition_Default();
+}
+void WL_SetGameDefinition(const game_definition_t *def)
+{
+    wl_game_definition = (def && GameDefinition_Valid(def)) ? def : NULL;
+}
 static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
 static bool boss_music,boss_effects,choosequick,pause_previous;
@@ -113,7 +123,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
-    const game_definition_t *def = wl_game_definition ? wl_game_definition : GameDefinition_Default();
+    const game_definition_t *def = WL_GameDefinition();
     if (screen == UI_EPISODE && !DrawNewSelection(def,true,episode)) return false;
     if (screen == UI_DIFFICULTY && !DrawNewSelection(def,false,difficulty)) return false;
     unsigned steps = Attract() || screen==UI_RESULTS ? 30 : 10;
@@ -230,13 +240,20 @@ static bool GameMessage(const char *text)
     FinishPaletteShifts();if(!GameDrawPaused() || !MessageAtHeight(text,160)) return false;
     state=UI_MESSAGE;IN_ClearKeysDown();return true;
 }
-/* WL_MAIN.C DoJukebox: registered WL6 has three time-selected six-song banks. */
+/* Legacy jukebox adapter. Registered WL6 has three time-selected six-song
+   banks; this fixed 3x6 presentation is not a general track browser. A
+   definition with fewer entries yields NULL for the missing slots, which the
+   UI renders as an empty row without probing resource indices. */
+const char *JukeboxTrackName(const game_definition_t *def, unsigned bank, unsigned slot)
+{
+    if (!def) def = GameDefinition_Default();
+    if (bank > 2 || slot >= 6) return NULL;
+    return GameDefinition_JukeboxName(def, bank * 6 + slot);
+}
 static const unsigned jukebox_tracks[]={3,11,9,12,2,0,8,18,17,4,1,19,6,20,22,21,19,26};
 static bool DrawJukebox(void)
 {
-    /* Legacy adapter: fixed 3-bank x 6-track layout. The game definition
-       may contain more tracks, but this UI only displays 6 per bank. */
-    const game_definition_t *def = wl_game_definition ? wl_game_definition : GameDefinition_Default();
+    const game_definition_t *def = WL_GameDefinition();
     ClearMScreen();DrawStripes(10);DrawWindow(22,64,280,91,BKGDCOLOR);
     if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=0x47;int w,h;
@@ -244,7 +261,7 @@ static bool DrawJukebox(void)
     PrintX=(320-w)/2;PrintY=15;if(!US_Print("Robert's Jukebox")) return false;
     for(unsigned i=0;i<6;++i) {
         fontcolor=i==jukebox_choice?HIGHLIGHT:(int)i==jukebox_playing?0x4a:TEXTCOLOR;
-        const char *track = GameDefinition_JukeboxName(def,jukebox_bank*6+i);
+        const char *track = JukeboxTrackName(def,jukebox_bank,i);
         if (!track) track = "";
         PrintX=56;PrintY=70+(int)i*13;if(!US_Print(track)) return false;
     }
@@ -491,7 +508,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(action==-1) return ReturnPanel(ticks);
     } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
         bool choosing_episode=state==UI_EPISODE;
-        int action=HandleNewSelection(wl_game_definition ? wl_game_definition : GameDefinition_Default(),ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
+        int action=HandleNewSelection(WL_GameDefinition(),ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
         if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);

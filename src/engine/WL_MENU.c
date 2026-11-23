@@ -157,44 +157,47 @@ bool MessageAtHeight(const char *text,unsigned area_height)
 }
 
 /* WL_MENU.C DrawNewEpisode/DrawNewGame. Both use the same input queue as
-   the control panel; a selection clears edges before entering the next page. */
+   the control panel; a selection clears edges before entering the next page.
+   The original Wolfenstein pages are fixed at six episode and four difficulty
+   slots. Definitions may carry more entries, but this legacy presentation
+   clamps to those limits for rendering, cursor placement and navigation. */
+enum { LEGACY_EPISODE_LIMIT = 6, LEGACY_DIFFICULTY_LIMIT = 4 };
+
+static unsigned SelectionCount(const game_definition_t *def, bool episode)
+{
+    unsigned count = episode ? GameDefinition_EpisodeCount(def)
+                             : GameDefinition_DifficultyCount(def);
+    unsigned limit = episode ? LEGACY_EPISODE_LIMIT : LEGACY_DIFFICULTY_LIMIT;
+    return count > limit ? limit : count;
+}
+
 bool DrawNewSelection(const game_definition_t *def, bool episode, unsigned choice)
 {
     if (!def) def = GameDefinition_Default();
     if (!GameDefinition_Valid(def)) return false;
+    unsigned count = SelectionCount(def, episode);
+    /* A page with no selectable row cannot accept a valid selection. */
+    if (count == 0) return false;
+    if (choice >= count) choice = 0;
     ClearMScreen();
     if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=TEXTCOLOR;
     if (episode) {
-        unsigned count = GameDefinition_EpisodeCount(def);
-        /* Legacy menu layout supports at most 6 episodes. */
-        if (count > 6) count = 6;
-        if (count == 0) return true;
-        if (choice >= count) choice = 0;
         DrawWindow(6,19,308,162,BKGDCOLOR);
         PrintX=72;PrintY=2;if (!US_Print("Which episode to play?")) return false;
         for (unsigned i=0;i<count;++i) {
-            const char *name = GameDefinition_EpisodeName(def,i);
-            if (!name) continue;
             if (!VWB_DrawPic(42,23+(int)i*26,C_EPISODE1PIC+(int)i)) return false;
             fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,name);
+            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,GameDefinition_EpisodeName(def,i));
             PrintX=98;PrintY=23+(int)i*26;if (!US_Print(label)) return false;
         }
         return VWB_DrawPic(10,24+(int)choice*26,C_CURSOR1PIC);
     }
-    unsigned count = GameDefinition_DifficultyCount(def);
-    /* Legacy menu layout supports at most 4 difficulties. */
-    if (count > 4) count = 4;
-    if (count == 0) return true;
-    if (choice >= count) choice = 0;
     PrintX=70;PrintY=68;if (!US_Print("How tough are you?")) return false;
     DrawWindow(45,90,225,67,BKGDCOLOR);
     for (unsigned i=0;i<count;++i) {
-        const char *name = GameDefinition_DifficultyName(def,i);
-        if (!name) continue;
         fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(name)) return false;
+        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(GameDefinition_DifficultyName(def,i))) return false;
     }
     return VWB_DrawPic(50,98+(int)choice*13,C_CURSOR1PIC) &&
         VWB_DrawPic(235,107,C_BABYMODEPIC+(int)choice);
@@ -202,15 +205,14 @@ bool DrawNewSelection(const game_definition_t *def, bool episode, unsigned choic
 int HandleNewSelection(const game_definition_t *def, uint64_t ticks, bool episode, unsigned *choice)
 {
     if (!def) def = GameDefinition_Default();
-    if (!GameDefinition_Valid(def)) return -3;
-    unsigned count = episode ? GameDefinition_EpisodeCount(def) : GameDefinition_DifficultyCount(def);
+    if (!choice || !GameDefinition_Valid(def)) return -3;
+    unsigned count = SelectionCount(def, episode);
     if (count == 0) return -3;
-    /* Legacy menu layout supports at most 6 episodes and 4 difficulties. */
-    if (episode && count > 6) count = 6;
-    if (!episode && count > 4) count = 4;
+    /* Normalize before any key is consumed so Enter/Space can never accept
+       an index that this presentation cannot display. */
+    if (*choice >= count) *choice = 0;
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks>=move_next)) {
-        if (*choice >= count) *choice = 0;
         *choice=(*choice+((up || (!down && Keyboard[sc_UpArrow])) ? count-1 : 1))%count;
         move_next=ticks+20;
         (void)SD_PlaySound(MOVEGUN1SND,0,0);
@@ -218,7 +220,7 @@ int HandleNewSelection(const game_definition_t *def, uint64_t ticks, bool episod
     }
     bool escape=IN_ConsumePress(sc_Escape),enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
     if (escape) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
-    if (enter || space) { (void)SD_PlaySound(SHOOTSND,0,0);return 1; }
+    if ((enter || space) && *choice < count) { (void)SD_PlaySound(SHOOTSND,0,0);return 1; }
     return 0;
 }
 

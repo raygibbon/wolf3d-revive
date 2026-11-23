@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     const char *directory = NULL, *capture = NULL;
     bool no_audio=false,config_writable=false,jukebox=false;
     char *save_path=NULL;
-game_context_t game_ctx;
+static game_context_t game_ctx;
     bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
@@ -171,6 +171,8 @@ video_done:
     }
     Display_Connect(NULL,NULL);
     Audio_Shutdown();
+    /* Drop the borrowed definition before the context/process shuts down. */
+    WL_SetGameDefinition(NULL);
     VL_Shutdown();
 done:
     GameStop();
