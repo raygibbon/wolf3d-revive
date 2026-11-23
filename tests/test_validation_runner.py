@@ -75,6 +75,25 @@ class ValidationRunnerTests(unittest.TestCase):
             self.assertEqual(r.status, "FAIL")
             self.assertEqual(r.exit_code, 7)
 
+    def test_minimum_tests_rejects_zero_discovered_tests(self):
+        with tempfile.TemporaryDirectory() as td:
+            job = self.make_job(
+                command=[sys.executable, "-c", "print('Ran 0 tests')"],
+                minimum_tests=1,
+            )
+            result = self.runner.run_job(job, Path(td))
+            self.assertEqual(result.status, "FAIL")
+            self.assertIn("expected at least 1", result.message)
+
+    def test_minimum_tests_accepts_reported_test_count(self):
+        with tempfile.TemporaryDirectory() as td:
+            job = self.make_job(
+                command=[sys.executable, "-c", "print('Ran 3 tests')"],
+                minimum_tests=1,
+            )
+            result = self.runner.run_job(job, Path(td))
+            self.assertEqual(result.status, "PASS")
+
     def test_timeout_produces_timeout_and_kills_child(self):
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td)
