@@ -14,6 +14,10 @@ This roadmap adopts Ironclaw3D's milestone -> numbered revision -> acceptance te
 - Native C interfaces are the canonical operations. Add scripting only with a future separately approved need.
 - A revision or milestone is not 'done' because it compiles or because most tests pass. Record failed/untested gates explicitly. Do not silently weaken gates.
 - Scope changes or new format revisions require an explicit decision record and migration tests.
+- Target ECWolf-compatible PK3 (ZIP) conventions wherever practical for maps, resources and mods. Compatibility is feature-by-feature, not an automatic promise to execute every ECWolf mod; record supported and unsupported features with fixtures.
+- Preserve the live first-person Workshop as the primary authoring interface. Loose files are the editable, hot-reloadable source; PK3 is an import/export/distribution container, not an editor requirement.
+- Support both mods that depend on player-installed Wolf3D data and standalone packages with cleared original assets. Mod packages should reference base asset libraries rather than copying protected assets; the R1.5 release gate applies to distributed payloads, not local use of user-owned data.
+- Keep one canonical native C world API and versioned world representation. ECWolf-specific formats and definitions are imported/exported by compatibility adapters, never by making Workshop state depend on ECWolf internals.
 
 ## Milestones and ordered revisions
 
@@ -30,6 +34,16 @@ Each row is proposed and may be refined by R0 evidence. Each milestone closes on
 | R6 Persistence/playtest | Author/play/return loop | R6.1 map save/load and atomic writes; R6.2 validation and recovery; R6.3 enter playtest from Workshop; R6.4 return with edits preserved; R6.5 resource hot-load safety; R6.6 complete round-trip test | Build -> save -> unload -> load -> play -> return -> edit succeeds repeatably |
 | R7 Authoring completeness | Usable level creation workflow | R7.1 player starts and exits; R7.2 enemies/items/secrets; R7.3 selection, delete, copy and undo UI; R7.4 map management; R7.5 accessibility/onboarding; R7.6 user testing | New player can produce and play a valid level with documented workflow |
 | R8 Release | Original game and creator distribution | R8.1 pack/export/import; R8.2 content security and compatibility; R8.3 Windows/Linux verification; R8.4 performance and memory limits; R8.5 licensing/credits; R8.6 release acceptance | Reproducible distributable original game + Workshop, clean licence and platform sign-off |
+
+## ECWolf PK3 interoperability contract (R2 through R8)
+
+- **R2.1 map contract:** Define canonical, versioned world/map semantics for game and Workshop, plus explicit mapping/round-trip constraints for the supported ECWolf map subset. The PK3 archive is packaging, not a substitute for defining map data.
+- **R2.2–R2.3:** Validate map semantics and resolve named resources/dependencies. Support a declared requirement for player-owned Wolf3D base content without bundling copyrighted game files.
+- **R2.4:** Read safe loose directories and PK3-compatible ZIPs with conventional ECWolf paths where feasible. Keep loose-folder authoring/hot reload first-class. Reject path traversal, archive bombs, collisions, invalid references and unsupported content with clear diagnostics.
+- **R2.5–R2.6:** Build actual ECWolf compatibility fixtures (basic maps, resources, MAPINFO/XLAT where supported) and test import/export behavior. Treat DECORATE, advanced scripting and engine-specific actors as later compatibility work rather than silently claiming support.
+- **R4–R6:** Workshop edits the live world through native C APIs and saves loose map/resources; loading/saving must not require creating a PK3 on each edit. Playtesting must reflect edits without restarting the application.
+- **R8.1:** Export the supported Workshop subset as an ECWolf-compatible PK3; verify the output in ECWolf as an external interoperability test before claiming compatibility. Provide actionable warnings or errors for unsupported native features. Users may instead export standalone original-content packages when assets are cleared.
+- **Compatibility policy:** Maintain a feature matrix distinguishing archive reading, assets, map structures, MAPINFO, XLAT, actor definitions, load-order/dependencies and exported behavior. Document gaps honestly; no full-ECWolf compatibility claim until demonstrated. Do not copy commercial game data into mods. A base-game-dependent mod may require the recipient's own legal Wolf3D installation.
 
 ## R2.7: First Playable Original-Content Technical Demo
 
