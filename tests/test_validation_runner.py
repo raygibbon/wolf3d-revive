@@ -135,6 +135,25 @@ class ValidationRunnerTests(unittest.TestCase):
                     os.environ["SDL_SDK"] = old
             self.assertIn(r.status, ("SKIP", "NOT RUN"))
 
+    def test_incomplete_sdl_sdk_is_not_run(self):
+        with tempfile.TemporaryDirectory() as td:
+            sdk = Path(td) / "sdl"
+            (sdk / "include/SDL3").mkdir(parents=True)
+            (sdk / "include/SDL3/SDL.h").touch()
+            run_dir = Path(td) / "run"
+            job = self.make_job(requires=("sdl-sdk",), mandatory=True)
+            old = os.environ.get("SDL_SDK")
+            os.environ["SDL_SDK"] = str(sdk)
+            try:
+                r = self.runner.run_job(job, run_dir)
+            finally:
+                if old is None:
+                    os.environ.pop("SDL_SDK", None)
+                else:
+                    os.environ["SDL_SDK"] = old
+            self.assertEqual(r.status, "NOT RUN")
+            self.assertIsNone(r.exit_code)
+
     def test_json_summary_matches_execution(self):
         with tempfile.TemporaryDirectory() as td:
             run_dir = Path(td) / "R0.6" / "testrun"

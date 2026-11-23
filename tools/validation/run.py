@@ -74,7 +74,8 @@ def _display_path(p: Path) -> str:
 
 def _has_sdl_sdk() -> bool:
     sdk = Path(os.environ.get("SDL_SDK", ROOT.parent / "cart/vendor/SDL"))
-    return (sdk / "build/libSDL3.a").is_file() or (sdk / "include/SDL3/SDL.h").is_file()
+    return ((sdk / "build/libSDL3.a").is_file() and
+            (sdk / "include/SDL3/SDL.h").is_file())
 
 
 def _has_cc() -> bool:
