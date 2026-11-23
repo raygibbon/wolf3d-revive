@@ -166,23 +166,35 @@ bool DrawNewSelection(const game_definition_t *def, bool episode, unsigned choic
     if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=TEXTCOLOR;
     if (episode) {
+        unsigned count = GameDefinition_EpisodeCount(def);
+        /* Legacy menu layout supports at most 6 episodes. */
+        if (count > 6) count = 6;
+        if (count == 0) return true;
+        if (choice >= count) choice = 0;
         DrawWindow(6,19,308,162,BKGDCOLOR);
         PrintX=72;PrintY=2;if (!US_Print("Which episode to play?")) return false;
-        unsigned count = GameDefinition_EpisodeCount(def);
         for (unsigned i=0;i<count;++i) {
+            const char *name = GameDefinition_EpisodeName(def,i);
+            if (!name) continue;
             if (!VWB_DrawPic(42,23+(int)i*26,C_EPISODE1PIC+(int)i)) return false;
             fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,GameDefinition_EpisodeName(def,i));
+            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,name);
             PrintX=98;PrintY=23+(int)i*26;if (!US_Print(label)) return false;
         }
         return VWB_DrawPic(10,24+(int)choice*26,C_CURSOR1PIC);
     }
+    unsigned count = GameDefinition_DifficultyCount(def);
+    /* Legacy menu layout supports at most 4 difficulties. */
+    if (count > 4) count = 4;
+    if (count == 0) return true;
+    if (choice >= count) choice = 0;
     PrintX=70;PrintY=68;if (!US_Print("How tough are you?")) return false;
     DrawWindow(45,90,225,67,BKGDCOLOR);
-    unsigned dcount = GameDefinition_DifficultyCount(def);
-    for (unsigned i=0;i<dcount;++i) {
+    for (unsigned i=0;i<count;++i) {
+        const char *name = GameDefinition_DifficultyName(def,i);
+        if (!name) continue;
         fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(GameDefinition_DifficultyName(def,i))) return false;
+        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(name)) return false;
     }
     return VWB_DrawPic(50,98+(int)choice*13,C_CURSOR1PIC) &&
         VWB_DrawPic(235,107,C_BABYMODEPIC+(int)choice);

@@ -39,6 +39,8 @@ static const char *QuitMessage(uint64_t ticks)
     unsigned first=ui_random>>24;ui_random=ui_random*1664525U+1013904223U;
     return MenuQuitMessage(first,ui_random>>24);
 }
+static const game_definition_t *wl_game_definition = NULL;
+void WL_SetGameDefinition(const game_definition_t *def) { wl_game_definition = def; }
 static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
 static bool boss_music,boss_effects,choosequick,pause_previous;
@@ -111,8 +113,9 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
-    if (screen == UI_EPISODE && !DrawNewSelection(GameDefinition_Default(),true,episode)) return false;
-    if (screen == UI_DIFFICULTY && !DrawNewSelection(GameDefinition_Default(),false,difficulty)) return false;
+    const game_definition_t *def = wl_game_definition ? wl_game_definition : GameDefinition_Default();
+    if (screen == UI_EPISODE && !DrawNewSelection(def,true,episode)) return false;
+    if (screen == UI_DIFFICULTY && !DrawNewSelection(def,false,difficulty)) return false;
     unsigned steps = Attract() || screen==UI_RESULTS ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
     deadline = ticks + steps + (screen==UI_RATING?7U*70U:screen == UI_TITLE ? 15U*70U : 10U*70U);
@@ -231,7 +234,9 @@ static bool GameMessage(const char *text)
 static const unsigned jukebox_tracks[]={3,11,9,12,2,0,8,18,17,4,1,19,6,20,22,21,19,26};
 static bool DrawJukebox(void)
 {
-    const game_definition_t *def = GameDefinition_Default();
+    /* Legacy adapter: fixed 3-bank x 6-track layout. The game definition
+       may contain more tracks, but this UI only displays 6 per bank. */
+    const game_definition_t *def = wl_game_definition ? wl_game_definition : GameDefinition_Default();
     ClearMScreen();DrawStripes(10);DrawWindow(22,64,280,91,BKGDCOLOR);
     if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=0x47;int w,h;
@@ -486,7 +491,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(action==-1) return ReturnPanel(ticks);
     } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
         bool choosing_episode=state==UI_EPISODE;
-        int action=HandleNewSelection(GameDefinition_Default(),ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
+        int action=HandleNewSelection(wl_game_definition ? wl_game_definition : GameDefinition_Default(),ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
         if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);
