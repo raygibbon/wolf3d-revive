@@ -27,3 +27,6 @@ __pycache__/
 /3rdparty/
 # Also block the previous ECWolf location against accidental recommits.
 /asset/ECWolf_RMST/
+
+# Local test build artifacts must not be committed.
+/tests/build/

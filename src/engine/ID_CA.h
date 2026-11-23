@@ -4,6 +4,7 @@
 #include "ID_MM.h"
 #include "w3r_types.h"
 #include "GFXV_WL6.h"
+#include "legacy_content.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -18,6 +19,11 @@ bool CAL_ValidateHuffman(const huffnode table[255]);
 bool CAL_HuffExpand(const w3r_byte *source, size_t source_length,
                     w3r_byte *dest, size_t length, const huffnode table[255]);
 bool CA_Startup(const char *data_dir);
+/* Binds an explicit content source. The descriptor is copied; the caller
+   keeps ownership and may reuse or clear its storage afterwards. */
+bool CA_StartupWithContent(const legacy_content_t *content);
+/* Active resource filename, or the WL6 default before startup/shutdown. */
+const char *CA_ResourceName(legacy_resource_t resource);
 void CA_Shutdown(void);
 bool CA_CacheGrChunk(int chunk);
 bool CA_GrChunkPresent(int chunk);

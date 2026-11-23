@@ -22,10 +22,13 @@ bool PM_Ready(void) { return PageFile!=NULL; }
 bool PM_Startup(void)
 {
     w3r_byte header[6],directory[PM_MAX_PAGES*6]; long size;
+    const char *name;
     PM_Shutdown();
     if (!*CA_DataDirectory()) return CA_Fail("Configure a data directory before reading VSWAP");
-    PageFile=CA_OpenDataFile(CA_DataDirectory(),"VSWAP.WL6");
-    if (!PageFile) return CA_Fail("Cannot open VSWAP.WL6");
+    name = CA_ResourceName(LEGACY_RESOURCE_VSWAP);
+    if (!name) return CA_Fail("Invalid VSWAP resource selection");
+    PageFile=CA_OpenDataFile(CA_DataDirectory(),name);
+    if (!PageFile) return CA_Fail("Cannot open %s",name);
     if (fseek(PageFile,0,SEEK_END) || (size=ftell(PageFile))<6 || size>32*1024*1024 || fseek(PageFile,0,SEEK_SET)) goto bad;
     if (fread(header,1,6,PageFile)!=6) goto bad;
     ChunksInFile=CA_LE16(header); PMSpriteStart=CA_LE16(header+2); PMSoundStart=CA_LE16(header+4);

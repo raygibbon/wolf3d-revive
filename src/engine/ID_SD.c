@@ -119,8 +119,8 @@ void SD_Shutdown(void)
 }
 static bool LoadAudio(void)
 {
-    if(!CA_ReadDataFile("AUDIOHED.WL6",&header,&header_size) ||
-       !CA_ReadDataFile("AUDIOT.WL6",&archive,&archive_size)) return false;
+    if(!CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_AUDIOHED),&header,&header_size) ||
+       !CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_AUDIOT),&archive,&archive_size)) return false;
     /* Some releases carry extra trailing offsets; require the WL6 288 chunks. */
     if(header_size<4*(AUDIO_CHUNKS+1) || header_size%4) return CA_Fail("Malformed AUDIOHED.WL6 offset table");
     const uint8_t *h=header,*a=archive;
@@ -146,7 +146,7 @@ static bool LoadAudio(void)
 }
 static bool LoadDigi(void)
 {
-    if(!CA_ReadDataFile("VSWAP.WL6",&swap,&swap_size)) return false;
+    if(!CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_VSWAP),&swap,&swap_size)) return false;
     const uint8_t *s=swap;unsigned count,start;
     if(swap_size<6) goto bad;
     count=CA_LE16(s);start=CA_LE16(s+4);
@@ -293,8 +293,10 @@ unsigned SD_SoundTicks(soundnames sound)
     if(chip) return (unsigned)((CA_LE32(chunks[87+(unsigned)sound].data)+1U)/2U);
     /* Read metadata only when PCM is disabled. No synthesiser/device startup,
        persistent cache, audio thread IO or gameplay RNG is involved. */
-    FILE *h=CA_OpenDataFile(CA_DataDirectory(),"AUDIOHED.WL6");
-    FILE *a=CA_OpenDataFile(CA_DataDirectory(),"AUDIOT.WL6");
+    const char *hed = CA_ResourceName(LEGACY_RESOURCE_AUDIOHED);
+    const char *aud = CA_ResourceName(LEGACY_RESOURCE_AUDIOT);
+    FILE *h = CA_OpenDataFile(CA_DataDirectory(), hed ? hed : "AUDIOHED.WL6");
+    FILE *a = CA_OpenDataFile(CA_DataDirectory(), aud ? aud : "AUDIOT.WL6");
     unsigned result=0;uint8_t offsets[8],common[6];long size;
     if(h && a && !fseek(h,(long)(87+(unsigned)sound)*4,SEEK_SET) && fread(offsets,1,8,h)==8 &&
        !fseek(a,0,SEEK_END) && (size=ftell(a))>=0) {

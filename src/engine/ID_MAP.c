@@ -58,7 +58,8 @@ bool CA_ReadMap(unsigned number,maptype *destination)
     memptr head=NULL,file=NULL,pending=NULL,scratch=NULL;
     size_t heads=0,bytes=0; bool ok=false;
     if (!destination || number>=60) return CA_Fail("Unsupported WL6 map number");
-    if (!CA_ReadDataFile("MAPHEAD.WL6",&head,&heads) || !CA_ReadDataFile("GAMEMAPS.WL6",&file,&bytes)) goto done;
+    if (!CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_MAPHEAD),&head,&heads) ||
+        !CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_GAMEMAPS),&file,&bytes)) goto done;
     if (heads<242 || heads>402 || (heads-2)%4) { (void)CA_Fail("Invalid MAPHEAD table"); goto done; }
     const w3r_byte *h=head,*raw=file;
     uint32_t at=CA_LE32(h+2+number*4);

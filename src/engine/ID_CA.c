@@ -22,7 +22,15 @@ static huffnode grhuffman[255];
 static uint32_t grstarts[NUMCHUNKS + 1];
 static FILE *grhandle;
 static char error[512], data_directory[4096];
+static legacy_content_t active_content;
+static bool content_active;
 const char *CA_DataDirectory(void) { return data_directory; }
+
+const char *CA_ResourceName(legacy_resource_t resource)
+{
+    const legacy_content_t *content = content_active ? &active_content : LegacyContent_Default();
+    return LegacyContent_ResourceName(content, resource);
+}
 
 const char *CA_Error(void) { return error; }
 bool CA_Fail(const char *format, ...)
@@ -119,6 +127,8 @@ static bool CA_Read(FILE *file, void *dest, size_t length)
 void CA_Shutdown(void)
 {
     CA_UncacheMap(); PM_Shutdown(); data_directory[0]=0;
+    memset(&active_content, 0, sizeof(active_content));
+    content_active = false;
     if (grhandle) { (void)fclose(grhandle); grhandle = NULL; }
     for (int i = 0; i < NUMCHUNKS; ++i) {
         if (grsegs[i]) (void)MM_FreePtr(&grsegs[i]);
@@ -127,15 +137,21 @@ void CA_Shutdown(void)
     memset(pictable, 0, sizeof(pictable));
 }
 
-static bool CAL_SetupGrFile(const char *directory)
+static bool CAL_SetupGrFile(const legacy_content_t *content)
 {
     w3r_byte dict[1024], head[(NUMCHUNKS + 1) * 3];
+    const char *dict_name = LegacyContent_ResourceName(content, LEGACY_RESOURCE_VGADICT);
+    const char *head_name = LegacyContent_ResourceName(content, LEGACY_RESOURCE_VGAHEAD);
+    const char *graph_name = LegacyContent_ResourceName(content, LEGACY_RESOURCE_VGAGRAPH);
     FILE *file;
     size_t size;
-    file = CA_Open(directory, "VGADICT.WL6");
+    if (!dict_name || !head_name || !graph_name)
+        return CA_Fail("Invalid legacy graphics resource selection");
+    file = CA_Open(content->directory, dict_name);
     if (!file) return false;
-    bool ok = CA_FileSize(file, "VGADICT.WL6", &size);
-    if (ok && size != 1020 && size != 1024) ok = CA_Fail("VGADICT.WL6 must contain 255 or 256 four-byte nodes");
+    bool ok = CA_FileSize(file, dict_name, &size);
+    if (ok && size != 1020 && size != 1024)
+        ok = CA_Fail("%s must contain 255 or 256 four-byte nodes", dict_name);
     if (ok) ok = CA_Read(file, dict, size);
     (void)fclose(file);
     if (!ok) return false;
@@ -144,15 +160,15 @@ static bool CAL_SetupGrFile(const char *directory)
         grhuffman[i].bit1 = ReadLE16(dict + i * 4 + 2);
     }
     if (!CAL_ValidateHuffman(grhuffman)) return false;
-    file = CA_Open(directory, "VGAHEAD.WL6");
+    file = CA_Open(content->directory, head_name);
     if (!file) return false;
-    ok = CA_FileSize(file, "VGAHEAD.WL6", &size);
+    ok = CA_FileSize(file, head_name, &size);
     if (ok && size != sizeof(head)) ok = CA_Fail("Unsupported WL6 graphics layout: expected 149 chunks (450-byte VGAHEAD)");
     if (ok) ok = CA_Read(file, head, sizeof(head));
     (void)fclose(file);
     if (!ok) return false;
-    grhandle = CA_Open(directory, "VGAGRAPH.WL6");
-    if (!grhandle || !CA_FileSize(grhandle, "VGAGRAPH.WL6", &size)) return false;
+    grhandle = CA_Open(content->directory, graph_name);
+    if (!grhandle || !CA_FileSize(grhandle, graph_name, &size)) return false;
     uint32_t previous = 0;
     for (size_t i = 0; i <= NUMCHUNKS; ++i) {
         uint32_t offset = (uint32_t)head[i * 3] | ((uint32_t)head[i * 3 + 1] << 8) |
@@ -174,26 +190,59 @@ static bool CAL_SetupGrFile(const char *directory)
     return true;
 }
 
+bool CA_StartupWithContent(const legacy_content_t *content)
+{
+    static const legacy_resource_t required[] = {
+        LEGACY_RESOURCE_VSWAP, LEGACY_RESOURCE_GAMEMAPS, LEGACY_RESOURCE_MAPHEAD,
+        LEGACY_RESOURCE_AUDIOT, LEGACY_RESOURCE_AUDIOHED
+    };
+    legacy_content_error_t content_error;
+    CA_Shutdown();
+    error[0] = '\0';
+    content_error = LegacyContent_Validate(content);
+    if (content_error != LEGACY_CONTENT_OK)
+        return CA_Fail("Invalid legacy content source: %s", LegacyContent_ErrorString(content_error));
+    /* Value copy: callers own their descriptors and may clear or reuse them. */
+    active_content = *content;
+    content_active = true;
+    /* Graphics startup checks presence; level and audio parsers have separate lifecycles. */
+    for (size_t i = 0; i < sizeof(required) / sizeof(required[0]); ++i) {
+        const char *name = LegacyContent_ResourceName(&active_content, required[i]);
+        size_t size;
+        w3r_byte probe;
+        FILE *file = CA_Open(active_content.directory, name);
+        if (!file) {
+            char message[4200];
+            (void)snprintf(message, sizeof(message), "Missing legacy content resource %s in '%s'", name, active_content.directory);
+            CA_Shutdown();
+            return CA_Fail("%s", message);
+        }
+        bool ok = CA_FileSize(file, name, &size) && CA_Read(file, &probe, 1);
+        (void)fclose(file);
+        if (!ok) {
+            char message[4200];
+            (void)snprintf(message, sizeof(message), "Unreadable legacy content resource %s in '%s'", name, active_content.directory);
+            CA_Shutdown();
+            return CA_Fail("%s", message);
+        }
+    }
+    if (!CAL_SetupGrFile(&active_content)) { CA_Shutdown(); return false; }
+    strcpy(data_directory, active_content.directory);
+    return true;
+}
+
 bool CA_Startup(const char *data_dir)
 {
-    static const char *required[] = {"VSWAP.WL6", "GAMEMAPS.WL6", "MAPHEAD.WL6", "AUDIOT.WL6", "AUDIOHED.WL6"};
+    legacy_content_t content;
+    legacy_content_error_t content_error;
     CA_Shutdown();
     error[0] = '\0';
     if (!data_dir || !*data_dir) return CA_Fail("Empty data directory; supply --data /path/to/WL6");
     if (strlen(data_dir)>=sizeof(data_directory)) return CA_Fail("Data directory too long");
-    /* Graphics startup checks presence; level and audio parsers have separate lifecycles. */
-    for (size_t i = 0; i < sizeof(required) / sizeof(required[0]); ++i) {
-        size_t size;
-        w3r_byte probe;
-        FILE *file = CA_Open(data_dir, required[i]);
-        if (!file) return false;
-        bool ok = CA_FileSize(file, required[i], &size) && CA_Read(file, &probe, 1);
-        (void)fclose(file);
-        if (!ok) return false;
-    }
-    if (!CAL_SetupGrFile(data_dir)) { CA_Shutdown(); return false; }
-    strcpy(data_directory,data_dir);
-    return true;
+    content_error = LegacyContent_Init(&content, data_dir);
+    if (content_error != LEGACY_CONTENT_OK)
+        return CA_Fail("Invalid legacy content source: %s", LegacyContent_ErrorString(content_error));
+    return CA_StartupWithContent(&content);
 }
 
 bool CA_GrChunkPresent(int chunk)
