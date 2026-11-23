@@ -210,6 +210,20 @@ def build_jobs() -> list[Job]:
         category="cpu",
     ))
 
+    # R1.3 - context platform tests
+    jobs.append(Job(
+        id="r13-context-platform",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="SDL platform context startup/shutdown/screenshot tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_context_platform.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="graphics",
+        env=sdl_env,
+        requires=("sdl-sdk", "cc"),
+    ))
+
     return jobs
 
 
