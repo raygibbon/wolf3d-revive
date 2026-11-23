@@ -24,7 +24,7 @@ A second occurrence triggers an automation candidate. Tasks with high risk or li
 | AUTO-04 | ASan/UBSan test matrix | `SANITIZE=1 tools/test.sh` | R0.5/R0.6 | R0.5 REPRESENTATIVE EVIDENCE RECORDED; WRAPPER NOT IMPLEMENTED |
 | AUTO-05 | Revision-based gating and progress/logs | `python3 tools/validation/run.py R0.4` | R0.6 | IMPLEMENTED (milestone selection, logs, JSON summary, bounded timeouts) |
 | AUTO-06 | Deterministic capture comparison | `python3 -m unittest discover -s tests -p test_render.py -v` | R0.4 | IMPLEMENTED IN EXISTING RENDER UNITTEST DRIVER |
-| AUTO-07 | Content provenance and banned-asset scanning | `tools/audit_content.py` (interface subject to design) | R1 | NOT IMPLEMENTED |
+| AUTO-07 | Content provenance and staged-package enforcement | `python3 tools/validate_distribution.py <command>` | R1.5 | IMPLEMENTED (versioned manifest, default-deny staging verification, notices) |
 | AUTO-08 | Map/content fixture validation | `tools/validate_content.py` (interface subject to design) | R2 | NOT IMPLEMENTED |
 | AUTO-09 | Workshop round-trip integration | revision-selected test fixture | R6.6 | NOT IMPLEMENTED |
 | AUTO-10 | PR evidence/checklist creation | CI/template based on real test metadata | R0.6 | PARTIAL (CI workflow added; real-run confirmation pending) |
@@ -278,6 +278,38 @@ tools/test.sh --all
   tests on push to `docs/revival-roadmap-and-validation` and PRs targeting
   `master`; sanitizer/perf/owned-data/GPU are not default CI gates. CI pass is
   not claimed until a real workflow run confirms it.
+
+## Verified R1.5 distribution gate
+
+`assets/distribution.toml` is the sole distribution-eligibility manifest. It is
+not the future R2 runtime resource manifest. The standard-library-only command
+surface is:
+
+```sh
+python3 tools/validate_distribution.py check
+python3 tools/validate_distribution.py inventory
+python3 tools/validate_distribution.py notices --profile original-standalone
+python3 tools/validate_distribution.py verify \
+  --profile original-standalone --root dist/staging
+python3 tools/validation/run.py R1.5
+```
+
+The `verify` command reads the actual staging tree and is the canonical R8
+pre-package guard. It rejects unlisted files, non-approved policy states,
+incorrect hashes, symlinks, special files, case-insensitive collisions,
+unexpected empty directories and files that change while being checked. It
+does not modify the staging directory. The current profile requires the
+reviewed `COPYING` and `third_party/emu8950/LICENSE` notice files. There is no
+approved game binary or original art/audio payload yet, so a notice-only tree
+can satisfy eligibility policy but is not a functional release.
+
+To add an original asset, first record real provenance and licence evidence,
+then add a `pending-review` manifest entry. Approval is a review decision:
+change it to `approved`, add its exact SHA-256 and any notice requirements only
+after clearance. Never generate blanket approvals from discovered files.
+
+Evidence and full limitations are in
+[`docs/milestones/R1/R1.5.md`](../milestones/R1/R1.5.md).
 
 ## Required script contract
 

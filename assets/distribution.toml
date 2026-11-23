@@ -1,0 +1,405 @@
+schema_version = 1
+
+[distribution]
+name = "wolf3d-revive"
+purpose = "Distribution eligibility and provenance policy; not an R2 runtime content manifest"
+default_policy = "deny"
+
+[limits]
+max_files = 4096
+max_file_size = 67108864
+max_total_size = 536870912
+
+[profiles.original-standalone]
+description = "Future independent game package; commercial Wolfenstein data and uncleared material are excluded"
+required_assets = ["gpl-v2-notice", "emu8950-mit-notice"]
+
+[[asset]]
+id = "gpl-v2-notice"
+path = "COPYING"
+type = "licence-notice"
+origin = "GNU General Public License version 2 text already tracked by the project"
+creator = "Free Software Foundation, Inc."
+license = "GPL-2.0-only"
+redistribution = "approved"
+evidence = "COPYING"
+sha256 = "edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6"
+attribution_required = true
+notice = "Include the complete GPL version 2 licence text and comply with the applicable source-code obligations."
+notice_path = "COPYING"
+profiles = ["original-standalone"]
+notes = "Integrity is pinned to the reviewed repository file; the digest is not legal proof."
+
+[[asset]]
+id = "emu8950-mit-notice"
+path = "third_party/emu8950/LICENSE"
+type = "third-party-licence-notice"
+origin = "emu8950 upstream commit f82a22e80b68820f263084aa8506b12eb1c9b4dd"
+creator = "Mitsutaka Okazaki"
+license = "MIT"
+redistribution = "approved"
+evidence = "third_party/emu8950/README.wolf3d.md"
+sha256 = "e0db14654c1f977ec384c3fad3baf6e1f4d21c8369946823bbb6d4e06ebc372b"
+attribution_required = true
+notice = "Retain the emu8950 copyright notice and MIT permission terms when its code is included."
+notice_path = "third_party/emu8950/LICENSE"
+profiles = ["original-standalone"]
+notes = "The notice is approved; inclusion of a future binary still requires confirmation that emu8950 is linked."
+
+[[asset]]
+id = "active-platform-source"
+prefix = "src/platform/"
+type = "source-code"
+origin = "Wolf3D Revive project code"
+creator = "Wolf3D Revive contributors"
+license = "GPL-2.0-only"
+redistribution = "development-only"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Code licensing is recorded separately from game-asset clearance; source is not a standalone payload asset."
+
+[[asset]]
+id = "active-engine-source"
+paths = [
+  "src/engine/ID_CA.c",
+  "src/engine/ID_CA.h",
+  "src/engine/ID_FILE.c",
+  "src/engine/ID_FILE.h",
+  "src/engine/ID_IN.c",
+  "src/engine/ID_IN.h",
+  "src/engine/ID_MAP.c",
+  "src/engine/ID_MAP.h",
+  "src/engine/ID_MM.c",
+  "src/engine/ID_MM.h",
+  "src/engine/ID_OPL.c",
+  "src/engine/ID_OPL_ADPCM.c",
+  "src/engine/ID_PM.c",
+  "src/engine/ID_PM.h",
+  "src/engine/ID_SD.c",
+  "src/engine/ID_SD.h",
+  "src/engine/ID_TIME.h",
+  "src/engine/ID_US_1.c",
+  "src/engine/ID_US_1.h",
+  "src/engine/ID_US_A.c",
+  "src/engine/ID_VH.c",
+  "src/engine/ID_VH.h",
+  "src/engine/ID_VL.c",
+  "src/engine/ID_VL.h",
+  "src/engine/WL_ACT1.c",
+  "src/engine/WL_ACT2.c",
+  "src/engine/WL_ACT2.h",
+  "src/engine/WL_ACTOR.h",
+  "src/engine/WL_AGENT.c",
+  "src/engine/WL_ASM.c",
+  "src/engine/WL_ASPECT.c",
+  "src/engine/WL_ASPECT.h",
+  "src/engine/WL_COMBAT.c",
+  "src/engine/WL_CONTROLS.c",
+  "src/engine/WL_CONTROLS.h",
+  "src/engine/WL_CONTROLS_MENU.c",
+  "src/engine/WL_DEF.h",
+  "src/engine/WL_DEMO.c",
+  "src/engine/WL_DEMO.h",
+  "src/engine/WL_DISPLAY.c",
+  "src/engine/WL_DISPLAY.h",
+  "src/engine/WL_DRAW.c",
+  "src/engine/WL_FRAME_CLOCK.c",
+  "src/engine/WL_FRAME_CLOCK.h",
+  "src/engine/WL_GAME.c",
+  "src/engine/WL_HIGHSCORES.c",
+  "src/engine/WL_HIGHSCORES.h",
+  "src/engine/WL_INTER.c",
+  "src/engine/WL_MAIN.c",
+  "src/engine/WL_MAIN.h",
+  "src/engine/WL_MENU.c",
+  "src/engine/WL_MENU.h",
+  "src/engine/WL_OBJECT.c",
+  "src/engine/WL_PALETTE.c",
+  "src/engine/WL_PLAY.c",
+  "src/engine/WL_PRESENT.c",
+  "src/engine/WL_PRESENT.h",
+  "src/engine/WL_PROFILE.h",
+  "src/engine/WL_RENDER.c",
+  "src/engine/WL_RENDER.h",
+  "src/engine/WL_RENDER_TARGET.c",
+  "src/engine/WL_RENDER_TARGET.h",
+  "src/engine/WL_SAVE.c",
+  "src/engine/WL_SAVE.h",
+  "src/engine/WL_SAVE_MENU.c",
+  "src/engine/WL_SAVE_STATES.inc",
+  "src/engine/WL_SCALE.c",
+  "src/engine/WL_SOUND.h",
+  "src/engine/WL_SPRITES.h",
+  "src/engine/WL_STATE.c",
+  "src/engine/WL_TEXT.c",
+  "src/engine/WL_VICTORY.c",
+  "src/engine/WL_VIEW.c",
+  "src/engine/game_context.c",
+  "src/engine/game_context.h",
+  "src/engine/game_definition.c",
+  "src/engine/game_definition.h",
+  "src/engine/game_identity.c",
+  "src/engine/game_identity.h",
+  "src/engine/legacy_content.c",
+  "src/engine/legacy_content.h",
+]
+type = "source-code"
+origin = "Active Wolf3D engine port"
+creator = "id Software and Wolf3D Revive contributors"
+license = "GPL-2.0-only"
+redistribution = "development-only"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Homogeneous active code group, explicitly excluding the two embedded/historical data exceptions below."
+
+[[asset]]
+id = "embedded-game-palette"
+path = "src/engine/gamepal.inc"
+type = "embedded-historical-palette"
+origin = "Generated from WOLFSRC/OBJ/GAMEPAL.OBJ LEDATA"
+creator = "id Software; derivation documented by Wolf3D Revive"
+license = "LicenseRef-Pending-Review"
+redistribution = "pending-review"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "A generated C include is not automatically cleared as code; review the palette data separately."
+
+[[asset]]
+id = "historical-graphics-index-header"
+path = "src/engine/GFXV_WL6.h"
+type = "generated-historical-resource-index"
+origin = "Historical Wolfenstein graphics-index header with DOS EOF marker removed"
+creator = "id Software"
+license = "LicenseRef-Pending-Review"
+redistribution = "pending-review"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Tracked and actively used for legacy compatibility, but not approved as original standalone content."
+
+[[asset]]
+id = "active-root-source"
+paths = ["src/main.c", "src/w3r_types.h"]
+type = "source-code"
+origin = "Wolf3D Revive active port"
+creator = "id Software and Wolf3D Revive contributors"
+license = "GPL-2.0-only"
+redistribution = "development-only"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Source-distribution obligations remain distinct from standalone asset eligibility."
+
+[[asset]]
+id = "historical-wolfsrc-tree"
+prefix = "WOLFSRC/"
+type = "historical-source-binaries-and-artifacts"
+origin = "Historical Wolfenstein 3D source snapshot"
+creator = "id Software and historical tool authors"
+license = "LicenseRef-Historical-Unverified"
+redistribution = "pending-review"
+evidence = "WOLFSRC/README/LICENSE.DOC"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "The active-source GPL statement does not purport to relicense archived DOS binaries, tools, objects or artwork."
+
+[[asset]]
+id = "historical-root-artifacts"
+paths = ["DEICE.EXE", "WOLFSRC.1", "WOLFSRC.DAT", "README.rst", "INSTALL.BAT"]
+type = "historical-tools-archives-and-documentation"
+origin = "Historical Wolfenstein distribution snapshot"
+creator = "unknown or not fully verified"
+license = "LicenseRef-Historical-Unverified"
+redistribution = "pending-review"
+evidence = "docs/milestones/R1/R1.1.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Tracked presence is not distribution clearance."
+
+[[asset]]
+id = "commercial-wl6-root-files"
+paths = ["AUDIOHED.WL6", "AUDIOT.WL6", "GAMEMAPS.WL6", "MAPHEAD.WL6", "VGADICT.WL6", "VGAGRAPH.WL6", "VGAHEAD.WL6", "VSWAP.WL6"]
+type = "commercial-game-data"
+origin = "User-supplied Wolfenstein 3D data"
+creator = "id Software and original rights holders"
+license = "LicenseRef-Commercial-Proprietary"
+redistribution = "prohibited"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "May be read locally through the R1.4 legacy adapter but must never enter an original standalone package."
+
+[[asset]]
+id = "external-commercial-data-directories"
+prefix = "game-data/"
+type = "commercial-game-data"
+origin = "User-supplied legacy data"
+creator = "id Software and original rights holders"
+license = "LicenseRef-Commercial-Proprietary"
+redistribution = "prohibited"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Ignored local input directory; renamed or differently located unlisted data is still rejected by default deny."
+
+[[asset]]
+id = "external-data-directory"
+prefix = "data/"
+type = "external-user-data"
+origin = "Local user-supplied content"
+creator = "unknown"
+license = "NOASSERTION"
+redistribution = "prohibited"
+evidence = "docs/ORIGINAL_CONTENT_AND_IP.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Local usability is not redistribution permission."
+
+[[asset]]
+id = "third-party-research-inputs"
+prefix = "3rdparty/"
+type = "external-research-material"
+origin = "Locally supplied third-party packs"
+creator = "unknown"
+license = "NOASSERTION"
+redistribution = "prohibited"
+evidence = "docs/milestones/R1/R1.1.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Credits without redistribution terms do not establish package eligibility."
+
+[[asset]]
+id = "emu8950-source"
+paths = ["third_party/emu8950/README.wolf3d.md", "third_party/emu8950/emu8950.c", "third_party/emu8950/emu8950.h", "third_party/emu8950/emuadpcm.c", "third_party/emu8950/emuadpcm.h"]
+type = "third-party-source-code"
+origin = "emu8950 upstream commit f82a22e80b68820f263084aa8506b12eb1c9b4dd plus documented safety patches"
+creator = "Mitsutaka Okazaki and Wolf3D Revive patch authors"
+license = "MIT"
+redistribution = "development-only"
+evidence = "third_party/emu8950/README.wolf3d.md"
+attribution_required = true
+notice = "Retain third_party/emu8950/LICENSE when distributing this source or a binary containing it."
+notice_path = "third_party/emu8950/LICENSE"
+profiles = ["original-standalone"]
+notes = "The source is inventoried separately from the approved notice file and is not a standalone payload asset."
+
+[[asset]]
+id = "tests-and-synthetic-fixtures"
+prefix = "tests/"
+type = "test-code-and-synthetic-fixtures"
+origin = "Wolf3D Revive tests; fixtures are checked-in synthetic data or generated during tests"
+creator = "Wolf3D Revive contributors"
+license = "GPL-2.0-only"
+redistribution = "development-only"
+evidence = "docs/milestones/R1/R1.1.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Includes synthetic hash/visual fixtures; generated outputs remain ignored and are not standalone game content."
+
+[[asset]]
+id = "development-tooling"
+paths = ["AGENTS.md", "cart.toml", ".gitignore"]
+type = "development-configuration"
+origin = "Wolf3D Revive project"
+creator = "Wolf3D Revive contributors"
+license = "NOASSERTION"
+redistribution = "development-only"
+evidence = "docs/milestones/R1/R1.1.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Build and agent configuration is not an original standalone payload."
+
+[[asset]]
+id = "development-scripts"
+prefix = "scripts/"
+type = "development-tooling"
+origin = "Wolf3D Revive project"
+creator = "Wolf3D Revive contributors"
+license = "GPL-2.0-only"
+redistribution = "development-only"
+evidence = "docs/milestones/R1/R1.1.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Not part of the standalone release payload."
+
+[[asset]]
+id = "validation-tools"
+prefix = "tools/"
+type = "development-tooling"
+origin = "Wolf3D Revive project"
+creator = "Wolf3D Revive contributors"
+license = "GPL-2.0-only"
+redistribution = "development-only"
+evidence = "docs/milestones/R1/R1.1.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "The validator enforces packaging policy but is not itself a standalone payload asset."
+
+[[asset]]
+id = "project-documentation"
+prefix = "docs/"
+type = "development-documentation"
+origin = "Wolf3D Revive project"
+creator = "Wolf3D Revive contributors"
+license = "NOASSERTION"
+redistribution = "development-only"
+evidence = "docs/LICENSING.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "No new licence is asserted for documentation; approved release notices are listed separately."
+
+[[asset]]
+id = "distribution-policy-manifest"
+path = "assets/distribution.toml"
+type = "development-policy"
+origin = "Wolf3D Revive R1.5"
+creator = "Wolf3D Revive contributors"
+license = "NOASSERTION"
+redistribution = "development-only"
+evidence = "docs/milestones/R1/R1.5.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "This distribution policy is not the future R2 runtime resource manifest."
+
+[[asset]]
+id = "generated-build-output"
+prefix = "build/"
+type = "generated-output"
+origin = "Local build and validation commands"
+creator = "generated"
+license = "NOASSERTION"
+redistribution = "development-only"
+evidence = "docs/automation/PLAYBOOK.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "A successful build does not approve a binary or its embedded content."
+
+[[asset]]
+id = "nested-distribution-output"
+prefix = "dist/"
+type = "generated-output"
+origin = "Local packaging work"
+creator = "generated"
+license = "NOASSERTION"
+redistribution = "development-only"
+evidence = "docs/automation/PLAYBOOK.md"
+attribution_required = false
+profiles = ["original-standalone"]
+notes = "Nested staging/output directories are never implicitly eligible."
+
+[[asset]]
+id = "external-sdl-sdk"
+prefix = "vendor/SDL/"
+type = "build-time-third-party-sdk"
+origin = "External SDL3 SDK"
+creator = "SDL contributors"
+license = "zlib"
+redistribution = "development-only"
+evidence = "docs/LICENSING.md"
+attribution_required = true
+notice = "Review and include SDL's zlib notice if SDL is packaged with a future release."
+profiles = ["original-standalone"]
+notes = "The SDK is ignored and linked at build time; no tracked SDL notice is available for approval in this profile."

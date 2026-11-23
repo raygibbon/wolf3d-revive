@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import shutil
 import signal
 import subprocess
@@ -37,6 +38,7 @@ class Job:
     env: dict[str, str] = field(default_factory=dict)
     requires: tuple[str, ...] = ()  # e.g. "sdl-sdk","cc"
     notes: str = ""
+    minimum_tests: int = 0  # fail closed if unittest output reports fewer tests
 
 
 @dataclass
@@ -285,6 +287,39 @@ def build_jobs() -> list[Job]:
         category="cpu",
         requires=("cc",),
     ))
+
+    # R1.5 - distribution manifest, staging enforcement and notice policy.
+    # Class filters keep each job focused; minimum_tests prevents a misspelled
+    # filter or missing class from producing a false green "Ran 0 tests".
+    for job_id, class_filter, description in [
+        (
+            "r15-manifest-policy",
+            "ManifestStructureTests",
+            "Distribution manifest structure and provenance policy tests",
+        ),
+        (
+            "r15-release-security",
+            "ReleaseVerificationTests",
+            "Actual staging-tree verification and negative security tests",
+        ),
+        (
+            "r15-inventory-notices",
+            "InventoryNoticeAndProjectTests",
+            "Project inventory, approved payload and deterministic notice tests",
+        ),
+    ]:
+        jobs.append(Job(
+            id=job_id,
+            milestone="R1.5",
+            milestones=("R1.5", "all"),
+            description=description,
+            command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p",
+                     "test_distribution_manifest.py", "-k", class_filter, "-v"],
+            timeout=120,
+            mandatory=True,
+            category="meta",
+            minimum_tests=1,
+        ))
 
     return jobs
 
@@ -545,8 +580,23 @@ def run_job(job: Job, run_dir: Path) -> JobResult:
             message = f"parent exit {exit_code}; cleaned surviving descendants pids={detail}"
             log.write(f"\nRESULT: FAIL {message}\n")
         elif exit_code == 0:
-            status = STATUS_PASS
-            log.write("\nRESULT: PASS\n")
+            log.flush()
+            reported_tests = None
+            if job.minimum_tests:
+                try:
+                    output = log_path.read_text(encoding="utf-8", errors="replace")
+                    matches = re.findall(r"^Ran (\d+) tests?", output, flags=re.MULTILINE)
+                    reported_tests = int(matches[-1]) if matches else None
+                except OSError:
+                    reported_tests = None
+            if job.minimum_tests and (reported_tests is None or reported_tests < job.minimum_tests):
+                status = STATUS_FAIL
+                message = (f"expected at least {job.minimum_tests} executed tests; "
+                           f"unittest reported {reported_tests!r}")
+                log.write(f"\nRESULT: FAIL {message}\n")
+            else:
+                status = STATUS_PASS
+                log.write("\nRESULT: PASS\n")
         else:
             status = STATUS_FAIL
             message = f"exit {exit_code}"
@@ -629,7 +679,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
     jobs = build_jobs()
-    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "R1.4", "ALL"}
+    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "R1.4", "R1.5", "ALL"}
 
     if args.list:
         for j in jobs:
