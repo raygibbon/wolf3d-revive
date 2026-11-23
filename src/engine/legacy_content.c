@@ -99,7 +99,10 @@ legacy_content_error_t LegacyContent_SetResource(legacy_content_t *content,
 const char *LegacyContent_ResourceName(const legacy_content_t *content,
                                        legacy_resource_t resource)
 {
-    if (!content || !ValidResource(resource)) return NULL;
+    if (!ValidResource(resource)) return NULL;
+    /* No descriptor bound yet: resolve through the immutable WL6 defaults so
+       gradual adoption keeps legacy behaviour. */
+    if (!content) return default_names[resource];
     return content->filenames[resource];
 }
 

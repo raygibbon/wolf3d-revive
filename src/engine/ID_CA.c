@@ -211,10 +211,16 @@ bool CA_StartupWithContent(const legacy_content_t *content)
         size_t size;
         w3r_byte probe;
         FILE *file = CA_Open(active_content.directory, name);
-        if (!file) { CA_Shutdown(); return false; }
+        if (!file) {
+            CA_Shutdown();
+            return CA_Fail("Missing legacy content resource %s in '%s'", name, active_content.directory);
+        }
         bool ok = CA_FileSize(file, name, &size) && CA_Read(file, &probe, 1);
         (void)fclose(file);
-        if (!ok) { CA_Shutdown(); return false; }
+        if (!ok) {
+            CA_Shutdown();
+            return CA_Fail("Unreadable legacy content resource %s in '%s'", name, active_content.directory);
+        }
     }
     if (!CAL_SetupGrFile(&active_content)) { CA_Shutdown(); return false; }
     strcpy(data_directory, active_content.directory);

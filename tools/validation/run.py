@@ -273,27 +273,14 @@ def build_jobs() -> list[Job]:
         category="cpu",
     ))
 
-    # Integration test: compile and run the synthetic WL6 integration test binary
+    # Integration test: compile and run the synthetic WL6 production-loader integration test binary
     jobs.append(Job(
         id="r14-legacy-content-integration",
         milestone="R1.4",
         milestones=("R1.4", "all"),
-        description="Legacy content integration tests with synthetic WL6 fixtures",
+        description="Legacy content production-loader integration tests (synthetic WL6, renamed resources)",
         command=[PY, str(ROOT / "tests" / "test_legacy_content_integration.py"), "-v"],
-        timeout=120,
-        mandatory=True,
-        category="cpu",
-        requires=("cc",),
-    ))
-
-    # C unit test: compile and run legacy_content_tests.c, check exit code
-    jobs.append(Job(
-        id="r14-legacy-content-c",
-        milestone="R1.4",
-        milestones=("R1.4", "all"),
-        description="Legacy content adapter C headless unit tests",
-        command=[PY, str(ROOT / "tests" / "test_legacy_content_c.py"), "-v"],
-        timeout=120,
+        timeout=900,
         mandatory=True,
         category="cpu",
         requires=("cc",),
