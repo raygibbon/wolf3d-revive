@@ -23,7 +23,7 @@ Each row is proposed and may be refined by R0 evidence. Each milestone closes on
 | --- | --- | --- | --- |
 | R0 Baseline | Establish reliable baseline and architecture inventory | R0.1 source/build/asset inventory; R0.2 ownership and dependency map; R0.3 deterministic headless CPU harness; R0.4 matched display captures; R0.5 sanitizers/performance baseline; R0.6 CI/check runner; R0.7 baseline acceptance | Repeatable native tests, captured visual baseline, unresolved issues recorded |
 | R1 IP separation | Classify and isolate Wolfenstein-specific content | R1.1 licence/provenance inventory; R1.2 symbols/branding/text/audio audit; R1.3 engine vs game boundary; R1.4 legacy-content isolation; R1.5 distributable-asset manifest | Original mode can be developed without pulling restricted/uncleared assets into packages; licences documented |
-| R2 Data/content | Shared data-first map and resources | R2.1 versioned map contract; R2.2 validated loader and clear errors; R2.3 named resources and content manifest; R2.4 safe package/loose paths; R2.5 compatibility/migration fixtures; R2.6 headless content validation | Valid/malformed/old content reliably handled; round-trip and bounded resource tests |
+| R2 Data/content | Shared data-first map and resources | R2.1 versioned map contract; R2.2 validated loader and clear errors; R2.3 named resources and content manifest; R2.4 safe package/loose paths; R2.5 compatibility/migration fixtures; R2.6 headless content validation; R2.7 first playable original-content technical demo | Valid/malformed/old content reliably handled; round-trip and bounded resource tests; technical demo launches without commercial Wolfenstein assets |
 | R3 Original game | Deliver independently playable original content | R3.1 identity/concept and art/audio specifications; R3.2 original textures/HUD/menus; R3.3 original characters/weapons/sounds; R3.4 gameplay/data bindings; R3.5 playable campaign slice; R3.6 no-legacy-assets smoke and licence review | Playable original level works from a clean package without proprietary Wolfenstein data |
 | R4 World authoring API | Build editor-capable world operations | R4.1 ownership and edit transactions; R4.2 validated tile/door/object mutations; R4.3 placement/snapping policy; R4.4 undo/redo contract; R4.5 headless authoring regression | No UI-only creation capability; gameplay and Workshop share operations |
 | R5 First-person Workshop | Minimal walk-around construction | R5.1 mode entry/exit; R5.2 first-person selector and preview; R5.3 place/delete walls; R5.4 drag/extend walls and rectangular room tool; R5.5 doors/props/materials; R5.6 input/display usability | Create a small traversable level without editing files or flying |
@@ -31,9 +31,42 @@ Each row is proposed and may be refined by R0 evidence. Each milestone closes on
 | R7 Authoring completeness | Usable level creation workflow | R7.1 player starts and exits; R7.2 enemies/items/secrets; R7.3 selection, delete, copy and undo UI; R7.4 map management; R7.5 accessibility/onboarding; R7.6 user testing | New player can produce and play a valid level with documented workflow |
 | R8 Release | Original game and creator distribution | R8.1 pack/export/import; R8.2 content security and compatibility; R8.3 Windows/Linux verification; R8.4 performance and memory limits; R8.5 licensing/credits; R8.6 release acceptance | Reproducible distributable original game + Workshop, clean licence and platform sign-off |
 
+## R2.7: First Playable Original-Content Technical Demo
+
+**Added:** R1.2 review (23 November 2026). R2.7 follows R2.6.
+
+### Purpose
+
+Prove that the engine can load and run a minimal original game package without any commercial Wolfenstein 3D assets. This is a technical demonstration of the data-driven content pipeline, not a full game.
+
+### Acceptance criteria
+
+| ID | Requirement |
+| --- | --- |
+| **D01** | Launch without commercial Wolfenstein assets (no WL6 files present) |
+| **D02** | Load a simple original map and resources from loose files or PK3 |
+| **D03** | Display original walls, sprites and doors in both Classic and Enhanced renderers |
+| **D04** | Support movement and collision on the loaded map |
+| **D05** | Provide a documented demo launch command |
+| **D06** | Include headless tests for loading, validation and invalid packages |
+| **D07** | Include a visual smoke test (synthetic capture) |
+| **D08** | Preserve Classic 4:3 and Enhanced widescreen renderer behaviour |
+| **D09** | Distinguish this technical demo from the larger R3.5 playable game demo |
+
+### Scope notes
+
+- R2.7 is a technical demo, not a game. It proves the content pipeline works end-to-end.
+- R3.5 (playable campaign slice) is a separate, larger milestone that builds on R2.7.
+- No gameplay changes beyond what is needed to load and display original content.
+- No new dependencies or build system changes.
+
+### Dependencies
+
+R2.7 depends on R2.1–R2.6 (versioned map contract, validated loader, named resources, safe package paths, compatibility fixtures, headless content validation). R3.5 depends on R2.7.
+
 ## Workstream dependencies
 
-R0 gates all implementation. R1 precedes R3 release packaging. R2 is prerequisite for R3 content delivery and R4 edits. R4 precedes R5 and R6. R5 and R6 meet before R7 usability; R8 follows the exit gates. R3 art production can proceed alongside R4/R5 only after the resource/map contracts are defined. Legacy compatibility is a test goal, not permission to redistribute restricted art.
+R0 gates all implementation. R1 precedes R3 release packaging. R2 is prerequisite for R3 content delivery and R4 edits. R2.7 (technical demo) proves the content pipeline before R3.5 (playable slice). R4 precedes R5 and R6. R5 and R6 meet before R7 usability; R8 follows the exit gates. R3 art production can proceed alongside R4/R5 only after the resource/map contracts are defined. Legacy compatibility is a test goal, not permission to redistribute restricted art.
 
 ## Revision contract
 
