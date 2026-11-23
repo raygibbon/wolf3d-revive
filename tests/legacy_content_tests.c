@@ -1,4 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
 /* Legacy content adapter headless tests.
    Asset-free: no original WL6 data required. Synthetic fixtures only.
    Exercises the full adapter validation surface used by the production loader.
@@ -15,7 +18,7 @@
 
 #define CHECK(cond) do { if (!(cond)) { fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); return 1; } } while (0)
 
-int main(void)
+static int RunAdapterTests(const char *temp_dir)
 {
     static const legacy_resource_t default_ids[8] = {
         LEGACY_RESOURCE_VSWAP, LEGACY_RESOURCE_MAPHEAD, LEGACY_RESOURCE_GAMEMAPS,
@@ -44,7 +47,7 @@ int main(void)
     /* Directory binding and structural validation. */
     fprintf(stderr, "test_init_binds_directory: ");
     { legacy_content_t content;
-      legacy_content_error_t err = LegacyContent_Init(&content, "/tmp/w3r-legacy-unit");
+      legacy_content_error_t err = LegacyContent_Init(&content, temp_dir);
       if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL valid directory: %d\n", (int)err); return 1; }
       err = LegacyContent_Validate(&content);
       if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL valid directory validate: %d\n", (int)err); return 1; }
@@ -55,7 +58,7 @@ int main(void)
     /* Filename selection, restoration and rejection rules. */
     fprintf(stderr, "test_set_resource: ");
     { legacy_content_t content;
-      legacy_content_error_t err = LegacyContent_Init(&content, "/tmp/w3r-legacy-unit");
+      legacy_content_error_t err = LegacyContent_Init(&content, temp_dir);
       if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL init: %d\n", (int)err); return 1; }
       if (LegacyContent_SetResource(&content, LEGACY_RESOURCE_VSWAP, "CUSTOM.WL6") != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL set: %d\n", (int)LegacyContent_SetResource(&content, LEGACY_RESOURCE_VSWAP, "CUSTOM.WL6")); return 1; }
       if (LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP) == NULL || strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP), "CUSTOM.WL6") != 0) { fprintf(stderr, "FAIL set get\n"); return 1; }
@@ -84,44 +87,78 @@ int main(void)
       if (s1 == NULL || s2 == NULL || s3 == NULL) { fprintf(stderr, "FAIL error strings\n"); return 1; } }
     fprintf(stderr, "PASS\n");
 
+    /* Unterminated descriptor arrays must be rejected safely, without reading
+       past the descriptor field capacities. */
+    fprintf(stderr, "test_validate_unterminated: ");
+    { legacy_content_t content;
+      legacy_content_error_t err = LegacyContent_Init(&content, temp_dir);
+      if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL unterminated init: %d\n", (int)err); return 1; }
+      memset(content.directory, 'A', sizeof(content.directory));
+      if (LegacyContent_Validate(&content) != LEGACY_CONTENT_INVALID_DIRECTORY) { fprintf(stderr, "FAIL unterminated directory accepted\n"); return 1; }
+      err = LegacyContent_Init(&content, temp_dir);
+      if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL unterminated reinit: %d\n", (int)err); return 1; }
+      memset(content.filenames[LEGACY_RESOURCE_VSWAP], 'A', sizeof(content.filenames[LEGACY_RESOURCE_VSWAP]));
+      if (LegacyContent_Validate(&content) != LEGACY_CONTENT_INVALID_FILENAME) { fprintf(stderr, "FAIL unterminated filename accepted\n"); return 1; } }
+    fprintf(stderr, "PASS\n");
+
     /* Explicit missing-asset reporting. */
     fprintf(stderr, "test_validate_assets_missing: ");
-    { mkdir("/tmp/w3r-legacy-unit", 0755);
-      static const char *const asset_names[8] = {
+    { static const char *const asset_names[8] = {
           "VSWAP.WL6", "MAPHEAD.WL6", "GAMEMAPS.WL6", "AUDIOHED.WL6", "AUDIOT.WL6",
           "VGADICT.WL6", "VGAHEAD.WL6", "VGAGRAPH.WL6",
       };
       for (unsigned i = 0; i < 8; ++i) {
           char path[512];
-          snprintf(path, sizeof(path), "/tmp/w3r-legacy-unit/%s", asset_names[i]);
+          snprintf(path, sizeof(path), "%s/%s", temp_dir, asset_names[i]);
           FILE *f = fopen(path, "wb");
           if (!f) { fprintf(stderr, "FAIL cannot create fixture %s\n", asset_names[i]); return 1; }
           if (fwrite("x", 1, 1, f) != (size_t)1) { fprintf(stderr, "FAIL cannot fill fixture %s\n", asset_names[i]); return 1; }
           (void)fclose(f);
       }
       { legacy_content_t content;
-        legacy_content_error_t err = LegacyContent_Init(&content, "/tmp/w3r-legacy-unit");
+        legacy_content_error_t err = LegacyContent_Init(&content, temp_dir);
         legacy_resource_t missing = LEGACY_RESOURCE_COUNT;
         if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL init fixture dir\n"); return 1; }
         err = LegacyContent_ValidateAssets(&content, &missing);
         if (err != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL all-present validation %d\n", (int)err); return 1; }
-        if (missing != LEGACY_RESOURCE_COUNT) { fprintf(stderr, "FAIL all-present missing %u\n", (unsigned)missing); return 1; } }
-      if (remove("/tmp/w3r-legacy-unit/VGAGRAPH.WL6") != 0) { fprintf(stderr, "FAIL cleanup\n"); return 1; }
+        if (missing != LEGACY_RESOURCE_COUNT) { fprintf(stderr, "FAIL all-present missing %u\n", (unsigned)missing); return 1; }
+        { char path[512];
+          snprintf(path, sizeof(path), "%s/VGAGRAPH.WL6", temp_dir);
+          if (remove(path) != 0) { fprintf(stderr, "FAIL cleanup VGAGRAPH.WL6\n"); return 1; } } }
       { legacy_content_t content;
-        legacy_content_error_t err = LegacyContent_Init(&content, "/tmp/w3r-legacy-unit");
+        legacy_content_error_t err = LegacyContent_Init(&content, temp_dir);
         legacy_resource_t missing = LEGACY_RESOURCE_COUNT;
         err = LegacyContent_ValidateAssets(&content, &missing);
         if (err != LEGACY_CONTENT_MISSING_ASSET) { fprintf(stderr, "FAIL missing asset error %d\n", (int)err); return 1; }
         if (missing != LEGACY_RESOURCE_VGAGRAPH) { fprintf(stderr, "FAIL missing identifier %u\n", (unsigned)missing); return 1; } }
       for (unsigned i = 0; i < 8; ++i) {
           char path[512];
+          snprintf(path, sizeof(path), "%s/%s", temp_dir, asset_names[i]);
           if (i == 7) continue; /* VGAGRAPH.WL6 was already removed for the missing-asset check. */
-          snprintf(path, sizeof(path), "/tmp/w3r-legacy-unit/%s", asset_names[i]);
           if (remove(path) != 0) { fprintf(stderr, "FAIL cleanup %s\n", asset_names[i]); return 1; }
       }
-      if (rmdir("/tmp/w3r-legacy-unit") != 0) { fprintf(stderr, "FAIL cleanup dir\n"); return 1; } }
+      if (rmdir(temp_dir) != 0) { fprintf(stderr, "FAIL cleanup dir\n"); return 1; } }
     fprintf(stderr, "PASS\n");
 
     fprintf(stderr, "=== All adapter tests complete ===\n");
     return 0;
+}
+
+int main(void)
+{
+    char temp_dir[] = "/tmp/w3r-legacy-unit-XXXXXX";
+    int status;
+    if (mkdtemp(temp_dir) == NULL) { fprintf(stderr, "FAIL cannot create temporary directory\n"); return 1; }
+    status = RunAdapterTests(temp_dir);
+    { static const char *const names[8] = {
+          "VSWAP.WL6", "MAPHEAD.WL6", "GAMEMAPS.WL6", "AUDIOHED.WL6", "AUDIOT.WL6",
+          "VGADICT.WL6", "VGAHEAD.WL6", "VGAGRAPH.WL6",
+      };
+      for (unsigned i = 0; i < 8; ++i) {
+          char path[512];
+          snprintf(path, sizeof(path), "%s/%s", temp_dir, names[i]);
+          (void)remove(path);
+      }
+      (void)rmdir(temp_dir); }
+    return status;
 }

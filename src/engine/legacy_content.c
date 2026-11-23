@@ -35,6 +35,17 @@ static bool ValidResource(legacy_resource_t resource)
     return (unsigned)resource < (unsigned)LEGACY_RESOURCE_COUNT;
 }
 
+/* Bounded read: true only when buffer holds a NUL terminator within capacity,
+   so descriptor-owned arrays are never read past their field storage. */
+static bool Terminated(const char *buffer, size_t capacity)
+{
+    if (!buffer) return false;
+    for (size_t i = 0; i < capacity; ++i) {
+        if (buffer[i] == '\0') return true;
+    }
+    return false;
+}
+
 static legacy_content_error_t ValidateDirectory(const char *directory)
 {
     size_t length;
@@ -111,11 +122,17 @@ legacy_content_error_t LegacyContent_Validate(const legacy_content_t *content)
     size_t directory_length;
     legacy_content_error_t error;
     if (!content) return LEGACY_CONTENT_NULL;
+    /* Descriptor-owned arrays must be NUL-terminated within their capacity;
+       reject malformed storage without reading past the array bounds. */
+    if (!Terminated(content->directory, sizeof(content->directory)))
+        return LEGACY_CONTENT_INVALID_DIRECTORY;
     error = ValidateDirectory(content->directory);
     if (error != LEGACY_CONTENT_OK) return error;
     directory_length = strlen(content->directory);
     for (size_t i = 0; i < LEGACY_RESOURCE_COUNT; ++i) {
         const char *filename = content->filenames[i];
+        if (!Terminated(filename, sizeof(content->filenames[i])))
+            return LEGACY_CONTENT_INVALID_FILENAME;
         error = ValidateFilename(filename);
         if (error != LEGACY_CONTENT_OK) return error;
         if (directory_length + 1 + strlen(filename) >= LEGACY_CONTENT_PATH_MAX)
