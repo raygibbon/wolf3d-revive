@@ -15,4 +15,9 @@ typedef struct {
    lifetime of the process and must not be freed. */
 const game_identity_t *GameIdentity_Default(void);
 
+/* Validates that all required fields of the given identity are non-null and
+   non-empty. Returns true if valid, false otherwise. Does not modify the
+   input. The caller owns the identity memory. */
+int GameIdentity_Valid(const game_identity_t *identity);
+
 #endif
