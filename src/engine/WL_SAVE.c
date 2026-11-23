@@ -53,8 +53,17 @@ static void Put32(uint8_t *p,uint32_t v) { for(unsigned i=0;i<4;++i) p[i]=(uint8
 static bool Identity(uint32_t ids[3])
 {
     static const char *const names[]={"MAPHEAD.WL6","GAMEMAPS.WL6","VSWAP.WL6"};
+    /* Map WL_SAVE indices to legacy_resource_t enum values.
+       enum: VSWAP=0, MAPHEAD=1, GAMEMAPS=2  vs  names[0]=MAPHEAD, names[1]=GAMEMAPS, names[2]=VSWAP */
+    static const legacy_resource_t save_to_resource[3] = {
+        LEGACY_RESOURCE_MAPHEAD,   /* names[0] -> MAPHEAD */
+        LEGACY_RESOURCE_GAMEMAPS,  /* names[1] -> GAMEMAPS */
+        LEGACY_RESOURCE_VSWAP      /* names[2] -> VSWAP */
+    };
     for(unsigned i=0;i<3;++i) {
-        FILE *file=CA_OpenDataFile(CA_DataDirectory(),names[i]);
+        const char *res=CA_ResourceName(save_to_resource[i]);
+        if(!res) res=names[i];
+        FILE *file=CA_OpenDataFile(CA_DataDirectory(),res);
         if(!file) return CA_Fail("Cannot identify save resources: %s",names[i]);
         uint8_t buffer[8192];size_t n,total=0;uint32_t crc=UINT32_MAX;
         while((n=fread(buffer,1,sizeof(buffer),file))!=0) { total+=n;if(total>32U*1024U*1024U) break;crc=CRC(crc,buffer,n); }

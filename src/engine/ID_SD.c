@@ -119,8 +119,8 @@ void SD_Shutdown(void)
 }
 static bool LoadAudio(void)
 {
-    if(!CA_ReadDataFile("AUDIOHED.WL6",&header,&header_size) ||
-       !CA_ReadDataFile("AUDIOT.WL6",&archive,&archive_size)) return false;
+    if(!CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_AUDIOHED),&header,&header_size) ||
+       !CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_AUDIOT),&archive,&archive_size)) return false;
     /* Some releases carry extra trailing offsets; require the WL6 288 chunks. */
     if(header_size<4*(AUDIO_CHUNKS+1) || header_size%4) return CA_Fail("Malformed AUDIOHED.WL6 offset table");
     const uint8_t *h=header,*a=archive;
@@ -146,7 +146,7 @@ static bool LoadAudio(void)
 }
 static bool LoadDigi(void)
 {
-    if(!CA_ReadDataFile("VSWAP.WL6",&swap,&swap_size)) return false;
+    if(!CA_ReadDataFile(CA_ResourceName(LEGACY_RESOURCE_VSWAP),&swap,&swap_size)) return false;
     const uint8_t *s=swap;unsigned count,start;
     if(swap_size<6) goto bad;
     count=CA_LE16(s);start=CA_LE16(s+4);

@@ -261,6 +261,40 @@ def build_jobs() -> list[Job]:
         category="cpu",
     ))
 
+    # R1.4 - legacy content isolation
+    jobs.append(Job(
+        id="r14-legacy-content-adapter",
+        milestone="R1.4",
+        milestones=("R1.4", "all"),
+        description="Legacy content adapter headless unit tests (asset-free)",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_legacy_content.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
+    jobs.append(Job(
+        id="r14-legacy-content-integration",
+        milestone="R1.4",
+        milestones=("R1.4", "all"),
+        description="Legacy content integration tests with synthetic WL6 fixtures",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "legacy_content_integration_tests.c", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
+    jobs.append(Job(
+        id="r14-legacy-content-c",
+        milestone="R1.4",
+        milestones=("R1.4", "all"),
+        description="Legacy content adapter C headless unit tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "legacy_content_tests.c", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
     return jobs
 
 

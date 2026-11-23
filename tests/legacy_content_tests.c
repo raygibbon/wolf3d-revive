@@ -8,7 +8,7 @@
 #include "legacy_content.h"
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
+#include <stdlib.h>
 
 /* Helper: verify a resource name via the default content descriptor. */
 #define CHECK_DEFAULT_NAME(res, expected) do { \
@@ -16,6 +16,7 @@
     (void)got; /* default content fallback */ \
 } while(0)
 
+/* Test main returns 1 (nonzero exit code) on any failure. */
 int main(void)
 {
     fprintf(stderr, "=== Legacy Content Adapter Tests (asset-free) ===\n");
@@ -23,48 +24,58 @@ int main(void)
     fprintf(stderr, "test_default_VSWAP_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_VSWAP);
-      fprintf(stderr, (got != NULL && strcmp(got, "VSWAP.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "VSWAP.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_MAPHEAD_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_MAPHEAD);
-      fprintf(stderr, (got != NULL && strcmp(got, "MAPHEAD.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "MAPHEAD.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_GAMEMAPS_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_GAMEMAPS);
-      fprintf(stderr, (got != NULL && strcmp(got, "GAMEMAPS.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "GAMEMAPS.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_AUDIOHED_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_AUDIOHED);
-      fprintf(stderr, (got != NULL && strcmp(got, "AUDIOHED.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "AUDIOHED.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_AUDIOT_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_AUDIOT);
-      fprintf(stderr, (got != NULL && strcmp(got, "AUDIOT.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "AUDIOT.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_VGADICT_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_VGADICT);
-      fprintf(stderr, (got != NULL && strcmp(got, "VGADICT.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "VGADICT.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_VGAHEAD_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_VGAHEAD);
-      fprintf(stderr, (got != NULL && strcmp(got, "VGAHEAD.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "VGAHEAD.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
     fprintf(stderr, "test_default_VGAGRAPH_name: ");
     { const legacy_content_t *def = LegacyContent_Default();
       const char *got = LegacyContent_ResourceName(def, LEGACY_RESOURCE_VGAGRAPH);
-      fprintf(stderr, (got != NULL && strcmp(got, "VGAGRAPH.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "VGAGRAPH.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     /* Test Init with valid directory. */
     fprintf(stderr, "test_init_binds_directory: ");
     { legacy_content_t content;
       legacy_content_error_t e = LegacyContent_Init(&content, "/tmp/test-wl6-legacy");
-      fprintf(stderr, (e == LEGACY_CONTENT_OK) ? "PASS\n" : "FAIL\n"); }
+      if (e != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     /* Test SetResource replaces filename. */
     fprintf(stderr, "test_set_resource: ");
     { legacy_content_t content;
       LegacyContent_Init(&content, "/tmp/test-wl6-legacy");
       legacy_content_error_t e = LegacyContent_SetResource(&content, LEGACY_RESOURCE_VSWAP, "CUSTOM.WL6");
-      fprintf(stderr, (e == LEGACY_CONTENT_OK) ? "PASS\n" : "FAIL\n"); }
+      if (e != LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     /* Test ResourceName after SetResource. */
     fprintf(stderr, "test_resource_name_after_set: ");
@@ -72,24 +83,28 @@ int main(void)
       LegacyContent_Init(&content, "/tmp/test-wl6-legacy");
       (void)LegacyContent_SetResource(&content, LEGACY_RESOURCE_VSWAP, "CUSTOM.WL6");
       const char *got = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP);
-      fprintf(stderr, (got != NULL && strcmp(got, "CUSTOM.WL6") == 0) ? "PASS\n" : "FAIL\n"); }
+      if (got == NULL || strcmp(got, "CUSTOM.WL6") != 0) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     /* Test ResourceName with NULL content returns NULL (no default fallback). */
     fprintf(stderr, "test_resource_name_null_content: ");
     { const char *got = LegacyContent_ResourceName(NULL, LEGACY_RESOURCE_VSWAP);
-      fprintf(stderr, (got == NULL) ? "PASS\n" : "FAIL\n"); }
+      if (got != NULL) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     /* Test Validate NULL returns error. */
     fprintf(stderr, "test_validate_null: ");
     { legacy_content_error_t e = LegacyContent_Validate(NULL);
-      fprintf(stderr, (e != LEGACY_CONTENT_OK) ? "PASS\n" : "FAIL\n"); }
+      if (e == LEGACY_CONTENT_OK) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     /* Test ErrorString has content for key errors. */
     fprintf(stderr, "test_error_strings: ");
     { const char *s1 = LegacyContent_ErrorString(LEGACY_CONTENT_EMPTY_DIRECTORY);
       const char *s2 = LegacyContent_ErrorString(LEGACY_CONTENT_MISSING_ASSET);
       const char *s3 = LegacyContent_ErrorString(LEGACY_CONTENT_INVALID_FILENAME);
-      fprintf(stderr, ((s1 != NULL) && (s2 != NULL) && (s3 != NULL)) ? "PASS\n" : "FAIL\n"); }
+      if (s1 == NULL || s2 == NULL || s3 == NULL) { fprintf(stderr, "FAIL\n"); return 1; }
+      fprintf(stderr, "PASS\n"); }
 
     fprintf(stderr, "=== All adapter tests complete ===\n");
     return 0;

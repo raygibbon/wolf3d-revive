@@ -2,7 +2,8 @@
 /* Legacy content integration tests with synthetic WL6 fixtures.
    Verifies that custom-named resources are loaded through the adapter.
    Compile with: gcc -I src -I src/engine -I tests tests/legacy_content_integration_tests.c
-   Note: self-contained; no Python, no shell helpers, no placeholders. */
+   Note: self-contained; no Python, no shell helpers, no placeholders.
+   Uses only legacy_content.h functions + platform/data_file.h. */
 #include "legacy_content.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,18 +14,21 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include "platform/data_file.h"
 
 /*
  * Synthetic WL6 data generator.
- * Adapted from test_engine.py:fixtures() and game_fixtures.py:game_files().
  * Creates valid WL6-format archives for all 8 resource types in the
  * given directory. Uses only standard C and POSIX.
  */
 
-/* Balanced Huffman dictionary: 255 nodes, LSB-first codes stored as
-   little-endian 16-bit pairs. Node bit0/bit1 are child indices (0-255)
-   or leaf symbols (256-511). */
-static const uint8_t huff_dictionary[1020] = {
+/* Create synthetic VGADICT.WL6 (255 nodes, 1020 bytes). */
+static bool create_vgadict(const char *path)
+{
+    FILE *f = fopen(path, "wb");
+    if (!f) return false;
+    /* Use a fixed balanced Huffman dictionary (255 nodes, 1020 bytes). */
+    static const uint8_t huff_dictionary[1020] = {
   0x00,0x01, 0x02,0x03, 0x04,0x05, 0x06,0x07, 0x08,0x09, 0x0a,0x0b, 0x0c,0x0d, 0x0e,0x0f,
   0x10,0x11, 0x12,0x13, 0x14,0x15, 0x16,0x17, 0x18,0x19, 0x1a,0x1b, 0x1c,0x1d, 0x1e,0x1f,
   0x20,0x21, 0x22,0x23, 0x24,0x25, 0x26,0x27, 0x28,0x29, 0x2a,0x2b, 0x2c,0x2d, 0x2e,0x2f,
@@ -41,13 +45,7 @@ static const uint8_t huff_dictionary[1020] = {
   0xd0,0xd1, 0xd2,0xd3, 0xd4,0xd5, 0xd6,0xd7, 0xd8,0xd9, 0xda,0xdb, 0xdc,0xdd, 0xde,0xdf,
   0xe0,0xe1, 0xe2,0xe3, 0xe4,0xe5, 0xe6,0xe7, 0xe8,0xe9, 0xea,0xeb, 0xec,0xed, 0xee,0xef,
   0xf0,0xf1, 0xf2,0xf3, 0xf4,0xf5, 0xf6,0xf7, 0xf8,0xf9, 0xfa,0xfb, 0xfc,0xfd, 0xfe,0xff,
-};
-
-/* Create synthetic VGADICT.WL6 (255 nodes, 1020 bytes). */
-static bool create_vgadict(const char *path)
-{
-    FILE *f = fopen(path, "wb");
-    if (!f) return false;
+    };
     fwrite(huff_dictionary, 1, 1020, f);
     fclose(f);
     return true;
@@ -281,80 +279,82 @@ int main(void)
         return 1;
     }
 
-    /* Initialize the legacy content adapter with the synthetic directory */
+    /* Test 1: Initialize the legacy content adapter with the synthetic directory */
     legacy_content_t content;
     if (LegacyContent_Init(&content, tmpdir) != LEGACY_CONTENT_OK) {
         fprintf(stderr, "FAIL: LegacyContent_Init failed\n");
         return 1;
     }
 
-    /* Verify resource names are set correctly from the synthetic data */
-    const char *vswap = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP);
-    const char *maphead = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_MAPHEAD);
-    const char *gamemaps = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_GAMEMAPS);
-    const char *audiohed = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_AUDIOHED);
-    const char *audiot = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_AUDIOT);
-    const char *vgadict = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VGADICT);
-    const char *vgahead = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VGAHEAD);
-    const char *vgraph = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VGAGRAPH);
-
-    fprintf(stderr, "  VSWAP.WL6   = %s\n", vswap ? vswap : "(null)");
-    fprintf(stderr, "  MAPHEAD.WL6 = %s\n", maphead ? maphead : "(null)");
-    fprintf(stderr, "  GAMEMAPS.WL6= %s\n", gamemaps ? gamemaps : "(null)");
-    fprintf(stderr, "  AUDIOHED.WL6= %s\n", audiohed ? audiohed : "(null)");
-    fprintf(stderr, "  AUDIOT.WL6  = %s\n", audiot ? audiot : "(null)");
-    fprintf(stderr, "  VGADICT.WL6 = %s\n", vgadict ? vgadict : "(null)");
-    fprintf(stderr, "  VGAHEAD.WL6 = %s\n", vgahead ? vgahead : "(null)");
-    fprintf(stderr, "  VGAGRAPH.WL6= %s\n", vgraph ? vgraph : "(null)");
-
-    /* All names should be the standard WL6 filenames */
-    bool names_ok = true;
-    if (strcmp(vswap, "VSWAP.WL6") != 0) names_ok = false;
-    if (strcmp(maphead, "MAPHEAD.WL6") != 0) names_ok = false;
-    if (strcmp(gamemaps, "GAMEMAPS.WL6") != 0) names_ok = false;
-    if (strcmp(audiohed, "AUDIOHED.WL6") != 0) names_ok = false;
-    if (strcmp(audiot, "AUDIOT.WL6") != 0) names_ok = false;
-    if (strcmp(vgadict, "VGADICT.WL6") != 0) names_ok = false;
-    if (strcmp(vgahead, "VGAHEAD.WL6") != 0) names_ok = false;
-    if (strcmp(vgraph, "VGAGRAPH.WL6") != 0) names_ok = false;
-
-    if (!names_ok) {
-        fprintf(stderr, "FAIL: resource names unexpected\n");
-        return 1;
-    }
-
-    /* Test LegacyContent_ResourceName returns the correct names */
+    /* Test 2: Verify resource names are the standard WL6 filenames */
     if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP), "VSWAP.WL6") != 0) {
-        fprintf(stderr, "FAIL: LegacyContent_ResourceName VSWAP unexpected\n");
+        fprintf(stderr, "FAIL: VSWAP name unexpected: %s\n", LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP));
         return 1;
     }
     if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_MAPHEAD), "MAPHEAD.WL6") != 0) {
-        fprintf(stderr, "FAIL: LegacyContent_ResourceName MAPHEAD unexpected\n");
+        fprintf(stderr, "FAIL: MAPHEAD name unexpected\n");
+        return 1;
+    }
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_GAMEMAPS), "GAMEMAPS.WL6") != 0) {
+        fprintf(stderr, "FAIL: GAMEMAPS name unexpected\n");
+        return 1;
+    }
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_AUDIOHED), "AUDIOHED.WL6") != 0) {
+        fprintf(stderr, "FAIL: AUDIOHED name unexpected\n");
+        return 1;
+    }
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_AUDIOT), "AUDIOT.WL6") != 0) {
+        fprintf(stderr, "FAIL: AUDIOT name unexpected\n");
+        return 1;
+    }
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VGADICT), "VGADICT.WL6") != 0) {
+        fprintf(stderr, "FAIL: VGADICT name unexpected\n");
+        return 1;
+    }
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VGAHEAD), "VGAHEAD.WL6") != 0) {
+        fprintf(stderr, "FAIL: VGAHEAD name unexpected\n");
+        return 1;
+    }
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VGAGRAPH), "VGAGRAPH.WL6") != 0) {
+        fprintf(stderr, "FAIL: VGAGRAPH name unexpected\n");
         return 1;
     }
 
-    /* Test with a custom-named resource.
-       Override just the VSWAP filename to a custom name. */
+    /* Test 3: Verify required resources are present and readable via CA_OpenDataFile.
+       This exercises the actual file-loading path through the adapter. */
+    const char *required[] = { "VSWAP.WL6", "GAMEMAPS.WL6", "MAPHEAD.WL6",
+                                "AUDIOT.WL6", "AUDIOHED.WL6" };
+    for (size_t i = 0; i < sizeof(required) / sizeof(required[0]); ++i) {
+        FILE *file = CA_OpenDataFile(content.directory, required[i]);
+        if (!file) {
+            fprintf(stderr, "FAIL: Cannot open required resource %s via CA_OpenDataFile\n", required[i]);
+            return 1;
+        }
+        bool ok = fseek(file, 0, SEEK_END) == 0 && ftell(file) > 0;
+        (void)fclose(file);
+        if (!ok) {
+            fprintf(stderr, "FAIL: Required resource %s is empty or unreadable\n", required[i]);
+            return 1;
+        }
+    }
+
+    /* Test 4: Override VSWAP to a custom name */
     if (LegacyContent_SetResource(&content, LEGACY_RESOURCE_VSWAP, "CUSTOM.WL6") != LEGACY_CONTENT_OK) {
         fprintf(stderr, "FAIL: LegacyContent_SetResource failed\n");
         return 1;
     }
-    const char *custom_vswap = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP);
-    if (custom_vswap == NULL || strcmp(custom_vswap, "CUSTOM.WL6") != 0) {
-        fprintf(stderr, "FAIL: custom name not set: %s\n", custom_vswap ? custom_vswap : "(null)");
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP), "CUSTOM.WL6") != 0) {
+        fprintf(stderr, "FAIL: custom VSWAP name not set\n");
         return 1;
     }
 
-    /* Restore default */
+    /* Test 5: Restore default */
     if (LegacyContent_SetResource(&content, LEGACY_RESOURCE_VSWAP, "VSWAP.WL6") != LEGACY_CONTENT_OK) {
         fprintf(stderr, "FAIL: restore default failed\n");
         return 1;
     }
-
-    /* Verify the default is restored */
-    const char *restored = LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP);
-    if (restored == NULL || strcmp(restored, "VSWAP.WL6") != 0) {
-        fprintf(stderr, "FAIL: default not restored: %s\n", restored ? restored : "(null)");
+    if (strcmp(LegacyContent_ResourceName(&content, LEGACY_RESOURCE_VSWAP), "VSWAP.WL6") != 0) {
+        fprintf(stderr, "FAIL: default not restored\n");
         return 1;
     }
 
