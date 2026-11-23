@@ -298,7 +298,9 @@ The `verify` command reads the actual staging tree and is the canonical R8
 pre-package guard. It rejects unlisted files, non-approved policy states,
 incorrect hashes, symlinks, special files, case-insensitive collisions,
 unexpected empty directories and files that change while being checked. It
-does not modify the staging directory. The current profile requires the
+also requires every staged attributed asset's approved notice file to be
+present and to pass its own registered SHA-256. It does not modify the staging
+directory. The current profile requires the
 reviewed `COPYING` and `third_party/emu8950/LICENSE` notice files. There is no
 approved game binary or original art/audio payload yet, so a notice-only tree
 can satisfy eligibility policy but is not a functional release.
@@ -306,7 +308,9 @@ can satisfy eligibility policy but is not a functional release.
 To add an original asset, first record real provenance and licence evidence,
 then add a `pending-review` manifest entry. Approval is a review decision:
 change it to `approved`, add its exact SHA-256 and any notice requirements only
-after clearance. Never generate blanket approvals from discovered files.
+after clearance. Reviewed original-asset identifiers currently include
+`CC0-1.0`, `CC-BY-4.0`, and `OFL-1.1`; unresolved and proprietary states cannot
+grant approval. Never generate blanket approvals from discovered files.
 
 Evidence and full limitations are in
 [`docs/milestones/R1/R1.5.md`](../milestones/R1/R1.5.md).

@@ -23,15 +23,21 @@ DEFAULT_MANIFEST = ROOT / "assets" / "distribution.toml"
 MAX_MANIFEST_BYTES = 1024 * 1024
 READ_CHUNK_BYTES = 1024 * 1024
 STATES = {"approved", "prohibited", "pending-review", "development-only"}
-LICENSES = {
+REVIEWED_LICENSES = {
+    "CC-BY-4.0",
+    "CC0-1.0",
     "GPL-2.0-only",
     "MIT",
-    "zlib",
+    "OFL-1.1",
+    "Zlib",
+}
+NON_APPROVABLE_LICENSES = {
     "NOASSERTION",
     "LicenseRef-Commercial-Proprietary",
     "LicenseRef-Historical-Unverified",
     "LicenseRef-Pending-Review",
 }
+LICENSES = REVIEWED_LICENSES | NON_APPROVABLE_LICENSES
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 PROFILE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -235,8 +241,8 @@ def load_manifest(path: Path = DEFAULT_MANIFEST, repository_root: Path = ROOT) -
                 _fail(f"{owner}: approved file requires sha256")
             if not evidence:
                 _fail(f"{owner}: approved file requires provenance evidence")
-            if license_id in {"NOASSERTION", "LicenseRef-Pending-Review", "LicenseRef-Historical-Unverified"}:
-                _fail(f"{owner}: approved file cannot use unresolved licence state {license_id}")
+            if license_id in NON_APPROVABLE_LICENSES:
+                _fail(f"{owner}: approved file cannot use non-approvable licence state {license_id}")
             evidence_path = repository_root / _safe_relative(evidence, owner)
             if not evidence_path.is_file():
                 _fail(f"{owner}: provenance evidence does not exist: {evidence}")
@@ -420,6 +426,8 @@ def verify_tree(manifest: Manifest, profile_name: str, root: Path) -> tuple[int,
 
     seen_case: dict[str, str] = {}
     seen_assets: set[str] = set()
+    verified_paths: set[str] = set()
+    staged_notice_dependencies: dict[str, str] = {}
     file_count = 0
     total_size = 0
     staged_files: list[tuple[str, Path, os.stat_result]] = []
@@ -475,6 +483,16 @@ def verify_tree(manifest: Manifest, profile_name: str, root: Path) -> tuple[int,
         if actual_digest != asset.sha256:
             _fail(f"sha256 mismatch for {relative}: expected {asset.sha256}, got {actual_digest}")
         seen_assets.add(asset.id)
+        verified_paths.add(relative)
+        if asset.attribution_required:
+            staged_notice_dependencies[asset.id] = asset.notice_path
+    missing_notices = sorted(
+        f"{asset_id} requires {notice_path}"
+        for asset_id, notice_path in staged_notice_dependencies.items()
+        if notice_path not in verified_paths
+    )
+    if missing_notices:
+        _fail("staging tree is missing verified notice dependency: " + "; ".join(missing_notices))
     missing = sorted(set(profile.required_assets) - seen_assets)
     if missing:
         _fail(f"staging tree is missing required asset(s) for {profile_name}: {', '.join(missing)}")

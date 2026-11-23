@@ -25,11 +25,12 @@ DIST = load_tool()
 
 
 def asset_block(asset_id, path, state, *, digest="", license_id="MIT",
-                attribution="false", evidence="evidence.txt", extra=""):
+                attribution="false", notice_path="legal/NOTICE",
+                evidence="evidence.txt", extra=""):
     digest_line = f'sha256 = "{digest}"\n' if digest else ""
     notice_lines = ""
     if attribution == "true":
-        notice_lines = 'notice = "Retain the notice."\nnotice_path = "legal/NOTICE"\n'
+        notice_lines = f'notice = "Retain the notice."\nnotice_path = "{notice_path}"\n'
     return f'''\n[[asset]]
 id = "{asset_id}"
 path = "{path}"
@@ -82,6 +83,26 @@ required_assets = ["approved-notice"]
 
     def write_manifest(self, text=None):
         self.manifest_path.write_text(text if text is not None else self.base_manifest(), encoding="utf-8")
+
+    def separate_notice_manifest(self):
+        payload = b"approved synthetic artwork\n"
+        notice = b"reviewed synthetic licence notice\n"
+        payload_digest = hashlib.sha256(payload).hexdigest()
+        notice_digest = hashlib.sha256(notice).hexdigest()
+        text = self.base_manifest().replace(
+            'required_assets = ["approved-notice"]',
+            'required_assets = ["approved-payload"]',
+        )
+        start = text.index("\n[[asset]]")
+        text = text[:start]
+        text += asset_block(
+            "approved-payload", "art/payload.bin", "approved",
+            digest=payload_digest, attribution="true", notice_path="legal/LICENSE",
+        )
+        text += asset_block(
+            "payload-license", "legal/LICENSE", "approved", digest=notice_digest,
+        )
+        return text, payload, notice
 
     def manifest(self):
         return DIST.load_manifest(self.manifest_path, self.root)
@@ -164,6 +185,38 @@ notes = "overlap"
         text = self.base_manifest().replace('license = "MIT"', 'license = "looks-free"')
         self.assert_manifest_error(text, "unknown licence state")
 
+    def test_reviewed_cc0_spdx_identifier_can_be_approved(self):
+        self.manifest_path.write_text(
+            self.base_manifest().replace('license = "MIT"', 'license = "CC0-1.0"'),
+            encoding="utf-8",
+        )
+        self.assertEqual(self.manifest().assets[0].license, "CC0-1.0")
+
+    def test_reviewed_cc_by_spdx_identifier_can_be_approved(self):
+        self.manifest_path.write_text(
+            self.base_manifest().replace('license = "MIT"', 'license = "CC-BY-4.0"'),
+            encoding="utf-8",
+        )
+        self.assertEqual(self.manifest().assets[0].license, "CC-BY-4.0")
+
+    def test_reviewed_ofl_spdx_identifier_can_be_approved(self):
+        self.manifest_path.write_text(
+            self.base_manifest().replace('license = "MIT"', 'license = "OFL-1.1"'),
+            encoding="utf-8",
+        )
+        self.assertEqual(self.manifest().assets[0].license, "OFL-1.1")
+
+    def test_unresolved_or_restricted_licence_cannot_grant_approval(self):
+        for licence in (
+            "NOASSERTION",
+            "LicenseRef-Commercial-Proprietary",
+            "LicenseRef-Historical-Unverified",
+            "LicenseRef-Pending-Review",
+        ):
+            with self.subTest(licence=licence):
+                text = self.base_manifest().replace('license = "MIT"', f'license = "{licence}"')
+                self.assert_manifest_error(text, "non-approvable licence state")
+
     def test_invalid_sha256_rejected(self):
         text = self.base_manifest().replace(self.digest, "1234")
         self.assert_manifest_error(text, "sha256")
@@ -227,6 +280,39 @@ class ReleaseVerificationTests(DistributionFixture):
         result = self.cli("verify", "--profile", "original-standalone", "--root", str(self.stage))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("files=1", result.stdout)
+
+    def test_staged_attributed_asset_requires_separate_notice(self):
+        text, payload, _ = self.separate_notice_manifest()
+        self.write_manifest(text)
+        target = self.stage / "art" / "payload.bin"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(payload)
+        with self.assertRaisesRegex(DIST.DistributionError, "missing verified notice dependency"):
+            DIST.verify_tree(self.manifest(), "original-standalone", self.stage)
+
+    def test_staged_attributed_asset_with_verified_notice_passes(self):
+        text, payload, notice = self.separate_notice_manifest()
+        self.write_manifest(text)
+        payload_path = self.stage / "art" / "payload.bin"
+        notice_path = self.stage / "legal" / "LICENSE"
+        payload_path.parent.mkdir(parents=True)
+        notice_path.parent.mkdir(parents=True)
+        payload_path.write_bytes(payload)
+        notice_path.write_bytes(notice)
+        count, total = DIST.verify_tree(self.manifest(), "original-standalone", self.stage)
+        self.assertEqual((count, total), (2, len(payload) + len(notice)))
+
+    def test_staged_attributed_asset_with_tampered_notice_fails(self):
+        text, payload, _ = self.separate_notice_manifest()
+        self.write_manifest(text)
+        payload_path = self.stage / "art" / "payload.bin"
+        notice_path = self.stage / "legal" / "LICENSE"
+        payload_path.parent.mkdir(parents=True)
+        notice_path.parent.mkdir(parents=True)
+        payload_path.write_bytes(payload)
+        notice_path.write_bytes(b"tampered notice\n")
+        with self.assertRaisesRegex(DIST.DistributionError, "sha256 mismatch for legal/LICENSE"):
+            DIST.verify_tree(self.manifest(), "original-standalone", self.stage)
 
     def test_empty_staging_fails_missing_required_assets(self):
         with self.assertRaisesRegex(DIST.DistributionError, "missing required asset"):
