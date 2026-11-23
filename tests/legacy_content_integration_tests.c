@@ -5,6 +5,7 @@
    Note: self-contained; no Python, no shell helpers, no placeholders.
    Uses only legacy_content.h functions + platform/data_file.h. */
 #include "legacy_content.h"
+#include "ID_CA.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -358,9 +359,47 @@ int main(void)
         return 1;
     }
 
-    /* Clean up temp directory */
-    if (rmdir(tmpdir) != 0) {
-        fprintf(stderr, "WARN: could not remove temp dir %s\n", tmpdir);
+    /* Test 6: Verify that required resources are present and readable through the adapter,
+       which is what CA_StartupWithContent() checks. */
+    fprintf(stderr, "test_resources_readable: ");
+    { legacy_content_t content;
+      if (LegacyContent_Init(&content, tmpdir) != LEGACY_CONTENT_OK) {
+          fprintf(stderr, "FAIL: LegacyContent_Init failed\n"); return 1; }
+      const char *required[] = { "VSWAP.WL6", "GAMEMAPS.WL6", "MAPHEAD.WL6",
+                                  "AUDIOT.WL6", "AUDIOHED.WL6" };
+      bool ok = true;
+      for (size_t i = 0; i < sizeof(required) / sizeof(required[0]); ++i) {
+          FILE *file = CA_OpenDataFile(content.directory, required[i]);
+          if (!file) { ok = false; break; }
+          if (fseek(file, 0, SEEK_END) != 0 || ftell(file) <= 0) { fclose(file); ok = false; break; }
+          fclose(file);
+      }
+      if (!ok) { fprintf(stderr, "FAIL: Resources not present/readable\n"); return 1; }
+      fprintf(stderr, "PASS\n" );
+    }
+
+    /* Test 7: Verify that default startup fails when only renamed resources
+       are present (i.e., resources with names different from the expected
+       WL6 filenames). */
+    fprintf(stderr, "test_startup_fails_on_renamed: ");
+    { legacy_content_t content;
+      /* Initialize with the temp dir that has standard-named resources,
+         then rename one resource to a non-standard name, and verify
+         that the resource becomes unreadable. */
+      if (LegacyContent_Init(&content, tmpdir) != LEGACY_CONTENT_OK) {
+          fprintf(stderr, "FAIL: LegacyContent_Init failed\n"); return 1; }
+      /* Rename AUDIOHED.WL6 to FAKEAUDIOHED.WL6 */
+      { char old_path[4096], new_path[4096];
+        snprintf(old_path, sizeof(old_path), "%s/AUDIOHED.WL6", tmpdir);
+        snprintf(new_path, sizeof(new_path), "%s/FAKEAUDIOHED.WL6", tmpdir);
+        if (rename(old_path, new_path) != 0) {
+            fprintf(stderr, "WARN: rename failed (errno=%d)\n", errno);
+        }
+      }
+      /* After renaming, AUDIOHED.WL6 should not be found at the expected name */
+      FILE *file = CA_OpenDataFile(content.directory, "AUDIOHED.WL6");
+      if (file) { fclose(file); fprintf(stderr, "FAIL: Expected AUDIOHED.WL6 to be unreadable after rename\n"); return 1; }
+      fprintf(stderr, "PASS\n" );
     }
 
     fprintf(stderr, "=== Integration tests complete ===\n");

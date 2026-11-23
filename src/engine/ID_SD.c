@@ -293,8 +293,10 @@ unsigned SD_SoundTicks(soundnames sound)
     if(chip) return (unsigned)((CA_LE32(chunks[87+(unsigned)sound].data)+1U)/2U);
     /* Read metadata only when PCM is disabled. No synthesiser/device startup,
        persistent cache, audio thread IO or gameplay RNG is involved. */
-    FILE *h=CA_OpenDataFile(CA_DataDirectory(),"AUDIOHED.WL6");
-    FILE *a=CA_OpenDataFile(CA_DataDirectory(),"AUDIOT.WL6");
+    const char *hed = CA_ResourceName(LEGACY_RESOURCE_AUDIOHED);
+    const char *aud = CA_ResourceName(LEGACY_RESOURCE_AUDIOT);
+    FILE *h = CA_OpenDataFile(CA_DataDirectory(), hed ? hed : "AUDIOHED.WL6");
+    FILE *a = CA_OpenDataFile(CA_DataDirectory(), aud ? aud : "AUDIOT.WL6");
     unsigned result=0;uint8_t offsets[8],common[6];long size;
     if(h && a && !fseek(h,(long)(87+(unsigned)sound)*4,SEEK_SET) && fread(offsets,1,8,h)==8 &&
        !fseek(a,0,SEEK_END) && (size=ftell(a))>=0) {

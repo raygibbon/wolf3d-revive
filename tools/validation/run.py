@@ -273,26 +273,30 @@ def build_jobs() -> list[Job]:
         category="cpu",
     ))
 
+    # Integration test: compile and run the synthetic WL6 integration test binary
     jobs.append(Job(
         id="r14-legacy-content-integration",
         milestone="R1.4",
         milestones=("R1.4", "all"),
         description="Legacy content integration tests with synthetic WL6 fixtures",
-        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "legacy_content_integration_tests.c", "-v"],
+        command=[PY, str(ROOT / "tests" / "test_legacy_content_integration.py"), "-v"],
         timeout=120,
         mandatory=True,
         category="cpu",
+        requires=("cc",),
     ))
 
+    # C unit test: compile and run legacy_content_tests.c, check exit code
     jobs.append(Job(
         id="r14-legacy-content-c",
         milestone="R1.4",
         milestones=("R1.4", "all"),
         description="Legacy content adapter C headless unit tests",
-        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "legacy_content_tests.c", "-v"],
+        command=[PY, str(ROOT / "tests" / "test_legacy_content_c.py"), "-v"],
         timeout=120,
         mandatory=True,
         category="cpu",
+        requires=("cc",),
     ))
 
     return jobs
@@ -638,7 +642,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
     jobs = build_jobs()
-    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "ALL"}
+    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "R1.4", "ALL"}
 
     if args.list:
         for j in jobs:
