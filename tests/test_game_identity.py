@@ -18,7 +18,7 @@ class GameIdentityTests(unittest.TestCase):
         flags = ["-std=c11", "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wshadow", "-Werror", "-g"]
         if os.environ.get("SANITIZE") == "1":
             flags += ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]
-        sources = [str(ROOT / "src" / "engine" / "game_identity.c")]
+        sources = [str(ROOT / "src" / "engine" / "game_identity.c"), str(ROOT / "src" / "engine" / "game_context.c")]
         subprocess.run(
             shlex.split(os.environ.get("CC", "gcc"))
             + flags

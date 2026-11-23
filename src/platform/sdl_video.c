@@ -12,6 +12,7 @@
 #include "engine/WL_DEMO.h"
 #include "engine/WL_PROFILE.h"
 #include "engine/game_identity.h"
+#include "engine/game_context.h"
 #include <stdlib.h>
 #include <stdio.h>
 #define SDL_MAIN_HANDLED
@@ -276,11 +277,20 @@ void VL_Shutdown(void)
 
 bool VL_Startup(void)
 {
+    game_context_t ctx;
+    if (!GameContext_InitDefault(&ctx)) return false;
+    return VL_StartupWithContext(&ctx);
+}
+
+bool VL_StartupWithContext(const game_context_t *ctx)
+{
+    const game_identity_t *identity = ctx ? GameContext_Identity(ctx) : GameIdentity_Default();
+    if (!identity) identity = GameIdentity_Default();
     char error[512];
     VL_Shutdown();
     SDL_SetMainReady();
     if (!SDL_Init(SDL_INIT_VIDEO)) goto failed;
-    window = SDL_CreateWindow(GameIdentity_Default()->display_title, 960, 720, SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    window = SDL_CreateWindow(identity->display_title, 960, 720, SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window) goto failed;
     renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer) goto failed;
@@ -452,7 +462,16 @@ bool VL_PollQuit(void)
 
 bool VL_Screenshot(void)
 {
-    char *dir=SDL_GetPrefPath(NULL,GameIdentity_Default()->prefs_id);if(!dir) return false;
+    game_context_t ctx;
+    if (!GameContext_InitDefault(&ctx)) return false;
+    return VL_ScreenshotWithContext(&ctx);
+}
+
+bool VL_ScreenshotWithContext(const game_context_t *ctx)
+{
+    const game_identity_t *identity = ctx ? GameContext_Identity(ctx) : GameIdentity_Default();
+    if (!identity) identity = GameIdentity_Default();
+    char *dir=SDL_GetPrefPath(NULL,identity->prefs_id);if(!dir) return false;
     char path[4096];bool ok=false;
     /* Monotonic suffix plus existence check prevents overwriting prior shots. */
     for(unsigned i=0;i<1000;++i) {

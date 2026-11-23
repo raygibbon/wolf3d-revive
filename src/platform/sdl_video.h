@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "display_settings.h"
+#include "engine/game_context.h"
 
 bool VL_Startup(void);
+bool VL_StartupWithContext(const game_context_t *ctx);
 bool VL_DisplayGet(display_settings *settings);
 bool VL_DisplayPreferences(display_settings *settings); /* Pending accepted intent for persistence. */
 bool VL_DisplaySet(const display_settings *settings);
@@ -31,6 +33,7 @@ bool VW_UpdateScreen(void);
 bool VL_PollQuit(void);
 /* Diagnostic capture of the rendered viewport; game artwork stays local. */
 bool VL_Screenshot(void);
+bool VL_ScreenshotWithContext(const game_context_t *ctx);
 bool VL_Capture(const char *path);
 const char *VL_Error(void);
 #endif

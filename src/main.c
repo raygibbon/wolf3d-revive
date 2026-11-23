@@ -12,6 +12,7 @@
 #include "engine/WL_SAVE.h"
 #include "engine/WL_HIGHSCORES.h"
 #include "engine/game_identity.h"
+#include "engine/game_context.h"
 #include "engine/WL_DISPLAY.h"
 #include "engine/WL_FRAME_CLOCK.h"
 #include <SDL3/SDL_timer.h>
@@ -38,6 +39,7 @@ int main(int argc, char *argv[])
     const char *directory = NULL, *capture = NULL;
     bool no_audio=false,config_writable=false,jukebox=false;
     char *save_path=NULL;
+game_context_t game_ctx;
     bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
@@ -96,7 +98,8 @@ int main(int argc, char *argv[])
     if (!no_audio && !Audio_Startup()) fprintf(stderr,"Audio unavailable: %s; continuing silently.\n",Audio_Error());
     Display_Connect(VL_DisplayGet,VL_DisplaySet);
     MainMenu[soundmenu].active=1;
-    save_path=SDL_GetPrefPath(NULL,GameIdentity_Default()->prefs_id);
+if (!GameContext_InitDefault(&game_ctx)) { fprintf(stderr, "Failed to initialize game context\n"); goto done; }
+save_path=SDL_GetPrefPath(NULL,GameContext_Identity(&game_ctx)->prefs_id);
     if(save_path) {
         if(!HighScores_Load(save_path)) fprintf(stderr,"High scores: %s\n",CA_Error());
         (void)Save_SetDirectory(save_path);config_result config=Config_Load(save_path);
