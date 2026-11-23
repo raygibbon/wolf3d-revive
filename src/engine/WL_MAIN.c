@@ -111,8 +111,8 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
-    if (screen == UI_EPISODE && !DrawNewSelection(true,episode)) return false;
-    if (screen == UI_DIFFICULTY && !DrawNewSelection(false,difficulty)) return false;
+    if (screen == UI_EPISODE && !DrawNewSelection(GameDefinition_Default(),true,episode)) return false;
+    if (screen == UI_DIFFICULTY && !DrawNewSelection(GameDefinition_Default(),false,difficulty)) return false;
     unsigned steps = Attract() || screen==UI_RESULTS ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
     deadline = ticks + steps + (screen==UI_RATING?7U*70U:screen == UI_TITLE ? 15U*70U : 10U*70U);
@@ -239,7 +239,9 @@ static bool DrawJukebox(void)
     PrintX=(320-w)/2;PrintY=15;if(!US_Print("Robert's Jukebox")) return false;
     for(unsigned i=0;i<6;++i) {
         fontcolor=i==jukebox_choice?HIGHLIGHT:(int)i==jukebox_playing?0x4a:TEXTCOLOR;
-        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(GameDefinition_JukeboxName(def,jukebox_bank*6+i))) return false;
+        const char *track = GameDefinition_JukeboxName(def,jukebox_bank*6+i);
+        if (!track) track = "";
+        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(track)) return false;
     }
     return VWB_DrawPic(24,68+(int)jukebox_choice*13,MenuCursorPicture());
 }
@@ -484,7 +486,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(action==-1) return ReturnPanel(ticks);
     } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
         bool choosing_episode=state==UI_EPISODE;
-        int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
+        int action=HandleNewSelection(GameDefinition_Default(),ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
         if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);

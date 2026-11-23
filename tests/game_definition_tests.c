@@ -67,6 +67,30 @@ int main(void)
     CHECK(GameDefinition_DifficultyCount(def) == 4);
     CHECK(GameDefinition_JukeboxCount(def) == 18);
 
+    /* 10. Alternative definition counts are respected. */
+    static const char *alt_eps2[] = { "E1", "E2", "E3" };
+    static const char *alt_diff2[] = { "Easy", "Hard" };
+    static const char *alt_juke2[] = { "T1", "T2", "T3", "T4" };
+    game_definition_t alt2 = {
+        .episode_names = alt_eps2, .episode_count = 3,
+        .difficulty_names = alt_diff2, .difficulty_count = 2,
+        .jukebox_names = alt_juke2, .jukebox_count = 4,
+    };
+    CHECK(GameDefinition_Valid(&alt2));
+    CHECK(GameDefinition_EpisodeCount(&alt2) == 3);
+    CHECK(GameDefinition_DifficultyCount(&alt2) == 2);
+    CHECK(GameDefinition_JukeboxCount(&alt2) == 4);
+    /* Out of range for alternative. */
+    CHECK(GameDefinition_EpisodeName(&alt2, 3) == NULL);
+    CHECK(GameDefinition_DifficultyName(&alt2, 2) == NULL);
+    CHECK(GameDefinition_JukeboxName(&alt2, 4) == NULL);
+
+    /* 11. Invalid definition rejected. */
+    game_definition_t zero_eps = { .episode_names = alt_eps2, .episode_count = 0,
+        .difficulty_names = alt_diff2, .difficulty_count = 2,
+        .jukebox_names = alt_juke2, .jukebox_count = 4 };
+    CHECK(GameDefinition_Valid(&zero_eps)); /* zero count is valid (optional) */
+
     printf("game_definition_tests: PASS\n");
     return 0;
 }

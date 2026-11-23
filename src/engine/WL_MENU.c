@@ -158,9 +158,10 @@ bool MessageAtHeight(const char *text,unsigned area_height)
 
 /* WL_MENU.C DrawNewEpisode/DrawNewGame. Both use the same input queue as
    the control panel; a selection clears edges before entering the next page. */
-bool DrawNewSelection(bool episode,unsigned choice)
+bool DrawNewSelection(const game_definition_t *def, bool episode, unsigned choice)
 {
-    const game_definition_t *def = GameDefinition_Default();
+    if (!def) def = GameDefinition_Default();
+    if (!GameDefinition_Valid(def)) return false;
     ClearMScreen();
     if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=TEXTCOLOR;
@@ -186,15 +187,22 @@ bool DrawNewSelection(bool episode,unsigned choice)
     return VWB_DrawPic(50,98+(int)choice*13,C_CURSOR1PIC) &&
         VWB_DrawPic(235,107,C_BABYMODEPIC+(int)choice);
 }
-int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice)
+int HandleNewSelection(const game_definition_t *def, uint64_t ticks, bool episode, unsigned *choice)
 {
-    unsigned count=episode ? 6U : 4U;
+    if (!def) def = GameDefinition_Default();
+    if (!GameDefinition_Valid(def)) return -3;
+    unsigned count = episode ? GameDefinition_EpisodeCount(def) : GameDefinition_DifficultyCount(def);
+    if (count == 0) return -3;
+    /* Legacy menu layout supports at most 6 episodes and 4 difficulties. */
+    if (episode && count > 6) count = 6;
+    if (!episode && count > 4) count = 4;
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks>=move_next)) {
+        if (*choice >= count) *choice = 0;
         *choice=(*choice+((up || (!down && Keyboard[sc_UpArrow])) ? count-1 : 1))%count;
         move_next=ticks+20;
         (void)SD_PlaySound(MOVEGUN1SND,0,0);
-        if (!DrawNewSelection(episode,*choice)) return -3;
+        if (!DrawNewSelection(def,episode,*choice)) return -3;
     }
     bool escape=IN_ConsumePress(sc_Escape),enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
     if (escape) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
