@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /* WL_MAIN.C DemoLoop and WL_MENU.C control panel, resumed by monotonic tics.
    Title 15s -> credits 10s -> scores 10s -> validated original demo. */
+#include "engine/game_definition.h"
 #include "WL_MAIN.h"
 #include "WL_MENU.h"
 #include "ID_CA.h"
@@ -37,6 +38,18 @@ static const char *QuitMessage(uint64_t ticks)
     ui_random^=(uint32_t)ticks;ui_random=ui_random*1664525U+1013904223U;
     unsigned first=ui_random>>24;ui_random=ui_random*1664525U+1013904223U;
     return MenuQuitMessage(first,ui_random>>24);
+}
+/* Selected game definition is a borrowed pointer. SetGameDefinition(NULL)
+   restores the compiled-in default; callers must keep a non-default
+   definition alive for as long as it is selected. */
+static const game_definition_t *wl_game_definition = NULL;
+const game_definition_t *WL_GameDefinition(void)
+{
+    return wl_game_definition ? wl_game_definition : GameDefinition_Default();
+}
+void WL_SetGameDefinition(const game_definition_t *def)
+{
+    wl_game_definition = (def && GameDefinition_Valid(def)) ? def : NULL;
 }
 static unsigned episode,difficulty=2,demo_number;
 static ui_state panel_return=UI_MENU,display_return=UI_CONTROLS,quick_return;
@@ -110,8 +123,9 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
     if (screen == UI_CREDITS && !CA_CacheScreen(CREDITSPIC)) return false;
     if ((screen == UI_HIGHSCORES || screen == UI_SCORES) && !DrawHighScores()) return false;
     if (screen == UI_MENU && !SetupControlPanel(ticks)) return false;
-    if (screen == UI_EPISODE && !DrawNewSelection(true,episode)) return false;
-    if (screen == UI_DIFFICULTY && !DrawNewSelection(false,difficulty)) return false;
+    const game_definition_t *def = WL_GameDefinition();
+    if (screen == UI_EPISODE && !DrawNewSelection(def,true,episode)) return false;
+    if (screen == UI_DIFFICULTY && !DrawNewSelection(def,false,difficulty)) return false;
     unsigned steps = Attract() || screen==UI_RESULTS ? 30 : 10;
     if (!VL_FadeIn(gamepal,steps,ticks)) return false;
     deadline = ticks + steps + (screen==UI_RATING?7U*70U:screen == UI_TITLE ? 15U*70U : 10U*70U);
@@ -226,15 +240,20 @@ static bool GameMessage(const char *text)
     FinishPaletteShifts();if(!GameDrawPaused() || !MessageAtHeight(text,160)) return false;
     state=UI_MESSAGE;IN_ClearKeysDown();return true;
 }
-/* WL_MAIN.C DoJukebox: registered WL6 has three time-selected six-song banks. */
+/* Legacy jukebox adapter. Registered WL6 has three time-selected six-song
+   banks; this fixed 3x6 presentation is not a general track browser. A
+   definition with fewer entries yields NULL for the missing slots, which the
+   UI renders as an empty row without probing resource indices. */
+const char *JukeboxTrackName(const game_definition_t *def, unsigned bank, unsigned slot)
+{
+    if (!def) def = GameDefinition_Default();
+    if (bank > 2 || slot >= 6) return NULL;
+    return GameDefinition_JukeboxName(def, bank * 6 + slot);
+}
 static const unsigned jukebox_tracks[]={3,11,9,12,2,0,8,18,17,4,1,19,6,20,22,21,19,26};
-static const char *const jukebox_names[]={
-    "Get Them!","Searching","P.O.W.","Suspense","War March","Around The Corner!",
-    "Nazi Anthem","Lurking...","Going After Hitler","Pounding Headache","Into the Dungeons","Ultimate Conquest",
-    "Kill the S.O.B.","The Nazi Rap","Twelfth Hour","Zero Hour","Ultimate Conquest","Wolfpack"
-};
 static bool DrawJukebox(void)
 {
+    const game_definition_t *def = WL_GameDefinition();
     ClearMScreen();DrawStripes(10);DrawWindow(22,64,280,91,BKGDCOLOR);
     if(!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=0x47;int w,h;
@@ -242,7 +261,9 @@ static bool DrawJukebox(void)
     PrintX=(320-w)/2;PrintY=15;if(!US_Print("Robert's Jukebox")) return false;
     for(unsigned i=0;i<6;++i) {
         fontcolor=i==jukebox_choice?HIGHLIGHT:(int)i==jukebox_playing?0x4a:TEXTCOLOR;
-        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(jukebox_names[jukebox_bank*6+i])) return false;
+        const char *track = JukeboxTrackName(def,jukebox_bank,i);
+        if (!track) track = "";
+        PrintX=56;PrintY=70+(int)i*13;if(!US_Print(track)) return false;
     }
     return VWB_DrawPic(24,68+(int)jukebox_choice*13,MenuCursorPicture());
 }
@@ -487,7 +508,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if(action==-1) return ReturnPanel(ticks);
     } else if (state == UI_EPISODE || state == UI_DIFFICULTY) {
         bool choosing_episode=state==UI_EPISODE;
-        int action=HandleNewSelection(ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
+        int action=HandleNewSelection(WL_GameDefinition(),ticks,choosing_episode,choosing_episode ? &episode : &difficulty);
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
         if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);

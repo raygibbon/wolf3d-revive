@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #include "platform/sdl_video.h"
 #include "engine/game_context.h"
+#include "engine/game_definition.h"
 #include "engine/game_identity.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
     /* 1. Startup with alternative identity. */
     game_identity_t alt_id = { .game_id = "alt-game", .display_title = "Alt Game", .prefs_id = "alt-game" };
     game_context_t alt_ctx;
-    CHECK(GameContext_Init(&alt_ctx, &alt_id));
+    CHECK(GameContext_Init(&alt_ctx, &alt_id, GameDefinition_Default()));
     CHECK(VL_StartupWithContext(&alt_ctx));
 
     /* 2. Capture screenshot with active context (alt-game directory). */
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
     /* 3. Capture screenshot with override identity (override-game directory). */
     game_identity_t override_id = { .game_id = "override-game", .display_title = "Override", .prefs_id = "override-game" };
     game_context_t override_ctx;
-    CHECK(GameContext_Init(&override_ctx, &override_id));
+    CHECK(GameContext_Init(&override_ctx, &override_id, GameDefinition_Default()));
     CHECK(VL_ScreenshotWithContext(&override_ctx));
 
     /* 4. Capture again using VL_Screenshot() (active context, alt-game directory). */

@@ -3,6 +3,7 @@
 #define WL_MENU_H
 #include <stdbool.h>
 #include <stdint.h>
+#include "game_definition.h"
 #define BORDCOLOR 0x29
 #define BORD2COLOR 0x23
 #define DEACTIVE 0x2b
@@ -28,8 +29,8 @@ bool DrawMainMenu(void);
 bool SetupControlPanel(uint64_t ticks);
 /* -2: no action; -1: Escape, otherwise original menu item index. */
 int HandleMenu(uint64_t ticks);
-bool DrawNewSelection(bool episode,unsigned choice);
-int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice);
+bool DrawNewSelection(const game_definition_t *def, bool episode, unsigned choice);
+int HandleNewSelection(const game_definition_t *def, uint64_t ticks, bool episode, unsigned *choice);
 bool BeginControlsMenu(void);
 bool ResumeControlsMenu(void);
 bool DrawControlsMenu(void);

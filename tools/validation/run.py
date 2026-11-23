@@ -225,6 +225,42 @@ def build_jobs() -> list[Job]:
         requires=("sdl-sdk", "cc"),
     ))
 
+    # R1.3 - game definition tests
+    jobs.append(Job(
+        id="r13-game-definition",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="Game definition interface headless tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_game_definition.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
+    # R1.3 - real menu consumer integration tests
+    jobs.append(Job(
+        id="r13-menu-selection",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="WL_MENU episode/difficulty rendering, bounds and navigation tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_menu_selection.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
+    # R1.3 - selected definition ownership and jukebox adapter
+    jobs.append(Job(
+        id="r13-definition-lifetime",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="Selected game-definition ownership/lifetime and jukebox adapter tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_game_definition_lifetime.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
     return jobs
 
 

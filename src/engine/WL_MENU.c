@@ -2,6 +2,7 @@
 /* WL_MENU.C by John Romero (C) 1992 Id Software, Inc.
    GOODTIMES control-panel slice; blocking HandleMenu is now tic-driven.
    Gameplay-dependent rows retain original disabled rendering and are skipped. */
+#include "engine/game_definition.h"
 #include "WL_MENU.h"
 #include "WL_SAVE.h"
 #include "WL_DISPLAY.h"
@@ -156,47 +157,70 @@ bool MessageAtHeight(const char *text,unsigned area_height)
 }
 
 /* WL_MENU.C DrawNewEpisode/DrawNewGame. Both use the same input queue as
-   the control panel; a selection clears edges before entering the next page. */
-bool DrawNewSelection(bool episode,unsigned choice)
+   the control panel; a selection clears edges before entering the next page.
+   The original Wolfenstein pages are fixed at six episode and four difficulty
+   slots. Definitions may carry more entries, but this legacy presentation
+   clamps to those limits for rendering, cursor placement and navigation. */
+enum { LEGACY_EPISODE_LIMIT = 6, LEGACY_DIFFICULTY_LIMIT = 4 };
+
+static unsigned SelectionCount(const game_definition_t *def, bool episode)
 {
-    static const char *episodes[]={"Escape from Wolfenstein","Operation: Eisenfaust","Die, Fuhrer, Die!","A Dark Secret","Trail of the Madman","Confrontation"};
-    static const char *skills[]={"Can I play, Daddy?","Don't hurt me.","Bring 'em on!","I am Death incarnate!"};
+    unsigned count = episode ? GameDefinition_EpisodeCount(def)
+                             : GameDefinition_DifficultyCount(def);
+    unsigned limit = episode ? LEGACY_EPISODE_LIMIT : LEGACY_DIFFICULTY_LIMIT;
+    return count > limit ? limit : count;
+}
+
+bool DrawNewSelection(const game_definition_t *def, bool episode, unsigned choice)
+{
+    if (!def) def = GameDefinition_Default();
+    if (!GameDefinition_Valid(def)) return false;
+    unsigned count = SelectionCount(def, episode);
+    /* A page with no selectable row cannot accept a valid selection. */
+    if (count == 0) return false;
+    if (choice >= count) choice = 0;
     ClearMScreen();
     if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     fontnumber=1;fontcolor=TEXTCOLOR;
     if (episode) {
         DrawWindow(6,19,308,162,BKGDCOLOR);
         PrintX=72;PrintY=2;if (!US_Print("Which episode to play?")) return false;
-        for (unsigned i=0;i<6;++i) {
+        for (unsigned i=0;i<count;++i) {
             if (!VWB_DrawPic(42,23+(int)i*26,C_EPISODE1PIC+(int)i)) return false;
             fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,episodes[i]);
+            char label[80];(void)snprintf(label,sizeof(label),"Episode %u\n%s",i+1,GameDefinition_EpisodeName(def,i));
             PrintX=98;PrintY=23+(int)i*26;if (!US_Print(label)) return false;
         }
         return VWB_DrawPic(10,24+(int)choice*26,C_CURSOR1PIC);
     }
     PrintX=70;PrintY=68;if (!US_Print("How tough are you?")) return false;
     DrawWindow(45,90,225,67,BKGDCOLOR);
-    for (unsigned i=0;i<4;++i) {
+    for (unsigned i=0;i<count;++i) {
         fontcolor=i==choice ? HIGHLIGHT : TEXTCOLOR;
-        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(skills[i])) return false;
+        PrintX=74;PrintY=100+(int)i*13;if (!US_Print(GameDefinition_DifficultyName(def,i))) return false;
     }
     return VWB_DrawPic(50,98+(int)choice*13,C_CURSOR1PIC) &&
         VWB_DrawPic(235,107,C_BABYMODEPIC+(int)choice);
 }
-int HandleNewSelection(uint64_t ticks,bool episode,unsigned *choice)
+int HandleNewSelection(const game_definition_t *def, uint64_t ticks, bool episode, unsigned *choice)
 {
-    unsigned count=episode ? 6U : 4U;
+    if (!def) def = GameDefinition_Default();
+    if (!choice || !GameDefinition_Valid(def)) return -3;
+    unsigned count = SelectionCount(def, episode);
+    if (count == 0) return -3;
+    /* Normalize before any key is consumed so Enter/Space can never accept
+       an index that this presentation cannot display. */
+    if (*choice >= count) *choice = 0;
     bool up=IN_ConsumePress(sc_UpArrow),down=IN_ConsumePress(sc_DownArrow);
     if (up || down || ((Keyboard[sc_UpArrow] || Keyboard[sc_DownArrow]) && ticks>=move_next)) {
         *choice=(*choice+((up || (!down && Keyboard[sc_UpArrow])) ? count-1 : 1))%count;
         move_next=ticks+20;
         (void)SD_PlaySound(MOVEGUN1SND,0,0);
-        if (!DrawNewSelection(episode,*choice)) return -3;
+        if (!DrawNewSelection(def,episode,*choice)) return -3;
     }
     bool escape=IN_ConsumePress(sc_Escape),enter=IN_ConsumePress(sc_Enter),space=IN_ConsumePress(sc_Space);
     if (escape) { (void)SD_PlaySound(ESCPRESSEDSND,0,0);return -1; }
-    if (enter || space) { (void)SD_PlaySound(SHOOTSND,0,0);return 1; }
+    if ((enter || space) && *choice < count) { (void)SD_PlaySound(SHOOTSND,0,0);return 1; }
     return 0;
 }
 

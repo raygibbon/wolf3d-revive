@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     const char *directory = NULL, *capture = NULL;
     bool no_audio=false,config_writable=false,jukebox=false;
     char *save_path=NULL;
-game_context_t game_ctx;
+static game_context_t game_ctx;
     bool check_only = false, check_ui = false, check_level = false, menu = false, level = false;
     unsigned long frames = 0;
     int status = 1;
@@ -95,6 +95,7 @@ game_context_t game_ctx;
     if (ready) MainItems.curpos=newgame;
     else { fprintf(stderr,"New Game unavailable: %s\n",CA_Error()); if (level) goto done; }
     if (!GameContext_InitDefault(&game_ctx)) { fprintf(stderr, "Failed to initialize game context\n"); goto done; }
+    WL_SetGameDefinition(GameContext_Definition(&game_ctx));
     if (!VL_StartupWithContext(&game_ctx)) { fprintf(stderr, "SDL3 video: %s\n", VL_Error()); goto video_done; }
     if (!no_audio && !Audio_Startup()) fprintf(stderr,"Audio unavailable: %s; continuing silently.\n",Audio_Error());
     Display_Connect(VL_DisplayGet,VL_DisplaySet);
@@ -170,6 +171,8 @@ video_done:
     }
     Display_Connect(NULL,NULL);
     Audio_Shutdown();
+    /* Drop the borrowed definition before the context/process shuts down. */
+    WL_SetGameDefinition(NULL);
     VL_Shutdown();
 done:
     GameStop();
