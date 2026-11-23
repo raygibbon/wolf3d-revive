@@ -11,6 +11,8 @@
 #include "engine/WL_SAVE.h"
 #include "engine/WL_DEMO.h"
 #include "engine/WL_PROFILE.h"
+#include "engine/game_identity.h"
+#include "engine/game_context.h"
 #include <stdlib.h>
 #include <stdio.h>
 #define SDL_MAIN_HANDLED
@@ -19,6 +21,7 @@
 #include <string.h>
 
 static SDL_Window *window;
+static const game_context_t *vl_active_context = NULL;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
 static w3r_byte rgba[VL_PIXELS * 4], last_frame[VL_PIXELS], last_palette[768];
@@ -271,15 +274,25 @@ void VL_Shutdown(void)
     uploaded=false;integer_scale=pending=target=restore_size=size_pending=false;
     window_w=960;window_h=720;applied_mode=SDL_LOGICAL_PRESENTATION_DISABLED;
     display_error[0]=0;memset(consumed,0,sizeof(consumed));IN_SDLFocusLost();
+    vl_active_context = NULL;
 }
 
 bool VL_Startup(void)
 {
+    static game_context_t default_ctx;
+    if (!GameContext_InitDefault(&default_ctx)) return false;
+    return VL_StartupWithContext(&default_ctx);
+}
+
+bool VL_StartupWithContext(const game_context_t *ctx)
+{
+    const game_identity_t *identity = GameContext_Identity(ctx);
+    if (!identity) return false;
     char error[512];
     VL_Shutdown();
     SDL_SetMainReady();
     if (!SDL_Init(SDL_INIT_VIDEO)) goto failed;
-    window = SDL_CreateWindow("Wolf3D Revive", 960, 720, SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    window = SDL_CreateWindow(identity->display_title, 960, 720, SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window) goto failed;
     renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer) goto failed;
@@ -288,6 +301,7 @@ bool VL_Startup(void)
     if (!texture || !SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST) ||
         !ApplyPresentation()) goto failed;
     IN_SDLReset();uploads = 0;
+    vl_active_context = ctx;
     return true;
 failed:
     (void)SDL_strlcpy(error,SDL_GetError(),sizeof(error));
@@ -451,7 +465,14 @@ bool VL_PollQuit(void)
 
 bool VL_Screenshot(void)
 {
-    char *dir=SDL_GetPrefPath(NULL,"wolf3d-revive");if(!dir) return false;
+    return VL_ScreenshotWithContext(vl_active_context);
+}
+
+bool VL_ScreenshotWithContext(const game_context_t *ctx)
+{
+    const game_identity_t *identity = GameContext_Identity(ctx);
+    if (!identity) return false;
+    char *dir=SDL_GetPrefPath(NULL,identity->prefs_id);if(!dir) return false;
     char path[4096];bool ok=false;
     /* Monotonic suffix plus existence check prevents overwriting prior shots. */
     for(unsigned i=0;i<1000;++i) {

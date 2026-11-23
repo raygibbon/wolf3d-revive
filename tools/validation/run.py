@@ -74,7 +74,8 @@ def _display_path(p: Path) -> str:
 
 def _has_sdl_sdk() -> bool:
     sdk = Path(os.environ.get("SDL_SDK", ROOT.parent / "cart/vendor/SDL"))
-    return (sdk / "build/libSDL3.a").is_file() or (sdk / "include/SDL3/SDL.h").is_file()
+    return ((sdk / "build/libSDL3.a").is_file() and
+            (sdk / "include/SDL3/SDL.h").is_file())
 
 
 def _has_cc() -> bool:
@@ -196,6 +197,32 @@ def build_jobs() -> list[Job]:
         timeout=300,
         mandatory=True,
         category="meta",
+    ))
+
+    # R1.3 - game identity interface tests
+    jobs.append(Job(
+        id="r13-game-identity",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="Game identity interface headless tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_game_identity.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="cpu",
+    ))
+
+    # R1.3 - context platform tests
+    jobs.append(Job(
+        id="r13-context-platform",
+        milestone="R1.3",
+        milestones=("R1.3", "all"),
+        description="SDL platform context startup/shutdown/screenshot tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_context_platform.py", "-v"],
+        timeout=120,
+        mandatory=True,
+        category="graphics",
+        env=sdl_env,
+        requires=("sdl-sdk", "cc"),
     ))
 
     return jobs
@@ -541,7 +568,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
     jobs = build_jobs()
-    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "ALL"}
+    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "ALL"}
 
     if args.list:
         for j in jobs:
