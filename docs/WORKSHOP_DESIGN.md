@@ -50,3 +50,41 @@ Using original placeholder art, create a small square room, add a corridor and d
 **Compatibility invariant:** The future R2 map contract must support mapping/import/export for a tested ECWolf-compatible subset; PK3 is a ZIP-based container, not the in-memory world representation. A mod referencing player-owned Wolf3D resources must not have to bundle commercial assets. This experimental wall tool must not hardwire Workshop's canonical data representation to ECWolf PK3 internals.
 
 **Prototype exit gates:** (a) manual live wall-place/remove demonstration in the same running game, (b) expected renderer and collision changes, (c) safe mutation API passes headless tests, (d) Classic and Enhanced smoke tests reported, (e) existing validation and CART build statuses recorded, (f) no commercial game data/new binary assets committed. A gate is PASS only with observed evidence; otherwise PARTIAL, FAIL or NOT RUN. Do not merge the experiment merely because it compiles.
+
+## Next vertical slice: blank-level builder and persistence
+
+**Branch:** `feature/workshop-blank-level-builder`. Approved direction after the successful first-person wall-place/remove experiment merged in PR #26. This is an implementation scope, not a claim that these features already work.
+
+### User-facing goal
+
+From inside Wolf3D Revive, choose **New Level** to start with a safe empty enclosed 64×64 world and a valid player spawn. Stay in first person. Choose a wall texture from the locally available validated wall assets, aim at the world grid, place and remove walls even without a nearby wall, walk through the result, save the level to disk, close/reopen it, and continue editing. The next demo must prove this round trip.
+
+### Small delivery slices in order
+
+1. **W2.1 new map:** Provide a deterministic, validated empty-level generator with enclosing boundaries, spawn, collision, and safe renderer/area metadata. Do not corrupt existing campaigns or require overwriting legacy WL6 map data.
+2. **W2.2 materials:** Enumerate actually loaded and usable wall texture IDs and allow choosing among them. Make asset selection independent of their distribution provenance; official release export must obey R1.5. Don't synthesize unsupported IDs or bundle commercial artwork.
+3. **W2.3 Workshop HUD:** Reuse the original Wolf3D bottom status-bar region while Workshop is active, with a simple nine-slot material hotbar, selection indication and short hints. Restore the unchanged normal status bar when leaving. Do not grow the earlier experimental floating pixel-backup overlay into a UI framework.
+4. **W2.4 free placement:** Target sensible floor/grid cells in first person without requiring a pre-existing wall face. Keep the authoritative world, safe native C edit API, collision/actor/edge validation and immediate rendering. Test targeting at map edges and close to the player. Retain reliable removal.
+5. **W2.5 persistence BEFORE extra building tools:** Define the minimal versioned map semantics and save/load workflow, with validated inputs, bounded paths, atomic writes and round-trip tests. Support a user-writable loose-level directory without modifying shipped or user-owned WL6 data. Saved map files must work with Workshop and normal gameplay.
+6. **Later:** Drag-wall/room tools, doors, objects, undo/redo, richer asset browsers and ECWolf PK3 export. Avoid adding these before the initial save/load demonstration works.
+
+### Compatibility and architectural rules
+
+- Workshop stays inside the running first-person game; no top-down CAD or external editor.
+- Canonical native C world operations remain headless-testable and shared with gameplay. Keep maps and asset libraries separate; levels reference textures/materials instead of copying them.
+- Preserve Classic and Enhanced rendering, legacy game launch and original controls outside Workshop; no new heavy dependencies.
+- Target **ECWolf-compatible PK3 import/export** in future via tested format adapters. PK3 is a ZIP container, not the in-memory world or required per-edit save format. Do not claim ECWolf compatibility without cross-engine fixtures.
+- Explicitly coordinate the versioned map contract with roadmap R2.1; document any format decision and migration/validation implications. Do not treat this branch as completing all R2 milestones.
+- Any C game-state change must be applied at safe update boundaries and respect ownership, bounds, actors, doors, pushwalls, area reachability and map enclosure.
+
+### Exit criteria
+
+1. New blank map starts from the game UI and can be walked in without proprietary assets being committed.
+2. Player selects a legitimate texture in a legible nine-slot bottom bar.
+3. Player places and removes walls in free space without a pre-existing surface, with correct raycasting and collision.
+4. Player saves, quits, loads and continues editing the same authored level, with exact semantic map round-trip.
+5. Classic and Enhanced HUD transitions are clean; no ghosting/artifacts.
+6. Synthetic headless creation, edit, save/load, malformed-file, boundary, and selection tests pass, with logged exit codes and regression results.
+7. An actual interactive demo is performed before claiming the complete slice PASS; report unsupported/manual checks as NOT RUN rather than assuming them.
+
+Keep implementation incremental; write tests and evidence before merging. Do not overwrite the owner's original Wolf3D files or include their commercial content in Git.
