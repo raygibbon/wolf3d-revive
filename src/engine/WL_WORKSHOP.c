@@ -330,6 +330,33 @@ void WL_WorkshopDrawTargetOverlay(wl_render_target *target,int x,int y,int width
     TargetBar(target,cx,cy+thick*2,thick,arm-thick*2,color);
 }
 
+static void DrawMaterialPreview(int x,int y,int size,unsigned id)
+{
+    size_t length=0;
+    const w3r_byte *texture=PM_GetPage((id-1U)*2U,&length);
+    if(!texture || length<4096U) {
+        for(int jy=0;jy<size;++jy) for(int jx=0;jx<size;++jx)
+            framebuffer[(size_t)(y+jy)*320+(size_t)(x+jx)]=(w3r_byte)(((jx/4+jy/4)&1)?0x2d:0x23);
+        return;
+    }
+    for(int jy=0;jy<size;++jy) for(int jx=0;jx<size;++jx) {
+        unsigned sx=(unsigned)(jx*64/size),sy=(unsigned)(jy*64/size);
+        framebuffer[(size_t)(y+jy)*320+(size_t)(x+jx)]=texture[(size_t)sy*64U+sx];
+    }
+}
+
+static void DrawSlot(int x,int y,unsigned number,unsigned id,bool selected)
+{
+    VWB_Bar(x,y,32,18,0x2d);
+    w3r_byte border=selected?0x13:0x23;
+    VWB_Hlin(x,x+31,y,border);VWB_Hlin(x,x+31,y+17,border);
+    VWB_Vlin(y,y+17,x,border);VWB_Vlin(y,y+17,x+31,border);
+    char label[2]={(char)('1'+(int)number),0};
+    fontcolor=selected?0x0f:0x17;PrintX=x+2;PrintY=y+5;(void)US_Print(label);
+    if(id) DrawMaterialPreview(x+13,y+1,16,id);
+    else { fontcolor=0x17;PrintX=x+8;PrintY=y+5;(void)US_Print("-"); }
+}
+
 void WL_WorkshopRefreshMaterials(void)
 {
     unsigned ids[64],count=0;
@@ -354,6 +381,7 @@ bool WL_WorkshopSetMaterials(const unsigned *ids,unsigned count)
     }
     memset(materials,0,sizeof(materials));
     for(unsigned i=0;i<count;++i) materials[i]=ids[i];
+    material_count=count;
     memset(hotbar,0,sizeof(hotbar));
     for(unsigned i=0;i<count && i<9;++i) hotbar[i]=materials[i];
     selected_slot=0;material_page=0;picker_open=false;
@@ -454,13 +482,60 @@ void WL_WorkshopRestoreStatusBar(void)
     }
 }
 
-/* Status bar drawing is handled by the game HUD; this module only needs
-   the save/restore helpers since the Workshop overlay replaces the bar
-   area and ClearOverlay restores it on exit. */
+/* Status bar drawing draws the nine-slot hotbar in the bottom status bar area.
+   When Workshop is enabled, this replaces the normal HUD. On exit, ClearOverlay
+   restores the saved HUD pixels. */
 void WL_WorkshopDrawStatusBar(void)
 {
     if(!enabled) return;
-    /* The status bar is drawn by the regular game HUD beneath the Workshop
-       viewport. No additional drawing needed here - the bar area is either
-       the normal HUD or the Workshop replacement. */
+
+    int old_font=fontnumber,old_px=px,old_py=py,old_print_x=PrintX,old_print_y=PrintY,old_window=WindowX;
+    w3r_byte old_color=fontcolor;
+    fontnumber=0;WindowX=0;
+
+    VWB_Bar(0,160,320,40,0x2d);
+    VWB_Hlin(0,319,160,0x23);VWB_Hlin(0,319,199,0x23);
+
+    unsigned wall=WL_WorkshopWall();
+    const char *status="NO TARGET";
+    if(message_tics) { status=message; }
+    else if(feedback_tics) { status=WL_EditResultName(feedback); }
+    else if(picker_open) { status="PICK MATERIAL"; }
+    else if(current.has_place && current.place_result==WL_EDIT_OK) { status="PLACE READY"; }
+    else if(current.has_remove && current.remove_result==WL_EDIT_OK) { status="REMOVE READY"; }
+    else if(current.has_place) { status=WL_EditResultName(current.place_result); }
+    else if(current.has_remove) { status=WL_EditResultName(current.remove_result); }
+
+    char line[96];
+    if(picker_open) {
+        (void)snprintf(line,sizeof(line),"WORKSHOP  ASSIGN SLOT %u  %s",selected_slot+1U,status);
+    } else {
+        if(wall) (void)snprintf(line,sizeof(line),"WORKSHOP  WALL %u  %s",wall,status);
+        else (void)snprintf(line,sizeof(line),"WORKSHOP  NO MATERIAL  %s",status);
+    }
+    fontcolor=0x17;PrintX=4;PrintY=162;(void)US_Print(line);
+
+    if(picker_open) {
+        (void)snprintf(line,sizeof(line),"PICK  PAGE %u/%u  E CLOSE  1-9 ASSIGN",material_page+1U,WL_WorkshopPickerPageCount()?WL_WorkshopPickerPageCount():1U);
+    } else {
+        (void)snprintf(line,sizeof(line),"1-9 SLOT  E PICK  WHEEL  F5 SAVE  L LOAD  ` EXIT");
+    }
+    fontcolor=0x17;PrintX=4;PrintY=171;(void)US_Print(line);
+
+    for(unsigned i=0;i<WL_WORKSHOP_SLOTS;++i) {
+        unsigned id;
+        bool selected;
+        if(picker_open) {
+            unsigned index=material_page*WL_WORKSHOP_SLOTS+i;
+            id=index<material_count?materials[index]:0U;
+            selected=id && id==wall;
+        } else {
+            id=hotbar[i];
+            selected=i==selected_slot;
+        }
+        DrawSlot(7+(int)i*34,181,i,id,selected);
+    }
+
+    fontnumber=old_font;fontcolor=old_color;px=old_px;py=old_py;
+    PrintX=old_print_x;PrintY=old_print_y;WindowX=old_window;
 }
