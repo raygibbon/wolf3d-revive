@@ -32,9 +32,8 @@ bool StartAuthoredLevel(unsigned difficulty)
 bool NewGame(unsigned difficulty,unsigned episode)
 {
     if (difficulty>3 || episode>5) return CA_Fail("Invalid episode/difficulty");
-    /* When starting from Workshop, preserve the authored map;
-       original campaign startup always clears authored state. */
-    if (!authored_level) GameClearAuthoredLevel();
+    /* Campaign startup always explicitly clears authored state. */
+    GameClearAuthoredLevel();
     memset(&gamestate,0,sizeof(gamestate));
     memset(LevelRatios,0,sizeof(LevelRatios));
     gamestate.episode=(int)episode;gamestate.difficulty=(int)difficulty;

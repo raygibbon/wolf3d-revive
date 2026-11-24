@@ -223,10 +223,13 @@ bool GameStep(uint64_t ticks)
         if (ActorAllocationFailed()) return false;
         UpdateSoundLoc();
         madenoise=false;
+        CT_EndTic();
+        /* Workshop keyboard handling must happen BEFORE IN_ClearPressed()
+           so that IN_ConsumePress() can actually detect the key presses. */
+        if(workshop) WL_WorkshopTick();
         IN_ClearPressed();CT_EndTic();
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
-        if(workshop) WL_WorkshopTick();
         if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh()) return false;
         if (!workshop && !DrawStatus()) return false;
         if(workshop) WL_WorkshopDrawStatusBar();
