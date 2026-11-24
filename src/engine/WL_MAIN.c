@@ -468,7 +468,16 @@ static bool StepDemoLoop(uint64_t ticks)
             bool loaded=action==1 && state==UI_LOAD;
             if(action==1 && choosequick) quickslot=(int)SaveMenuSelected();
             choosequick=false;
-            if(loaded) { resuming=true;return Transition(UI_GAME,ticks,10); }
+            if(loaded) {
+                wl_level level;
+                char error[128];
+                if(WL_LevelLoad(&level,Save_Directory(),error,sizeof(error))) {
+                    if(GameInstallAuthoredLevel(&level)) {
+                        resuming=true;return Transition(UI_GAME,ticks,10);
+                    }
+                }
+                WL_WorkshopMessage(error,true);
+            }
             return ReturnPanel(ticks);
         }
     } else if(state==UI_DISPLAY) {

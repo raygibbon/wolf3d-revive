@@ -14,7 +14,7 @@
 
 #define WORKSHOP_RANGE (TILEGLOBAL*3)
 #define WORKSHOP_RAY_STEP (TILEGLOBAL/64)
-#define WORKSHOP_FREE_DISTANCE (TILEGLOBAL/4)
+#define WORKSHOP_FREE_DISTANCE (TILEGLOBAL/2)
 #define WORKSHOP_PANEL_MARGIN 4
 #define WORKSHOP_CROSSHAIR_RADIUS 5
 #define WORKSHOP_CROSSHAIR_BOX 16
@@ -171,15 +171,17 @@ void WL_WorkshopTick(void)
     if(!enabled) return;
     if(feedback_tics) --feedback_tics;
     /* Number-key hotbar selection (only in Workshop mode) */
-    if(Keyboard[0x02]) { WL_WorkshopSelectSlot(0); IN_ClearKeysDown(); }
-    if(Keyboard[0x03]) { WL_WorkshopSelectSlot(1); IN_ClearKeysDown(); }
-    if(Keyboard[0x04]) { WL_WorkshopSelectSlot(2); IN_ClearKeysDown(); }
-    if(Keyboard[0x05]) { WL_WorkshopSelectSlot(3); IN_ClearKeysDown(); }
-    if(Keyboard[0x06]) { WL_WorkshopSelectSlot(4); IN_ClearKeysDown(); }
-    if(Keyboard[0x07]) { WL_WorkshopSelectSlot(5); IN_ClearKeysDown(); }
-    if(Keyboard[0x08]) { WL_WorkshopSelectSlot(6); IN_ClearKeysDown(); }
-    if(Keyboard[0x09]) { WL_WorkshopSelectSlot(7); IN_ClearKeysDown(); }
-    if(Keyboard[0x0A]) { WL_WorkshopSelectSlot(8); IN_ClearKeysDown(); }
+    if(IN_ConsumePress(0x02)) { WL_WorkshopSelectSlot(0); }
+    if(IN_ConsumePress(0x03)) { WL_WorkshopSelectSlot(1); }
+    if(IN_ConsumePress(0x04)) { WL_WorkshopSelectSlot(2); }
+    if(IN_ConsumePress(0x05)) { WL_WorkshopSelectSlot(3); }
+    if(IN_ConsumePress(0x06)) { WL_WorkshopSelectSlot(4); }
+    if(IN_ConsumePress(0x07)) { WL_WorkshopSelectSlot(5); }
+    if(IN_ConsumePress(0x08)) { WL_WorkshopSelectSlot(6); }
+    if(IN_ConsumePress(0x09)) { WL_WorkshopSelectSlot(7); }
+    if(IN_ConsumePress(0x0A)) { WL_WorkshopSelectSlot(8); }
+    /* Toggle material picker with E key (only in Workshop mode) */
+    if(IN_ConsumePress(0x13)) { WL_WorkshopPickerToggle(); }
     WL_WorkshopUpdateTarget();
 }
 
