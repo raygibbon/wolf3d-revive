@@ -30,7 +30,8 @@ unsigned WL_WorkshopWall(void);
 void WL_WorkshopDrawClassicOverlay(void);
 void WL_WorkshopDrawTargetOverlay(wl_render_target *target,int x,int y,int width,int height);
 void WL_WorkshopDrawStatusBar(void);
-bool WL_WorkshopRestoreStatusBar(void);
+void WL_WorkshopSaveStatusBar(void);
+void WL_WorkshopRestoreStatusBar(void);
 
 /* Material/hotbar state is headless-testable and independent of SDL. */
 void WL_WorkshopRefreshMaterials(void);

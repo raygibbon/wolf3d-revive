@@ -13,6 +13,7 @@
 
 #define WORKSHOP_RANGE (TILEGLOBAL*3)
 #define WORKSHOP_RAY_STEP (TILEGLOBAL/64)
+#define WORKSHOP_FREE_DISTANCE (TILEGLOBAL/4)
 #define WORKSHOP_PANEL_MARGIN 4
 #define WORKSHOP_CROSSHAIR_RADIUS 5
 #define WORKSHOP_CROSSHAIR_BOX 16
@@ -84,7 +85,20 @@ bool WL_WorkshopSelect(const wl_edit_world *world,int32_t x,int32_t y,int angle,
         }
         last_x=cell_x;last_y=cell_y;
     }
-    return false;
+    /* No wall surface within range: target the floor grid as a free-space placement.
+       Reject player-occupied cells and protected boundaries. */
+    int32_t sample_x=x+FixedByFrac(WORKSHOP_FREE_DISTANCE,sintable[angle+90]);
+    int32_t sample_y=y-FixedByFrac(WORKSHOP_FREE_DISTANCE,sintable[angle]);
+    int cell_x=TileCoordinate(sample_x),cell_y=TileCoordinate(sample_y);
+    if(cell_x<0 || cell_y<0 || (unsigned)cell_x>=world->width || (unsigned)cell_y>=world->height) return false;
+    if(cell_x==last_x && cell_y==last_y) return false;
+    if(world->tiles[cell_x][cell_y]) return false; /* occupied */
+    /* Reject player-occupied cell */
+    if((uint32_t)cell_x == (uint32_t)world->player->tilex && (uint32_t)cell_y == (uint32_t)world->player->tiley) return false;
+    target->hit=false;target->has_place=true;
+    target->place_x=cell_x;target->place_y=cell_y;
+    target->place_result=WL_EditCanSetWall(world,cell_x,cell_y,selected);
+    return true;
 }
 
 static void SaveRect(w3r_byte *dest,size_t dest_stride,const w3r_byte *src,size_t src_stride,
@@ -126,14 +140,19 @@ void WL_WorkshopSetEnabled(bool value)
     WL_WorkshopClearOverlay();
     enabled=value;pending=WL_WORKSHOP_NONE;feedback=WL_EDIT_OK;feedback_tics=0;
     if(enabled) {
+        WL_WorkshopSaveStatusBar();
         /* Reuse a wall already validated by level setup when possible. */
         for(unsigned y=1;y<63;++y) for(unsigned x=1;x<63;++x) {
             unsigned tile=tilemap[x][y];
             if(tile>0 && tile<=63 && tile!=21 && tile!=22) { wall_id=tile;goto selected; }
         }
 selected:
+        WL_WorkshopRefreshMaterials();
         WL_WorkshopUpdateTarget();
-    } else memset(&current,0,sizeof(current));
+    } else {
+        WL_WorkshopRestoreStatusBar();
+        memset(&current,0,sizeof(current));
+    }
 }
 
 void WL_WorkshopRequest(wl_workshop_request request)
@@ -143,7 +162,7 @@ void WL_WorkshopUpdateTarget(void)
 {
     if(!enabled) { memset(&current,0,sizeof(current));return; }
     wl_edit_world world=WL_WorkshopLiveWorld();
-    (void)WL_WorkshopSelect(&world,player.x,player.y,player.angle,wall_id,&current);
+    (void)WL_WorkshopSelect(&world,player.x,player.y,player.angle,WL_WorkshopWall(),&current);
 }
 
 void WL_WorkshopTick(void)
@@ -411,4 +430,37 @@ void WL_WorkshopMessage(const char *text,bool error)
     (void)snprintf(message,sizeof(message),"%s",text);
     message_error=error;
     message_tics=140;
+}
+
+/* Status bar backup for HUD restoration. */
+static w3r_byte status_bar_backup[320*40];
+static bool status_bar_backup_valid;
+
+/* Workshop status bar replaces the normal bottom status bar. */
+void WL_WorkshopSaveStatusBar(void)
+{
+    if(status_bar_backup_valid) return;
+    memcpy(status_bar_backup,framebuffer+160*320,sizeof(status_bar_backup));
+    status_bar_backup_valid=true;
+}
+
+void WL_WorkshopRestoreStatusBar(void)
+{
+    if(status_bar_backup_valid) {
+        memcpy(framebuffer+160*320,status_bar_backup,sizeof(status_bar_backup));
+        status_bar_backup_valid=false;
+    } else {
+        VWB_Bar(0,160,320,40,127);
+    }
+}
+
+/* Status bar drawing is handled by the game HUD; this module only needs
+   the save/restore helpers since the Workshop overlay replaces the bar
+   area and ClearOverlay restores it on exit. */
+void WL_WorkshopDrawStatusBar(void)
+{
+    if(!enabled) return;
+    /* The status bar is drawn by the regular game HUD beneath the Workshop
+       viewport. No additional drawing needed here - the bar area is either
+       the normal HUD or the Workshop replacement. */
 }

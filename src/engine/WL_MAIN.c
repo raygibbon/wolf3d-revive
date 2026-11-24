@@ -427,7 +427,12 @@ static bool StepDemoLoop(uint64_t ticks)
             if(WL_LevelBlank(&level,1)) {
                 char error[128];
                 if(WL_LevelSave(&level,Save_Directory(),error,sizeof(error))) {
-                    return Transition(UI_EPISODE,ticks,10);
+                    /* Level created and saved successfully - enter Workshop mode
+                       with the blank level as the authoritative world. */
+                    WL_WorkshopSetEnabled(true);
+                    WL_WorkshopRefreshMaterials();
+                    WL_WorkshopUpdateTarget();
+                    return true;
                 }
                 /* Failed to save; show error and stay in menu */
                 WL_WorkshopMessage(error,true);
