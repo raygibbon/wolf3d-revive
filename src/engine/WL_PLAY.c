@@ -6,6 +6,7 @@
 #include "WL_DEMO.h"
 #include "WL_SAVE.h"
 #include "WL_CONTROLS.h"
+#include "WL_WORKSHOP.h"
 #include "ID_IN.h"
 #include "ID_CA.h"
 #include "ID_SD.h"
@@ -41,6 +42,7 @@ void DrawPlayBorder(void)
 }
 static bool DrawPlayScreen(void)
 {
+    WL_WorkshopClearOverlay();
     DrawPlayBorder();return VWB_DrawPic(0,160,STATUSBARPIC) && DrawStatus();
 }
 bool GameProbe(void)
@@ -172,21 +174,23 @@ bool GameStep(uint64_t ticks)
         if(playback && !Demo_ReadTic(&demo)) break;
         if (gamestate.died) { if (!Died(ticks-elapsed+tic+1)) return false;WL_PresentCapture(ticks-elapsed+tic+dt);continue; }
         if (DeathCameraActive()) { if (!StepDeathCamera()) return false;WL_PresentCapture(ticks-elapsed+tic+dt);continue; }
-        if (gamestate.TimeCount<=UINT32_MAX-dt) gamestate.TimeCount+=dt;
+        bool workshop=WL_WorkshopEnabled();
+        if(workshop) (void)WL_WorkshopCommit();
+        if (!workshop && gamestate.TimeCount<=UINT32_MAX-dt) gamestate.TimeCount+=dt;
         /* Original T_Player returns before face/input in BJ victory; T_Attack
            still updates the face, while s_deathcam has no player thinker. */
-        if (!gamestate.victoryflag || (gamestate.attackframe && player.state!=&s_deathcam)) UpdateFace();
+        if (!workshop && (!gamestate.victoryflag || (gamestate.attackframe && player.state!=&s_deathcam))) UpdateFace();
         thrustspeed=0;
-        MoveDoors();MovePWalls();
+        if(!workshop) { MoveDoors();MovePWalls(); }
         if (gamestate.attackframe && playback && demo.use) Demo_SuppressButtons(8U);
-        if (!gamestate.attackframe && (playback?demo.use:CT_Pressed(CT_USE)) && !gamestate.victoryflag) Cmd_Use();
+        if (!workshop && !gamestate.attackframe && (playback?demo.use:CT_Pressed(CT_USE)) && !gamestate.victoryflag) Cmd_Use();
         if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
             SD_StartMusic(24);
-            FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
+            FinishPaletteShifts();WL_WorkshopClearOverlay();victorypage=1;IN_ClearKeysDown();return DrawVictory();
         }
         if (playstate!=ex_playing) {
             if (gamestate.mapon==8) return CA_Fail("Invalid secret exit on episode finale");
-            gamestate.keys=0;FinishPaletteShifts();
+            gamestate.keys=0;FinishPaletteShifts();WL_WorkshopClearOverlay();
             levelratio_t stats=LevelStats();
             SD_StartMusic(16);
             intermission=true;IN_ClearKeysDown();
@@ -209,10 +213,12 @@ bool GameStep(uint64_t ticks)
             if(alt) { strafe+=turn;turn=0;if(strafe>1) strafe=1;if(strafe< -1) strafe=-1; }
             ModernMovement(turn*move+mouse_turn,forward,strafe,move);
         }
-        ConnectAreas();
-        if (!gamestate.victoryflag) T_Attack(playback?(demo.buttons&1U)!=0:CT_Down(CT_FIRE));
-        for (objtype *ob=player.next;ob;ob=ob->next) {
-            DoActor(ob);if (DeathCameraActive()) break;
+        if(!workshop) {
+            ConnectAreas();
+            if (!gamestate.victoryflag) T_Attack(playback?(demo.buttons&1U)!=0:CT_Down(CT_FIRE));
+            for (objtype *ob=player.next;ob;ob=ob->next) {
+                DoActor(ob);if (DeathCameraActive()) break;
+            }
         }
         if (ActorAllocationFailed()) return false;
         UpdateSoundLoc();
@@ -220,7 +226,9 @@ bool GameStep(uint64_t ticks)
         IN_ClearPressed();CT_EndTic();
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
+        if(workshop) WL_WorkshopTick();
         if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh() || !DrawStatus()) return false;
+        if(workshop) WL_WorkshopDrawClassicOverlay();
         WL_PresentCapture(ticks-elapsed+tic+dt);
     }
     return true;

@@ -201,6 +201,19 @@ def build_jobs() -> list[Job]:
         category="meta",
     ))
 
+    jobs.append(Job(
+        id="live-workshop-core",
+        milestone="LIVE-WORKSHOP",
+        milestones=("LIVE-WORKSHOP",),
+        description="Live Workshop edit, selector, and production collision tests",
+        command=[PY, "-m", "unittest", "discover", "-s", "tests", "-p", "test_workshop.py", "-v"],
+        timeout=300,
+        mandatory=True,
+        category="cpu",
+        requires=("cc",),
+        minimum_tests=1,
+    ))
+
     # R1.3 - game identity interface tests
     jobs.append(Job(
         id="r13-game-identity",
@@ -662,7 +675,7 @@ def print_summary(results: list[JobResult], summary_path: Path) -> None:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Run Wolf3D Revive milestone validation jobs.")
-    ap.add_argument("milestone", nargs="?", help="Milestone to run: R0.3, R0.4, R0.5, R0.6, all")
+    ap.add_argument("milestone", nargs="?", help="Milestone to run: R0.3, R0.4, R0.5, R0.6, R1.3, R1.4, R1.5, LIVE-WORKSHOP, all")
     ap.add_argument("--list", action="store_true", help="List jobs and exit")
     ap.add_argument("--dry-run", action="store_true", help="Select and print jobs without executing")
     ap.add_argument("--category", action="append", choices=["cpu", "graphics", "sanitizer", "performance", "meta"],
@@ -679,7 +692,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
     jobs = build_jobs()
-    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "R1.4", "R1.5", "ALL"}
+    known_milestones = {"R0.3", "R0.4", "R0.5", "R0.6", "R1.3", "R1.4", "R1.5", "LIVE-WORKSHOP", "ALL"}
 
     if args.list:
         for j in jobs:

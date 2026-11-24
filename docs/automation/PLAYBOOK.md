@@ -315,6 +315,33 @@ grant approval. Never generate blanket approvals from discovered files.
 Evidence and full limitations are in
 [`docs/milestones/R1/R1.5.md`](../milestones/R1/R1.5.md).
 
+## Live Workshop prototype validation
+
+The experimental live-wall branch provides one focused, asset-free validation
+selection. It compiles a C harness against the production engine and exercises
+the native edit API, bounded first-person selector, production collision query,
+production raycaster, and the viewport HUD overlay's status-bar isolation,
+pixel restore and mode-transition cleanup:
+
+```sh
+python3 tools/validation/run.py LIVE-WORKSHOP
+SANITIZE=1 python3 -m unittest discover -s tests -p test_workshop.py -v
+```
+
+The runner writes its ordinary bounded log and JSON summary below
+`build/validation/LIVE-WORKSHOP/<run-id>/`. A PASS does not certify interactive
+input, crosshair legibility, or a physical Classic/Enhanced presentation. Those
+remain a hands-on check with legal external data using:
+
+```sh
+build/cart-sdl/linux/wolf3d-revive --data /absolute/path/to/WL6 --level
+```
+
+Toggle Workshop with backtick, use configured Fire/left mouse to place, and
+configured Use/right mouse to remove. Repeat with high-resolution rendering
+disabled and enabled. The exact checklist and current gate states are in
+[`docs/experiments/LIVE_WORKSHOP_WALL_PLACEMENT.md`](../experiments/LIVE_WORKSHOP_WALL_PLACEMENT.md).
+
 ## Required script contract
 
 - Compatible with the target toolchain; avoid unnecessary new dependencies.

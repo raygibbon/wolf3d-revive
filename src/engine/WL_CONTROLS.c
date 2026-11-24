@@ -16,6 +16,7 @@ static bool keys[CT_KEYS],pressed[CT_KEYS],buttons[4],clicks[4],mouse,invert;
 static unsigned sensitivity=10,nextkey;
 static double motion;
 void CT_Clear(void) { memset(keys,0,sizeof(keys));memset(buttons,0,sizeof(buttons));motion=0;CT_EndTic(); }
+void CT_ClearMouseButtons(void) { memset(buttons,0,sizeof(buttons));memset(clicks,0,sizeof(clicks)); }
 void CT_EndTic(void) { memset(pressed,0,sizeof(pressed));memset(clicks,0,sizeof(clicks));nextkey=0; }
 void CT_DefaultProfile(ct_preset value,ct_profile *profile)
 {

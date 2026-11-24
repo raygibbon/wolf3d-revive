@@ -27,6 +27,7 @@ void CT_LegacyKey(unsigned scan,bool down);
 void CT_MouseButton(unsigned button,bool down);
 void CT_MouseMotion(double x);
 void CT_Clear(void);
+void CT_ClearMouseButtons(void);
 void CT_EndTic(void);
 bool CT_Down(ct_action action);
 bool CT_Pressed(ct_action action);

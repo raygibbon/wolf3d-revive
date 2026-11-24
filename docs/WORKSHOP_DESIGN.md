@@ -30,3 +30,23 @@ R4 headless edit and transaction semantics -> R5 in-world selection, placement, 
 ## First proving demo
 
 Using original placeholder art, create a small square room, add a corridor and door, place a start and an enemy, save to disk, restart, play it, then return to Workshop and edit a wall. Record deterministic API test, screenshot capture in Classic and Enhanced, invalid-placement cases and an observed hands-on session. Only then broaden the palette.
+
+## Early live-wall proof of concept (experimental branch)
+
+**Branch:** `experiment/live-workshop-wall-placement`. This is a deliberately small vertical slice to demonstrate first-person live creation before full R2–R6 delivery. It is not a replacement for those milestones or a production map format. No formal acceptance is implied until the build and hands-on tests are completed.
+
+**Player-visible goal:** In an already loaded level, toggle Workshop, aim at an adjacent empty tile, see a clear placement preview, place a wall, observe collision/rendering update immediately, remove the wall, and walk through the cleared space. Remain in the same first-person scene throughout. Do not implement a standalone map editor, overhead CAD, or free-flight mode.
+
+**Minimum implementation contract:**
+
+1. Inspect the live map owner, tile storage, renderer, collision, input and main-loop ordering before choosing integration points. No second editor-only tile array. Use existing C11/SDL3/CART code, avoid new dependencies.
+2. Provide a small, headless-testable native C mutation API (names are implementation choices) that validates world bounds, legal wall IDs, occupancy, player tile and mutation timing; returns precise failure reasons and leaves state unchanged on failure. Apply mutations only at a safe update boundary, not during rendering or iteration over active simulation data.
+3. Workshop toggle and wall-place/remove bindings must not conflict with existing gameplay controls. Preserve normal first-person movement and camera. Use a short, deterministic view-based targeting range and grid snapping; disallow creating walls inside the player or other occupied/protected cells. Never let removal delete immutable level borders or critical existing structures without explicit safety rules.
+4. Draw an unobtrusive target/placement cue using the current renderer. Show valid versus invalid placement distinctly and show the mode. Missing or invalid targets should not crash or alter the world. For the experiment, reuse locally loaded existing wall texture IDs without copying commercial data into Git.
+5. Make the tile change visible to both render and collision immediately; invalidate only the caches actually present in the engine. Confirm live wall placement blocks motion, removal restores motion, and exiting Workshop returns to ordinary play without a restart.
+6. Add a deterministic headless unit/integration test for valid placement and removal, out-of-bounds and invalid tile IDs, occupied cell rejection, repeated operations, and no mutation on failure. Add an interactive smoke-test checklist and Classic/Enhanced display checks. Guard existing game behaviour and record actual test commands and results.
+7. No permanent format or PK3 export is required for this prototype. Existing map/asset loader remains unchanged. Persistence, undo/redo, drag walls, full room tools, resource hot reload and ECWolf PK3 export remain staged R2–R8 work. Document explicit technical debt rather than pretending these features exist.
+
+**Compatibility invariant:** The future R2 map contract must support mapping/import/export for a tested ECWolf-compatible subset; PK3 is a ZIP-based container, not the in-memory world representation. A mod referencing player-owned Wolf3D resources must not have to bundle commercial assets. This experimental wall tool must not hardwire Workshop's canonical data representation to ECWolf PK3 internals.
+
+**Prototype exit gates:** (a) manual live wall-place/remove demonstration in the same running game, (b) expected renderer and collision changes, (c) safe mutation API passes headless tests, (d) Classic and Enhanced smoke tests reported, (e) existing validation and CART build statuses recorded, (f) no commercial game data/new binary assets committed. A gate is PASS only with observed evidence; otherwise PARTIAL, FAIL or NOT RUN. Do not merge the experiment merely because it compiles.
