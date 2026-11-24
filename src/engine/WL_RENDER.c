@@ -8,6 +8,7 @@
 #include "ID_PM.h"
 #include "ID_VL.h"
 #include "WL_PROFILE.h"
+#include "WL_WORKSHOP.h"
 #include <math.h>
 #include <string.h>
 #include <limits.h>
@@ -262,7 +263,7 @@ bool WL_RenderSnapshot(wl_render_target *target,int32_t *depth,size_t columns,bo
     uint32_t cursor=0;unsigned phase=GameDeathPresentation(&cursor);
     if(snapshot) { phase=snapshot->death_phase;cursor=snapshot->death_cursor; }
     if(phase!=3 && !Scene(&v)) return false;
-    DeathFizzle(&v,phase,cursor);return true;
+    DeathFizzle(&v,phase,cursor);WL_WorkshopDrawTargetOverlay(target,v.x,v.y,v.w,v.h);return true;
 }
 
 bool WL_RenderFrameAspect(wl_render_target *target,int32_t *depth,size_t columns,bool world,unsigned aw,unsigned ah,void (*service)(void))

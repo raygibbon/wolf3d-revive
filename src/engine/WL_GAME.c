@@ -4,6 +4,7 @@
 #include "WL_DEF.h"
 #include "ID_CA.h"
 #include "ID_PM.h"
+#include "WL_WORKSHOP.h"
 #include <string.h>
 objtype player;
 w3r_byte tilemap[64][64];
@@ -30,7 +31,7 @@ unsigned NextMap(unsigned episode,unsigned map,exit_t exit)
         (exit!=ex_completed && exit!=ex_secretlevel)) return 60;
     return episode*10+(map==9 ? back[episode] : exit==ex_secretlevel ? 9 : map+1);
 }
-void ShutdownGameLevel(void) { ResetVictory(); CA_UncacheMap(); PM_Shutdown(); doornum=0; InitObjects();ResetPushwalls(); }
+void ShutdownGameLevel(void) { WL_WorkshopReset();ResetVictory(); CA_UncacheMap(); PM_Shutdown(); doornum=0; InitObjects();ResetPushwalls(); }
 /* Original maps can contain unused floor cells on the outer edge (E1M3).
    Only initially reachable space (including closed doors) must be enclosed. This
    keeps malformed maps from letting rays or movement leave the 64x64 grid. */

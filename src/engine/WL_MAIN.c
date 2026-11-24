@@ -12,6 +12,7 @@
 #include "WL_SAVE.h"
 #include "ID_SD.h"
 #include "WL_CONTROLS.h"
+#include "WL_WORKSHOP.h"
 #include "WL_DISPLAY.h"
 #include "WL_DEMO.h"
 #include "WL_HIGHSCORES.h"
@@ -367,6 +368,13 @@ static bool StepDemoLoop(uint64_t ticks)
         if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
         /* DOS US_ControlPanel/CP_CheckQuick: panel entry freezes gameplay,
            direct F-key panels return to the game, not the main menu. */
+        if(GameCanSave() && IN_ConsumePress(0x29)) {
+            WL_WorkshopSetEnabled(!WL_WorkshopEnabled());CT_ClearMouseButtons();
+        }
+        if(GameCanSave() && WL_WorkshopEnabled()) {
+            if(CT_Pressed(CT_FIRE)) WL_WorkshopRequest(WL_WORKSHOP_PLACE);
+            if(CT_Pressed(CT_USE)) WL_WorkshopRequest(WL_WORKSHOP_REMOVE);
+        }
         if(GameCanSave()) {
             bool handled;if(!HiddenKeys(ticks,&handled)) return false;if(handled) return true;
         }
