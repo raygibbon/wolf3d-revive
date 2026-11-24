@@ -425,6 +425,11 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action == newlevel) {
             wl_level level;
             if(WL_LevelBlank(&level,1)) {
+                /* Sync the level's tile grid with the current edited tilemap
+                   so that saved authored levels preserve the player's edits. */
+                for(unsigned x=0;x<WL_LEVEL_SIZE;++x)
+                    for(unsigned y=0;y<WL_LEVEL_SIZE;++y)
+                        level.tiles[x][y]=tilemap[x][y];
                 char error[128];
                 if(WL_LevelSave(&level,Save_Directory(),error,sizeof(error))) {
                     /* Level created and saved successfully - load and install as authored map */

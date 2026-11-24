@@ -5,6 +5,7 @@
 #include "ID_US_1.h"
 #include "ID_VH.h"
 #include "WL_LEVEL.h"
+#include "ID_IN.h"
 #include "ID_PM.h"
 #include "WL_ACTOR.h"
 #include "WL_RENDER.h"
@@ -169,6 +170,16 @@ void WL_WorkshopTick(void)
 {
     if(!enabled) return;
     if(feedback_tics) --feedback_tics;
+    /* Number-key hotbar selection (only in Workshop mode) */
+    if(Keyboard[0x02]) { WL_WorkshopSelectSlot(0); IN_ClearKeysDown(); }
+    if(Keyboard[0x03]) { WL_WorkshopSelectSlot(1); IN_ClearKeysDown(); }
+    if(Keyboard[0x04]) { WL_WorkshopSelectSlot(2); IN_ClearKeysDown(); }
+    if(Keyboard[0x05]) { WL_WorkshopSelectSlot(3); IN_ClearKeysDown(); }
+    if(Keyboard[0x06]) { WL_WorkshopSelectSlot(4); IN_ClearKeysDown(); }
+    if(Keyboard[0x07]) { WL_WorkshopSelectSlot(5); IN_ClearKeysDown(); }
+    if(Keyboard[0x08]) { WL_WorkshopSelectSlot(6); IN_ClearKeysDown(); }
+    if(Keyboard[0x09]) { WL_WorkshopSelectSlot(7); IN_ClearKeysDown(); }
+    if(Keyboard[0x0A]) { WL_WorkshopSelectSlot(8); IN_ClearKeysDown(); }
     WL_WorkshopUpdateTarget();
 }
 
@@ -179,7 +190,7 @@ wl_edit_result WL_WorkshopCommit(void)
     wl_edit_world world=WL_WorkshopLiveWorld();
     wl_edit_result result=WL_EDIT_INVALID_STATE;
     if(pending==WL_WORKSHOP_PLACE && current.has_place)
-        result=WL_EditSetWall(&world,current.place_x,current.place_y,wall_id);
+        result=WL_EditSetWall(&world,current.place_x,current.place_y,WL_WorkshopWall());
     else if(pending==WL_WORKSHOP_REMOVE && current.has_remove)
         result=WL_EditRemoveWall(&world,current.remove_x,current.remove_y);
     pending=WL_WORKSHOP_NONE;feedback=result;feedback_tics=70;WL_WorkshopUpdateTarget();

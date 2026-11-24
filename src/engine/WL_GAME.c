@@ -17,6 +17,18 @@ static bool authored_map_valid;
 static bool authored_level;
 bool GameAuthoredLevel(void) { return authored_level; }
 void GameClearAuthoredLevel(void) { authored_level=false;authored_map_valid=false;memset(&authored_map,0,sizeof(authored_map)); }
+
+bool StartAuthoredLevel(unsigned difficulty)
+{
+    /* Don't clear authored state - preserve the installed map */
+    memset(&gamestate,0,sizeof(gamestate));
+    memset(LevelRatios,0,sizeof(LevelRatios));
+    gamestate.episode=(int)0;gamestate.difficulty=(int)difficulty;
+    gamestate.health=100;gamestate.ammo=8;gamestate.lives=3;
+    gamestate.nextextra=40000;
+    gamestate.weapon=gamestate.bestweapon=gamestate.chosenweapon=wp_pistol;
+    return true;
+}
 bool NewGame(unsigned difficulty,unsigned episode)
 {
     if (difficulty>3 || episode>5) return CA_Fail("Invalid episode/difficulty");
