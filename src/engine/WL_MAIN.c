@@ -135,6 +135,7 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
 }
 static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
 {
+    WL_WorkshopClearOverlay();
     leaving = true; next_state = next; transition_end = ticks + steps;
     IN_ClearKeysDown();
     /* CP_Quit/CP_CheckQuick silence both streams before MenuFadeOut. */

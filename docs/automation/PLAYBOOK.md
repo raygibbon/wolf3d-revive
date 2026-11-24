@@ -320,7 +320,8 @@ Evidence and full limitations are in
 The experimental live-wall branch provides one focused, asset-free validation
 selection. It compiles a C harness against the production engine and exercises
 the native edit API, bounded first-person selector, production collision query,
-and production raycaster:
+production raycaster, and the viewport HUD overlay's status-bar isolation,
+pixel restore and mode-transition cleanup:
 
 ```sh
 python3 tools/validation/run.py LIVE-WORKSHOP

@@ -29,9 +29,9 @@ Inspection found these integration points before implementation:
 - SDL input enters device-independent `ID_IN`/`WL_CONTROLS` state. Requests are
   queued by `WL_MAIN.c` and committed at the beginning of a simulation tic in
   `GameStep()`, before door, pushwall, or actor iteration.
-- Classic draws the cue into the indexed framebuffer. Enhanced draws the same
-  cue into its render target after the production scene pass; the indexed
-  status hint is composited into both presentations.
+- Classic draws the cue into the indexed framebuffer viewport. Enhanced draws
+  the crosshair into its render target after the production scene pass and
+  composites the compact viewport panel; neither path writes the status bar.
 
 ## Implementation
 
@@ -80,9 +80,13 @@ palette updates, audio positioning, menus, and first-person navigation remain
 active. Exiting resumes the same runtime world and player pose.
 
 The centre crosshair is green for a valid placement and red for invalid/no
-placement. A 320x200 status strip identifies Workshop, the wall ID, coordinates,
-controls, and the most recent explicit edit result. Classic and Enhanced draw
-their crosshairs in their respective production presentation paths.
+placement. A compact two-line panel at the bottom of the 3D viewport identifies
+Workshop, the wall ID, controls, coordinates, and the most recent explicit edit
+result. It never writes the original status bar at Y=160. Classic backs up the
+panel and crosshair pixels and restores them on explicit clear; Enhanced draws
+the crosshair natively and composites the same panel into its render target.
+Leaving Workshop, opening a menu/pause transition, or changing levels clears the
+overlay and its saved pixels.
 
 ### Inputs
 
@@ -107,14 +111,18 @@ becoming a weapon shot after exit.
 
 - `src/engine/WL_WORLD_EDIT.h/.c`: validated native mutation boundary.
 - `src/engine/WL_WORKSHOP.h/.c`: mode, selection, queue, live binding, and cues.
-- `src/engine/WL_MAIN.c`: toggle and edit-request input client.
-- `src/engine/WL_PLAY.c`: safe commit boundary, simulation policy, target and
-  Classic overlay updates.
+- `src/engine/WL_MAIN.c`: toggle/edit-request input client and menu-transition
+  overlay clear.
+- `src/engine/WL_PLAY.c`: safe commit boundary, simulation policy, per-tic UI
+  update, viewport overlay drawing, and screen/level transition clears.
+- `src/engine/WL_WORKSHOP.h/.c`: bounded viewport panel, crosshair, pixel backup
+  and restore, feedback timing, and Enhanced panel compositing.
 - `src/engine/WL_RENDER.c`: Enhanced target cue.
 - `src/engine/WL_GAME.c`: level-lifetime reset.
 - `src/engine/WL_CONTROLS.h/.c`: bounded mouse-button transition clear.
 - `tests/workshop_tests.c`, `tests/test_workshop.py`: synthetic unit/integration
-  fixture using production edit, collision, and raycasting functions.
+  fixture using production edit, collision, raycasting, Classic overlay,
+  viewport-size transition, cleanup, and Enhanced composition functions.
 - `tools/validation/run.py`: canonical `LIVE-WORKSHOP` focused gate.
 
 No asset, archive, map format, commercial data, screenshot, dependency, or
@@ -127,13 +135,15 @@ local static SDL3. No `WOLF3D_DATA` directory was available.
 
 | Command | Exit | Result |
 | --- | ---: | --- |
-| `python3 tools/validation/run.py LIVE-WORKSHOP` | 0 | PASS; one compiled headless harness. Final run: `build/validation/LIVE-WORKSHOP/20261124T023352Z/summary.json`. |
+| `python3 tools/validation/run.py LIVE-WORKSHOP` | 0 | PASS; one compiled headless harness. Final run: `build/validation/LIVE-WORKSHOP/20261124T032215Z/summary.json`. |
 | `SANITIZE=1 python3 -m unittest discover -s tests -p test_workshop.py -v` | 0 | PASS; one ASan/UBSan-instrumented harness, no finding. |
+| `python3 -m unittest discover -s tests -p test_render.py -v` | 0 | PASS; 9 executed, 3 owned-data skips. Classic/Enhanced geometry, HUD isolation, presentation and visual baselines passed. |
+| `python3 -m unittest discover -s tests -p test_classic.py -v` | 0 | PASS; 12 executed, 4 owned-data skips. All 16 DOS viewport sizes and interface paths passed. |
 | `python3 -m unittest discover -s tests -p test_controls.py -v` | 0 | PASS; 2 executed, 1 owned-data skip. |
 | `python3 tools/validation/run.py R1.3` | 0 | PASS; 5 mandatory jobs. `build/validation/R1.3/20261124T023352Z/summary.json`. |
 | `python3 tools/validation/run.py R1.4` | 0 | PASS; 2 mandatory jobs. `build/validation/R1.4/20261124T023352Z/summary.json`. |
 | `python3 tools/validation/run.py R1.5` | 0 | PASS; 3 mandatory distribution/inventory jobs against the staged tree. `build/validation/R1.5/20261124T023638Z/summary.json`. |
-| `python3 tools/validation/run.py R0.6` | 0 | PASS; 6 mandatory jobs. `build/validation/R0.6/20261124T023352Z/summary.json`. |
+| `python3 tools/validation/run.py R0.6` | 0 | PASS; 6 mandatory Classic/Enhanced/display/presentation/engine jobs. `build/validation/R0.6/20261124T032343Z/summary.json`. |
 | `./build/tools/cart build --profile cart-sdl --verbose` | 0 | PASS; C11 application compiled and linked without a warning in the final focused build. |
 | `git diff --check` | 0 | PASS before report creation; rerun at delivery. |
 
@@ -144,7 +154,11 @@ and enclosure protection, invalid state, atomic failures, direct/diagonal/range
 and boundary-stable selection, and outside-map selection. Its integration case
 places through `WL_EditSetWall`, observes the new tile through production
 `TryMove` and `WL_RenderRay`, removes it, and observes traversable collision and
-the farther original wall through those same production functions.
+the farther original wall through those same production functions. Overlay
+regressions assert that the status bar is never modified, changed pixels stay
+inside the 3D viewport at all 16 view sizes, explicit clear/disable/level reset
+restore the framebuffer, and the Enhanced target receives the panel and
+crosshair only while the overlay is active.
 
 ## Interactive smoke procedure
 
@@ -195,6 +209,7 @@ regressions passed, but they are not a substitute for this observation.
 | Fire/Use interception and held-click debounce | **PASS** | Requests use `CT_Pressed`; Workshop branch suppresses combat/use; controls regression passes. |
 | Headless native C API | **PASS** | Focused harness requires no SDL window or commercial data. |
 | Classic and Enhanced presentation preserved | **PASS** | R0.6 Classic/render/display/presentation mandatory jobs pass; hands-on visual inspection NOT RUN. |
+| HUD isolation, cleanup and mode transitions | **PASS** | Headless tests prove the status bar is untouched, overlay pixels stay in the viewport at every view size, and clear/disable/reset restore the framebuffer; Enhanced composition is covered. |
 | Existing R1.3/R1.4 behavior preserved | **PASS** | Both required runners pass. |
 | CART build | **PASS** | Exit 0, no compiler warning in final focused build. |
 | Human same-session demonstration | **NOT RUN** | No legal WL6 path / operator display session available. |
@@ -210,7 +225,7 @@ regressions passed, but they are not a substitute for this observation.
 - Removing a wall preserves existing area metadata. The enclosure guard protects
   renderer stability, but a future canonical world transaction must own area
   semantics and validation explicitly.
-- The preview is intentionally a crosshair/status cue, not a translucent 3D
+- The preview is intentionally a crosshair and compact viewport panel, not a translucent 3D
   block. Hands-on usability remains an open gate.
 - The selector is bounded to 192 fixed-point samples. It allocates nothing per
   frame. Disabled Workshop adds no selector, scan, allocation, or render cue.

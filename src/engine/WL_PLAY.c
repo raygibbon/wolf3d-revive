@@ -42,6 +42,7 @@ void DrawPlayBorder(void)
 }
 static bool DrawPlayScreen(void)
 {
+    WL_WorkshopClearOverlay();
     DrawPlayBorder();return VWB_DrawPic(0,160,STATUSBARPIC) && DrawStatus();
 }
 bool GameProbe(void)
@@ -185,11 +186,11 @@ bool GameStep(uint64_t ticks)
         if (!workshop && !gamestate.attackframe && (playback?demo.use:CT_Pressed(CT_USE)) && !gamestate.victoryflag) Cmd_Use();
         if (playstate==ex_victorious || (playstate==ex_completed && gamestate.mapon==8)) {
             SD_StartMusic(24);
-            FinishPaletteShifts();victorypage=1;IN_ClearKeysDown();return DrawVictory();
+            FinishPaletteShifts();WL_WorkshopClearOverlay();victorypage=1;IN_ClearKeysDown();return DrawVictory();
         }
         if (playstate!=ex_playing) {
             if (gamestate.mapon==8) return CA_Fail("Invalid secret exit on episode finale");
-            gamestate.keys=0;FinishPaletteShifts();
+            gamestate.keys=0;FinishPaletteShifts();WL_WorkshopClearOverlay();
             levelratio_t stats=LevelStats();
             SD_StartMusic(16);
             intermission=true;IN_ClearKeysDown();
@@ -225,7 +226,7 @@ bool GameStep(uint64_t ticks)
         IN_ClearPressed();CT_EndTic();
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
-        if(workshop) WL_WorkshopUpdateTarget();
+        if(workshop) WL_WorkshopTick();
         if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh() || !DrawStatus()) return false;
         if(workshop) WL_WorkshopDrawClassicOverlay();
         WL_PresentCapture(ticks-elapsed+tic+dt);

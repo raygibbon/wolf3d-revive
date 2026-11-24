@@ -4,6 +4,7 @@
 #include "engine/WL_RENDER.h"
 #include "engine/ID_CA.h"
 #include "engine/ID_PM.h"
+#include "engine/ID_VL.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,8 +117,114 @@ static void TestProductionCollision(void)
     CHECK(WL_RenderRay(0,&hit) && hit.tile==1);
 }
 
+static void PrepareOverlayWorld(void)
+{
+    memset(tilemap,0,sizeof(tilemap));memset(actorat,0,sizeof(actorat));memset(staticblock,0,sizeof(staticblock));
+    memset(pushable,0,sizeof(pushable));memset(statobjlist,0,sizeof(statobjlist));statcount=0;pwallstate=0;
+    player.x=10*TILEGLOBAL+TILEGLOBAL/2;player.y=10*TILEGLOBAL+TILEGLOBAL/2;player.tilex=player.tiley=10;
+    player.angle=0;doornum=0;PMSpriteStart=128;BuildTables();
+    for(unsigned i=0;i<64;++i) tilemap[0][i]=tilemap[63][i]=tilemap[i][0]=tilemap[i][63]=1;
+    tilemap[13][10]=2;
+    WL_WorkshopReset();
+    CHECK(NewViewSize(15));
+}
+
+static void PatternFramebuffer(void)
+{
+    for(unsigned y=0;y<200;++y) for(unsigned x=0;x<320;++x)
+        framebuffer[y*320+x]=(w3r_byte)((x*3U+y*5U)&0xffU);
+}
+
+static void CheckOverlayInsideViewport(const w3r_byte *baseline)
+{
+    bool changed=false;
+    for(unsigned y=0;y<200;++y) for(unsigned x=0;x<320;++x) {
+        if(framebuffer[y*320+x]==baseline[y*320+x]) continue;
+        changed=true;
+        CHECK(x>=(unsigned)VIEWX && x<(unsigned)VIEWX+(unsigned)VIEWWIDTH);
+        CHECK(y>=(unsigned)VIEWY && y<(unsigned)VIEWY+(unsigned)VIEWHEIGHT);
+    }
+    CHECK(changed);
+}
+
+static void TestOverlayCleanup(void)
+{
+    PrepareOverlayWorld();
+    static w3r_byte baseline[320*200];
+    PatternFramebuffer();memcpy(baseline,framebuffer,sizeof(baseline));
+    WL_WorkshopSetEnabled(true);CHECK(WL_WorkshopEnabled());
+    WL_WorkshopDrawClassicOverlay();
+    CHECK(!memcmp(framebuffer+160*320,baseline+160*320,40*320));
+    CheckOverlayInsideViewport(baseline);
+    WL_WorkshopClearOverlay();
+    CHECK(!memcmp(framebuffer,baseline,sizeof(baseline)));
+    WL_WorkshopDrawClassicOverlay();
+    WL_WorkshopSetEnabled(false);CHECK(!WL_WorkshopEnabled());
+    CHECK(!memcmp(framebuffer,baseline,sizeof(baseline)));
+    WL_WorkshopDrawClassicOverlay();
+    CHECK(!memcmp(framebuffer,baseline,sizeof(baseline)));
+    WL_WorkshopSetEnabled(true);
+    WL_WorkshopDrawClassicOverlay();
+    WL_WorkshopReset();CHECK(!WL_WorkshopEnabled());
+    CHECK(!memcmp(framebuffer,baseline,sizeof(baseline)));
+}
+
+static void TestOverlayViewSizes(void)
+{
+    PrepareOverlayWorld();
+    static w3r_byte baseline[320*200];
+    for(unsigned size=4;size<=19;++size) {
+        CHECK(NewViewSize(size));
+        PatternFramebuffer();memcpy(baseline,framebuffer,sizeof(baseline));
+        WL_WorkshopSetEnabled(true);
+        WL_WorkshopDrawClassicOverlay();
+        CHECK(!memcmp(framebuffer+160*320,baseline+160*320,40*320));
+        CheckOverlayInsideViewport(baseline);
+        WL_WorkshopClearOverlay();
+        CHECK(!memcmp(framebuffer,baseline,sizeof(baseline)));
+        WL_WorkshopSetEnabled(false);
+    }
+    CHECK(NewViewSize(15));
+}
+
+static void TestTargetOverlay(void)
+{
+    enum { WIDTH=640,HEIGHT=480 };
+    PrepareOverlayWorld();
+    PatternFramebuffer();
+    WL_WorkshopSetEnabled(true);
+    WL_WorkshopDrawClassicOverlay();
+    static w3r_byte pixels[WIDTH*HEIGHT];
+    wl_render_target target;
+    memset(pixels,0x22,sizeof(pixels));
+    CHECK(WL_TargetInit(&target,pixels,sizeof(pixels),WIDTH,HEIGHT,WIDTH));
+    static w3r_byte before[WIDTH*HEIGHT];
+    memcpy(before,pixels,sizeof(before));
+    int vx=80,vy=48,vw=480,vh=288;
+    WL_WorkshopDrawTargetOverlay(&target,vx,vy,vw,vh);
+    bool changed=false,panel=false;
+    for(unsigned y=0;y<HEIGHT;++y) for(unsigned x=0;x<WIDTH;++x) {
+        size_t at=(size_t)y*WIDTH+x;
+        if(pixels[at]!=before[at]) {
+            changed=true;
+            CHECK(x>=(unsigned)vx && x<(unsigned)(vx+vw));
+            CHECK(y>=(unsigned)vy && y<(unsigned)(vy+vh));
+        }
+        if(pixels[at]==0x7f) panel=true;
+    }
+    CHECK(changed && panel);
+    WL_WorkshopClearOverlay();
+    memset(pixels,0x22,sizeof(pixels));memcpy(before,pixels,sizeof(before));
+    WL_WorkshopDrawTargetOverlay(&target,vx,vy,vw,vh);
+    CHECK(!memcmp(pixels,before,sizeof(before)));
+    WL_WorkshopSetEnabled(false);
+    WL_WorkshopDrawTargetOverlay(&target,vx,vy,vw,vh);
+    CHECK(!memcmp(pixels,before,sizeof(before)));
+}
+
 int main(void)
 {
     TestEditing();TestAtomicFailure();TestSelection();TestProductionCollision();
-    puts("workshop edit/selection/collision tests passed");return 0;
+    TestOverlayCleanup();TestOverlayViewSizes();TestTargetOverlay();
+    puts("workshop edit/selection/collision/overlay tests passed");return 0;
 }

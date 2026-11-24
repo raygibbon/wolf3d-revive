@@ -21,6 +21,8 @@ void WL_WorkshopSetEnabled(bool enabled);
 void WL_WorkshopRequest(wl_workshop_request request);
 wl_edit_result WL_WorkshopCommit(void);
 void WL_WorkshopUpdateTarget(void);
+void WL_WorkshopTick(void);
+void WL_WorkshopClearOverlay(void);
 const wl_workshop_target *WL_WorkshopTarget(void);
 unsigned WL_WorkshopWall(void);
 void WL_WorkshopDrawClassicOverlay(void);

@@ -25,7 +25,7 @@ class WorkshopTests(unittest.TestCase):
             subprocess.run(command, check=True)
             result = subprocess.run([str(output)], text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertIn("workshop edit/selection/collision tests passed", result.stdout)
+            self.assertIn("workshop edit/selection/collision/overlay tests passed", result.stdout)
 
 
 if __name__ == "__main__":
