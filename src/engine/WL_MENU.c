@@ -16,7 +16,7 @@
 #include <stdio.h>
 CP_iteminfo MainItems = {76, 55, MENU_COUNT, viewscores, 24};
 CP_itemtype MainMenu[MENU_COUNT] = {
-    {0,"New Game"}, {0,"Sound"}, {1,"Control"}, {0,"Load Game"}, {0,"Save Game"},
+    {0,"New Game"}, {0,"New Level"}, {0,"Sound"}, {1,"Control"}, {0,"Load Game"}, {0,"Save Game"},
     {1,"Change View"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
 };
 static int shape = C_CURSOR1PIC;

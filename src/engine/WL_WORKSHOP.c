@@ -4,6 +4,7 @@
 #include "WL_WORKSHOP.h"
 #include "ID_US_1.h"
 #include "ID_VH.h"
+#include "WL_LEVEL.h"
 #include "ID_PM.h"
 #include "WL_ACTOR.h"
 #include "WL_RENDER.h"
@@ -23,6 +24,19 @@ static wl_workshop_request pending;
 static wl_workshop_target current;
 static wl_edit_result feedback=WL_EDIT_OK;
 static unsigned feedback_tics;
+
+/* Material/hotbar state is headless-testable and independent of SDL. */
+static unsigned materials[64];
+static unsigned material_count;
+static unsigned hotbar[9];
+static unsigned selected_slot;
+static unsigned material_page;
+static bool picker_open;
+
+/* Message buffer for workshop status. */
+static char message[64];
+static bool message_error;
+static unsigned message_tics;
 
 /* The overlay is transient viewport presentation. Keep a bounded copy of the
    pixels it covers so an explicit clear can restore the framebuffer even when
@@ -295,4 +309,106 @@ void WL_WorkshopDrawTargetOverlay(wl_render_target *target,int x,int y,int width
     TargetBar(target,cx+thick*2,cy,arm-thick*2,thick,color);
     TargetBar(target,cx,cy-arm,thick,arm-thick*2,color);
     TargetBar(target,cx,cy+thick*2,thick,arm-thick*2,color);
+}
+
+void WL_WorkshopRefreshMaterials(void)
+{
+    unsigned ids[64],count=0;
+    unsigned limit=PMSpriteStart/2U;
+    if(limit>63U) limit=63U;
+    for(unsigned id=1;id<=limit;++id) {
+        if(!WL_LevelMaterialValid(id)) continue;
+        if(!PM_PagePresent((id-1U)*2U) || !PM_PagePresent((id-1U)*2U+1U)) continue;
+        ids[count++]=id;
+    }
+    (void)WL_WorkshopSetMaterials(ids,count);
+}
+
+bool WL_WorkshopSetMaterials(const unsigned *ids,unsigned count)
+{
+    if(count>64 || (count && !ids)) return false;
+    bool used[64]={false};
+    for(unsigned i=0;i<count;++i) {
+        unsigned id=ids[i];
+        if(id>63U || !WL_LevelMaterialValid(id) || used[id]) return false;
+        used[id]=true;
+    }
+    memset(materials,0,sizeof(materials));
+    for(unsigned i=0;i<count;++i) materials[i]=ids[i];
+    memset(hotbar,0,sizeof(hotbar));
+    for(unsigned i=0;i<count && i<9;++i) hotbar[i]=materials[i];
+    selected_slot=0;material_page=0;picker_open=false;
+    if(enabled) WL_WorkshopUpdateTarget();
+    return true;
+}
+
+unsigned WL_WorkshopMaterialCount(void) { return material_count; }
+unsigned WL_WorkshopMaterialAt(unsigned index) { return index<material_count?materials[index]:0U; }
+unsigned WL_WorkshopFirstMaterial(void) { return material_count?materials[0]:0U; }
+unsigned WL_WorkshopHotbarMaterial(unsigned slot) { return slot<9?hotbar[slot]:0U; }
+unsigned WL_WorkshopSelectedSlot(void) { return selected_slot; }
+
+bool WL_WorkshopMaterialAvailable(unsigned id)
+{
+    for(unsigned i=0;i<material_count;++i) if(materials[i]==id) return true;
+    return false;
+}
+
+bool WL_WorkshopSelectSlot(unsigned slot)
+{
+    if(slot>=9 || !hotbar[slot]) return false;
+    selected_slot=slot;
+    if(enabled) WL_WorkshopUpdateTarget();
+    return true;
+}
+
+bool WL_WorkshopSetSlotMaterial(unsigned slot,unsigned id)
+{
+    if(slot>=9 || !WL_WorkshopMaterialAvailable(id)) return false;
+    hotbar[slot]=id;
+    if(enabled) WL_WorkshopUpdateTarget();
+    return true;
+}
+
+void WL_WorkshopCycle(int direction)
+{
+    if(!direction) return;
+    for(unsigned step=1;step<=9;++step) {
+        unsigned slot;
+        if(direction>0) slot=(selected_slot+step)%9;
+        else slot=(selected_slot+9-(step%9))%9;
+        if(hotbar[slot]) { (void)WL_WorkshopSelectSlot(slot);return; }
+    }
+}
+
+bool WL_WorkshopPickerOpen(void) { return picker_open; }
+unsigned WL_WorkshopPickerPage(void) { return material_page; }
+unsigned WL_WorkshopPickerPageCount(void) { return (material_count+8U)/9; }
+
+void WL_WorkshopPickerToggle(void)
+{
+    if(picker_open) { picker_open=false;return; }
+    unsigned wall=WL_WorkshopWall();
+    material_page=0;
+    for(unsigned i=0;i<material_count;++i) if(materials[i]==wall) { material_page=i/9;break; }
+    picker_open=true;
+}
+
+bool WL_WorkshopPickerAssign(unsigned page_index)
+{
+    if(!picker_open || page_index>=9) return false;
+    unsigned index=material_page*9+page_index;
+    if(index>=material_count) return false;
+    hotbar[selected_slot]=materials[index];
+    picker_open=false;
+    if(enabled) WL_WorkshopUpdateTarget();
+    return true;
+}
+
+void WL_WorkshopMessage(const char *text,bool error)
+{
+    if(!text) text="";
+    (void)snprintf(message,sizeof(message),"%s",text);
+    message_error=error;
+    message_tics=140;
 }

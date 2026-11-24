@@ -12,7 +12,7 @@
 #define TEXTCOLOR 0x17
 #define HIGHLIGHT 0x13
 /* GOODTIMES layout selected by original VERSION.H: no Read This row. */
-enum { newgame, soundmenu, control, loadgame, savegame, changeview, viewscores, backtodemo, quit, MENU_COUNT };
+enum { newgame, soundmenu, control, loadgame, savegame, changeview, viewscores, backtodemo, quit, newlevel, MENU_COUNT };
 typedef struct { int x, y, amount, curpos, indent; } CP_iteminfo;
 typedef struct { int active; const char *string; } CP_itemtype;
 extern CP_iteminfo MainItems;

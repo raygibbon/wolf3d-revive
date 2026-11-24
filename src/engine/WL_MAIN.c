@@ -4,6 +4,7 @@
 #include "engine/game_definition.h"
 #include "WL_MAIN.h"
 #include "WL_MENU.h"
+#include "WL_LEVEL.h"
 #include "ID_CA.h"
 #include "ID_IN.h"
 #include "ID_VH.h"
@@ -421,6 +422,19 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action == control) return Transition(UI_CONTROLS,ticks,10);
         if (action == soundmenu) return Transition(UI_SOUND,ticks,10);
         if (action == newgame) return Transition(UI_EPISODE,ticks,10);
+        if (action == newlevel) {
+            wl_level level;
+            if(WL_LevelBlank(&level,1)) {
+                char error[128];
+                if(WL_LevelSave(&level,Save_Directory(),error,sizeof(error))) {
+                    return Transition(UI_EPISODE,ticks,10);
+                }
+                /* Failed to save; show error and stay in menu */
+                WL_WorkshopMessage(error,true);
+                return Transition(UI_MENU,ticks,10);
+            }
+            return Transition(UI_MENU,ticks,10);
+        }
         if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {

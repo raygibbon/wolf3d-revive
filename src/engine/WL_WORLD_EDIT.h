@@ -11,7 +11,8 @@ typedef enum {
     WL_EDIT_OCCUPIED,
     WL_EDIT_PROTECTED,
     WL_EDIT_NOT_WALL,
-    WL_EDIT_INVALID_STATE
+    WL_EDIT_INVALID_STATE,
+    WL_EDIT_NO_TARGET
 } wl_edit_result;
 
 typedef struct {

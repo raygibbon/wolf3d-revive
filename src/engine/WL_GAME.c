@@ -4,6 +4,7 @@
 #include "WL_DEF.h"
 #include "ID_CA.h"
 #include "ID_PM.h"
+#include "WL_LEVEL.h"
 #include "WL_WORKSHOP.h"
 #include <string.h>
 objtype player;
@@ -11,9 +12,15 @@ w3r_byte tilemap[64][64];
 doorobj_t doorobjlist[64];
 unsigned doornum;
 exit_t playstate;
+static maptype authored_map;
+static bool authored_map_valid;
+static bool authored_level;
+bool GameAuthoredLevel(void) { return authored_level; }
+void GameClearAuthoredLevel(void) { authored_level=false;authored_map_valid=false;memset(&authored_map,0,sizeof(authored_map)); }
 bool NewGame(unsigned difficulty,unsigned episode)
 {
     if (difficulty>3 || episode>5) return CA_Fail("Invalid episode/difficulty");
+    GameClearAuthoredLevel();
     memset(&gamestate,0,sizeof(gamestate));
     memset(LevelRatios,0,sizeof(LevelRatios));
     gamestate.episode=(int)episode;gamestate.difficulty=(int)difficulty;
@@ -53,11 +60,34 @@ static bool ValidateEnclosure(void)
     }
     return true;
 }
-bool SetupGameLevel(void)
+bool GameAuthoredLevelValidate(const wl_level *level)
 {
-    if (gamestate.episode<0 || gamestate.episode>5 || gamestate.mapon<0 || gamestate.mapon>9 ||
-        gamestate.difficulty<0 || gamestate.difficulty>3) return CA_Fail("Invalid game selection");
-    if (!CA_CacheMap((unsigned)(gamestate.episode*10+gamestate.mapon)) || !PM_Startup()) { ShutdownGameLevel(); return false; }
+    char error[128];
+    if(!level || !WL_LevelValidate(level,error,sizeof(error)))
+        return CA_Fail("Invalid authored level: %s",error);
+    if(!PM_Ready() && !PM_Startup()) return false;
+    unsigned wall_limit=PMSpriteStart/2U;
+    if(wall_limit>63U) wall_limit=63U;
+    for(unsigned x=0;x<WL_LEVEL_SIZE;++x) for(unsigned y=0;y<WL_LEVEL_SIZE;++y) {
+        unsigned tile=level->tiles[x][y];
+        if(!tile) continue;
+        if(tile>wall_limit) return CA_Fail("Wall texture %u is outside the loaded VSWAP",tile);
+        if(!PM_GetPage((tile-1U)*2U,NULL) || !PM_GetPage((tile-1U)*2U+1U,NULL))
+            return CA_Fail("Wall texture %u is unavailable",tile);
+    }
+    return true;
+}
+
+bool GameInstallAuthoredLevel(const wl_level *level)
+{
+    maptype map;
+    if(!level || !WL_LevelToMap(level,&map)) return CA_Fail("Cannot convert authored level to a map");
+    authored_map=map;authored_map_valid=true;authored_level=true;
+    return true;
+}
+
+static bool SetupGameLevelInstalled(void)
+{
     InitObjects();ResetPushwalls();
     gamestate.killcount=gamestate.killtotal=gamestate.treasurecount=gamestate.treasuretotal=0;
     gamestate.secretcount=gamestate.secrettotal=0;gamestate.TimeCount=0;
@@ -117,4 +147,18 @@ bool SetupGameLevel(void)
     ResetMovement(); BuildTables(); return true;
 bad:
     ShutdownGameLevel(); return false;
+}
+
+bool SetupGameLevel(void)
+{
+    if (authored_level) {
+        if (!authored_map_valid) { ShutdownGameLevel(); return CA_Fail("No authored map is staged"); }
+        if (!PM_Ready() && !PM_Startup()) { ShutdownGameLevel(); return false; }
+        if (!CA_InstallMap(&authored_map)) { ShutdownGameLevel(); return false; }
+        return SetupGameLevelInstalled();
+    }
+    if (gamestate.episode<0 || gamestate.episode>5 || gamestate.mapon<0 || gamestate.mapon>9 ||
+        gamestate.difficulty<0 || gamestate.difficulty>3) return CA_Fail("Invalid game selection");
+    if (!CA_CacheMap((unsigned)(gamestate.episode*10+gamestate.mapon)) || !PM_Startup()) { ShutdownGameLevel(); return false; }
+    return SetupGameLevelInstalled();
 }

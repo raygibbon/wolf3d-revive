@@ -125,6 +125,6 @@ bool WL_EditTileBlocked(const wl_edit_world *world,int x,int y)
 
 const char *WL_EditResultName(wl_edit_result result)
 {
-    static const char *const names[]={"OK","OUT OF BOUNDS","INVALID WALL","OCCUPIED","PROTECTED","NOT A WALL","INVALID STATE"};
+    static const char *const names[]={"OK","OUT OF BOUNDS","INVALID WALL","OCCUPIED","PROTECTED","NOT A WALL","INVALID STATE","NO TARGET"};
     return (unsigned)result<sizeof(names)/sizeof(names[0])?names[result]:"UNKNOWN";
 }

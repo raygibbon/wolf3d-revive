@@ -4,6 +4,8 @@
 #include "WL_WORLD_EDIT.h"
 #include "WL_RENDER_TARGET.h"
 
+#define WL_WORKSHOP_SLOTS 9U
+
 typedef struct {
     bool hit,has_place,has_remove;
     int place_x,place_y,remove_x,remove_y;
@@ -27,5 +29,26 @@ const wl_workshop_target *WL_WorkshopTarget(void);
 unsigned WL_WorkshopWall(void);
 void WL_WorkshopDrawClassicOverlay(void);
 void WL_WorkshopDrawTargetOverlay(wl_render_target *target,int x,int y,int width,int height);
+void WL_WorkshopDrawStatusBar(void);
+bool WL_WorkshopRestoreStatusBar(void);
+
+/* Material/hotbar state is headless-testable and independent of SDL. */
+void WL_WorkshopRefreshMaterials(void);
+bool WL_WorkshopSetMaterials(const unsigned *ids,unsigned count);
+unsigned WL_WorkshopMaterialCount(void);
+unsigned WL_WorkshopMaterialAt(unsigned index);
+bool WL_WorkshopMaterialAvailable(unsigned id);
+unsigned WL_WorkshopFirstMaterial(void);
+unsigned WL_WorkshopHotbarMaterial(unsigned slot);
+unsigned WL_WorkshopSelectedSlot(void);
+bool WL_WorkshopSelectSlot(unsigned slot);
+bool WL_WorkshopSetSlotMaterial(unsigned slot,unsigned id);
+void WL_WorkshopCycle(int direction);
+bool WL_WorkshopPickerOpen(void);
+unsigned WL_WorkshopPickerPage(void);
+unsigned WL_WorkshopPickerPageCount(void);
+bool WL_WorkshopPickerAssign(unsigned page_index);
+void WL_WorkshopPickerToggle(void);
+void WL_WorkshopMessage(const char *text,bool error);
 
 #endif
