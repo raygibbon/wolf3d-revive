@@ -4,6 +4,8 @@
    Gameplay-dependent rows retain original disabled rendering and are skipped. */
 #include "engine/game_definition.h"
 #include "WL_MENU.h"
+#include "WL_MAIN.h"
+#include "WL_LEVEL.h"
 #include "WL_SAVE.h"
 #include "WL_DISPLAY.h"
 #include "ID_CA.h"
@@ -14,9 +16,11 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdio.h>
-CP_iteminfo MainItems = {76, 55, MENU_COUNT, viewscores, 24};
+enum { MAIN_MENU_TOP=35,MAIN_MENU_ROW=12 };
+CP_iteminfo MainItems = {76, MAIN_MENU_TOP, MENU_COUNT, viewscores, 24};
 CP_itemtype MainMenu[MENU_COUNT] = {
-    {0,"New Game"}, {0,"New Level"}, {0,"Sound"}, {1,"Control"}, {0,"Load Game"}, {0,"Save Game"},
+    {0,"New Game"}, {0,"New Level"}, {0,"Load Level"}, {0,"Save Level"},
+    {0,"Sound"}, {1,"Control"}, {0,"Load Game"}, {0,"Save Game"},
     {1,"Change View"}, {1,"View Scores"}, {1,"Back to Demo"}, {1,"Quit"}
 };
 static int shape = C_CURSOR1PIC;
@@ -69,19 +73,22 @@ bool DrawMainMenu(void)
     if (!VWB_DrawPic(112,184,C_MOUSELBACKPIC)) return false;
     DrawStripes(10);
     if (!VWB_DrawPic(84,0,C_OPTIONSPIC)) return false;
-    DrawWindow(68,52,178,13*10+6,BKGDCOLOR);
+    DrawWindow(68,32,178,MAIN_MENU_ROW*MENU_COUNT+6,BKGDCOLOR);
     fontnumber = 1; WindowX = 100;
     for (int i = 0; i < MENU_COUNT; ++i) {
         fontcolor = MainMenu[i].active ? (i == MainItems.curpos ? HIGHLIGHT : TEXTCOLOR) : DEACTIVE;
-        PrintX = 100; PrintY = 55 + i * 13;
+        PrintX = 100; PrintY = MAIN_MENU_TOP + i * MAIN_MENU_ROW;
         if (!US_Print(MainMenu[i].string)) return false;
     }
-    return VWB_DrawPic(72,53 + MainItems.curpos * 13,shape);
+    return VWB_DrawPic(72,MAIN_MENU_TOP-2 + MainItems.curpos * MAIN_MENU_ROW,shape);
 }
 bool SetupControlPanel(uint64_t ticks)
 {
     if (!VW_ValidateFont(1)) return false;
     MainMenu[changeview].active=1;
+    MainMenu[newlevel].active=*Save_Directory()?1:0;
+    MainMenu[loadlevel].active=*Save_Directory() && WL_LevelExists(Save_Directory())?1:0;
+    MainMenu[savelevel].active=*Save_Directory() && GameAuthoredLevel() && GameCanSave()?1:0;
     MainMenu[loadgame].active=*Save_Directory()?1:0;
     MainMenu[savegame].active=GameCanSave() && *Save_Directory()?1:0;
     MainMenu[viewscores].string=GameRunning()?"End Game":"View Scores";

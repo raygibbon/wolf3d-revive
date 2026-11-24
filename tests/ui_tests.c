@@ -51,7 +51,7 @@ static void TestDraw(bool synthetic)
     CHECK(framebuffer[32*320] == STRIPE && framebuffer[54*320+69] == BKGDCOLOR);
     if (synthetic) {
         CHECK(framebuffer[80] == C_OPTIONSPIC);
-        CHECK(framebuffer[(53+6*13)*320+72] == C_CURSOR1PIC);
+        CHECK(framebuffer[(33+viewscores*12)*320+72] == C_CURSOR1PIC);
     }
     fontnumber = 1; fontcolor = 19;
     int w,h; CHECK(VW_MeasurePropString("A",&w,&h));

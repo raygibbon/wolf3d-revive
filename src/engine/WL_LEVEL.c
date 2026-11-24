@@ -74,26 +74,10 @@ bool WL_LevelValidate(const wl_level *level,char *error,size_t error_size)
     if(level->tiles[level->spawn_x][level->spawn_y]) {
         SetError(error,error_size,"spawn is inside a wall");return false;
     }
-    bool seen[WL_LEVEL_SIZE][WL_LEVEL_SIZE]={{false}};
-    unsigned queue[WL_LEVEL_SIZE*WL_LEVEL_SIZE],head=0,tail=0;
-    queue[tail++]=(unsigned)(level->spawn_y*WL_LEVEL_SIZE+level->spawn_x);
-    seen[level->spawn_x][level->spawn_y]=true;
-    static const int dx[]={1,0,-1,0},dy[]={0,1,0,-1};
-    while(head<tail) {
-        unsigned cell=queue[head++];
-        unsigned x=cell%WL_LEVEL_SIZE,y=cell/WL_LEVEL_SIZE;
-        for(unsigned i=0;i<4;++i) {
-            int nx=(int)x+dx[i],ny=(int)y+dy[i];
-            if(nx<0 || ny<0 || nx>=(int)WL_LEVEL_SIZE || ny>=(int)WL_LEVEL_SIZE || seen[nx][ny]) continue;
-            if(level->tiles[nx][ny]) continue;
-            seen[nx][ny]=true;queue[tail++]=(unsigned)((unsigned)ny*WL_LEVEL_SIZE+(unsigned)nx);
-        }
-    }
-    for(unsigned x=0;x<WL_LEVEL_SIZE;++x) for(unsigned y=0;y<WL_LEVEL_SIZE;++y) {
-        if(!level->tiles[x][y] && !seen[x][y]) {
-            SetError(error,error_size,"level contains an unreachable floor area");return false;
-        }
-    }
+    /* Disconnected floor is valid authored content: a sealed room may be
+       opened later or used by future authoring tools. Runtime safety depends
+       on the enclosed outer boundary and a valid unobstructed spawn, not on
+       every floor cell being reachable from that spawn. */
     return true;
 }
 

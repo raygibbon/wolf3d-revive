@@ -64,7 +64,9 @@ void ResetPushwalls(void);
 bool DoorSolid(unsigned door);
 /* Original difficulty order: baby, easy, medium, hard. */
 bool NewGame(unsigned difficulty,unsigned episode);
+bool StartAuthoredLevel(unsigned difficulty);
 bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed);
+bool GameStartAuthored(uint64_t ticks,unsigned difficulty,unsigned seed);
 bool GameStartSelected(uint64_t ticks,unsigned episode,unsigned difficulty);
 bool GameStart(uint64_t ticks);
 bool GameWarp(uint64_t ticks,unsigned floor);

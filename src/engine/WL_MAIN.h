@@ -23,6 +23,11 @@ ui_state DemoLoopState(void);
 void DemoLoopPrepareExit(void);
 bool DemoLoopStartGame(uint64_t ticks);
 bool GameInstallAuthoredLevel(const wl_level *level);
+bool GameAuthoredLevel(void);
+void GameClearAuthoredLevel(void);
+bool GameCaptureAuthoredLevel(wl_level *level);
+bool GameSaveAuthoredLevel(const char *directory,char *error,size_t error_size);
+bool GameLoadAuthoredLevel(const char *directory,char *error,size_t error_size);
 /* Select/clear the borrowed game definition used by menu and jukebox
    consumers. NULL (or an invalid definition) restores the compiled-in
    Wolf3D default. A non-default definition must stay alive until replaced

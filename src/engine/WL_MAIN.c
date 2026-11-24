@@ -34,6 +34,7 @@ static int score_rank=-1;
 static bool score_error;
 static uint64_t deadline, transition_end;
 static bool resuming;
+static bool starting_authored;
 static uint32_t ui_random=0x574f4c46U;
 static const char *QuitMessage(uint64_t ticks)
 {
@@ -100,6 +101,10 @@ static bool ChangeScreen(ui_state screen, uint64_t ticks)
         if(resuming) { GamePauseClock(ticks+10);ok=GameDrawPaused();resuming=false;
             sd_status audio;SD_GetStatus(&audio);int song=SD_LevelMusic((unsigned)gamestate.episode,(unsigned)gamestate.mapon);
             if(audio.music!=song) SD_StartMusic(song); }
+        else if(starting_authored) {
+            starting_authored=false;
+            ok=GameStartAuthored(ticks+10,difficulty,(unsigned)((ticks+10)&255U));
+        }
         else ok=GameStartSelected(ticks+10,episode,difficulty);
         if(!ok) return GameError() && VL_FadeIn(gamepal,10,ticks);
         if(GamePreloadPending()) return StartPreloadGraphics(ticks) || GameError();
@@ -144,10 +149,10 @@ static bool Transition(ui_state next, uint64_t ticks, unsigned steps)
     /* MenuFadeOut is dark red, VW_FadeOut is black. */
     return VL_FadeOut(Attract() || state==UI_SIGNON || state==UI_RESULTS || next==UI_RESULTS ? 0 : 43,0,0,steps,ticks);
 }
-bool DemoLoopStartGame(uint64_t ticks) { quickslot=-1;episode=0;difficulty=2;resuming=false;return ChangeScreen(UI_GAME,ticks); }
+bool DemoLoopStartGame(uint64_t ticks) { quickslot=-1;episode=0;difficulty=2;resuming=false;starting_authored=false;return ChangeScreen(UI_GAME,ticks); }
 bool DemoLoopStartup(uint64_t ticks, bool menu)
 {
-    GameStop();resuming=false;quickslot=-1;demo_number=0;panel_return=UI_MENU;choosequick=false;
+    GameStop();resuming=false;starting_authored=false;quickslot=-1;demo_number=0;panel_return=UI_MENU;choosequick=false;
     /* Validate the complete UI slice before starting the event loop. */
     if (!VW_ValidateFont(0) || !VW_ValidateFont(1) || !DrawHighScores() ||
         !SetupControlPanel(ticks) || !CA_CacheScreen(CREDITSPIC) || !CA_CacheScreen(TITLEPIC)) return false;
@@ -424,32 +429,29 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action == newgame) return Transition(UI_EPISODE,ticks,10);
         if (action == newlevel) {
             wl_level level;
-            if(WL_LevelBlank(&level,1)) {
-                char error[128];
-                if(WL_LevelSave(&level,Save_Directory(),error,sizeof(error))) {
-                    /* Level created and saved successfully - load and install as authored map */
-                    if(WL_LevelLoad(&level,Save_Directory(),error,sizeof(error))) {
-                        if(GameInstallAuthoredLevel(&level)) {
-                            /* Authored level is now the active world; start gameplay */
-                            return Transition(UI_GAME,ticks,10);
-                        }
-                    }
-                    /* Failed to load/install; reset and stay in menu */
-                    WL_WorkshopMessage(error,true);
-                }
-                return Transition(UI_MENU,ticks,10);
+            if(WL_LevelBlank(&level,1) && GameInstallAuthoredLevel(&level)) {
+                starting_authored=true;resuming=false;
+                return Transition(UI_GAME,ticks,10);
             }
+            WL_WorkshopMessage(CA_Error(),true);
             return Transition(UI_MENU,ticks,10);
         }
-        if (Keyboard[0x02]) { WL_WorkshopSelectSlot(0); IN_ClearKeysDown(); }
-        if (Keyboard[0x03]) { WL_WorkshopSelectSlot(1); IN_ClearKeysDown(); }
-        if (Keyboard[0x04]) { WL_WorkshopSelectSlot(2); IN_ClearKeysDown(); }
-        if (Keyboard[0x05]) { WL_WorkshopSelectSlot(3); IN_ClearKeysDown(); }
-        if (Keyboard[0x06]) { WL_WorkshopSelectSlot(4); IN_ClearKeysDown(); }
-        if (Keyboard[0x07]) { WL_WorkshopSelectSlot(5); IN_ClearKeysDown(); }
-        if (Keyboard[0x08]) { WL_WorkshopSelectSlot(6); IN_ClearKeysDown(); }
-        if (Keyboard[0x09]) { WL_WorkshopSelectSlot(7); IN_ClearKeysDown(); }
-        if (Keyboard[0x0A]) { WL_WorkshopSelectSlot(8); IN_ClearKeysDown(); }
+        if(action==loadlevel) {
+            char error[128];
+            if(GameLoadAuthoredLevel(Save_Directory(),error,sizeof(error))) {
+                starting_authored=true;resuming=false;
+                return Transition(UI_GAME,ticks,10);
+            }
+            WL_WorkshopMessage(error,true);return Transition(UI_MENU,ticks,10);
+        }
+        if(action==savelevel) {
+            char error[128];
+            if(GameSaveAuthoredLevel(Save_Directory(),error,sizeof(error))) {
+                WL_WorkshopMessage("LEVEL SAVED",false);resuming=true;
+                return Transition(UI_GAME,ticks,10);
+            }
+            WL_WorkshopMessage(error,true);return Transition(UI_MENU,ticks,10);
+        }
         if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {
@@ -464,14 +466,9 @@ static bool StepDemoLoop(uint64_t ticks)
             if(action==1 && choosequick) quickslot=(int)SaveMenuSelected();
             choosequick=false;
             if(loaded) {
-                wl_level level;
-                char error[128];
-                if(WL_LevelLoad(&level,Save_Directory(),error,sizeof(error))) {
-                    if(GameInstallAuthoredLevel(&level)) {
-                        resuming=true;return Transition(UI_GAME,ticks,10);
-                    }
-                }
-                WL_WorkshopMessage(error,true);
+                /* This panel is exclusively the original save-game loader.
+                   Authored levels have their own main-menu lifecycle. */
+                resuming=true;return Transition(UI_GAME,ticks,10);
             }
             return ReturnPanel(ticks);
         }
@@ -559,7 +556,7 @@ static bool StepDemoLoop(uint64_t ticks)
         if (action==-3) return false;
         if (action==-1) return Transition(choosing_episode ? UI_MENU : UI_EPISODE,ticks,10);
         if(action==1 && choosing_episode && GameRunning()) return QuickDialog(QUICK_NEW,ticks);
-        if(action==1 && !choosing_episode) quickslot=-1;
+        if(action==1 && !choosing_episode) { quickslot=-1;starting_authored=false; }
         if (action==1) return Transition(choosing_episode ? UI_DIFFICULTY : UI_GAME,ticks,10);
     } else if(state==UI_RESULTS) {
         if(score_error) { if(IN_AnyPressed()) return Transition(UI_TITLE,ticks,30); }

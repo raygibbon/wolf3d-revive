@@ -14,7 +14,6 @@
 
 #define WORKSHOP_RANGE (TILEGLOBAL*3)
 #define WORKSHOP_RAY_STEP (TILEGLOBAL/64)
-#define WORKSHOP_FREE_DISTANCE (TILEGLOBAL/2)
 #define WORKSHOP_PANEL_MARGIN 4
 #define WORKSHOP_CROSSHAIR_RADIUS 5
 #define WORKSHOP_CROSSHAIR_BOX 16
@@ -68,6 +67,7 @@ bool WL_WorkshopSelect(const wl_edit_world *world,int32_t x,int32_t y,int angle,
     if(target) memset(target,0,sizeof(*target));
     if(!target || !WL_EditWorldValid(world) || angle<0 || angle>=360) return false;
     int last_x=TileCoordinate(x),last_y=TileCoordinate(y);
+    int free_x=-1,free_y=-1;
     if(last_x<0 || last_y<0 || (unsigned)last_x>=world->width || (unsigned)last_y>=world->height) return false;
     for(int32_t distance=WORKSHOP_RAY_STEP;distance<=WORKSHOP_RANGE;distance+=WORKSHOP_RAY_STEP) {
         int32_t sample_x=x+FixedByFrac(distance,sintable[angle+90]);
@@ -84,21 +84,16 @@ bool WL_WorkshopSelect(const wl_edit_world *world,int32_t x,int32_t y,int angle,
             target->remove_result=WL_EditCanRemoveWall(world,cell_x,cell_y);
             return true;
         }
+        if(free_x<0) { free_x=cell_x;free_y=cell_y; }
         last_x=cell_x;last_y=cell_y;
     }
-    /* No wall surface within range: target the floor grid as a free-space placement.
-       Reject player-occupied cells and protected boundaries. */
-    int32_t sample_x=x+FixedByFrac(WORKSHOP_FREE_DISTANCE,sintable[angle+90]);
-    int32_t sample_y=y-FixedByFrac(WORKSHOP_FREE_DISTANCE,sintable[angle]);
-    int cell_x=TileCoordinate(sample_x),cell_y=TileCoordinate(sample_y);
-    if(cell_x<0 || cell_y<0 || (unsigned)cell_x>=world->width || (unsigned)cell_y>=world->height) return false;
-    if(cell_x==last_x && cell_y==last_y) return false;
-    if(world->tiles[cell_x][cell_y]) return false; /* occupied */
-    /* Reject player-occupied cell */
-    if((uint32_t)cell_x == (uint32_t)world->player->tilex && (uint32_t)cell_y == (uint32_t)world->player->tiley) return false;
+    /* If no surface was hit, use the first empty grid cell actually crossed by
+       the ray. This works from every position within the source tile; a fixed
+       half-tile sample does not reliably cross a boundary. */
+    if(free_x<0) return false;
     target->hit=false;target->has_place=true;
-    target->place_x=cell_x;target->place_y=cell_y;
-    target->place_result=WL_EditCanSetWall(world,cell_x,cell_y,selected);
+    target->place_x=free_x;target->place_y=free_y;
+    target->place_result=WL_EditCanSetWall(world,free_x,free_y,selected);
     return true;
 }
 
@@ -170,16 +165,13 @@ void WL_WorkshopTick(void)
 {
     if(!enabled) return;
     if(feedback_tics) --feedback_tics;
-    /* Number-key hotbar selection (only in Workshop mode) */
-    if(IN_ConsumePress(0x02)) { WL_WorkshopSelectSlot(0); }
-    if(IN_ConsumePress(0x03)) { WL_WorkshopSelectSlot(1); }
-    if(IN_ConsumePress(0x04)) { WL_WorkshopSelectSlot(2); }
-    if(IN_ConsumePress(0x05)) { WL_WorkshopSelectSlot(3); }
-    if(IN_ConsumePress(0x06)) { WL_WorkshopSelectSlot(4); }
-    if(IN_ConsumePress(0x07)) { WL_WorkshopSelectSlot(5); }
-    if(IN_ConsumePress(0x08)) { WL_WorkshopSelectSlot(6); }
-    if(IN_ConsumePress(0x09)) { WL_WorkshopSelectSlot(7); }
-    if(IN_ConsumePress(0x0A)) { WL_WorkshopSelectSlot(8); }
+    /* Number keys assign from the visible picker page, or select a hotbar
+       slot when the picker is closed. Consume each edge exactly once. */
+    for(unsigned slot=0;slot<WL_WORKSHOP_SLOTS;++slot) if(IN_ConsumePress(0x02U+slot)) {
+        if(picker_open) (void)WL_WorkshopPickerAssign(slot);
+        else (void)WL_WorkshopSelectSlot(slot);
+        break;
+    }
     /* Toggle material picker with E key (only in Workshop mode) */
     if(IN_ConsumePress(0x13)) { WL_WorkshopPickerToggle(); }
     WL_WorkshopUpdateTarget();
@@ -202,7 +194,8 @@ wl_edit_result WL_WorkshopCommit(void)
 const wl_workshop_target *WL_WorkshopTarget(void) { return &current; }
 
 static bool PreviewValid(void)
-{ return current.hit && (current.place_result==WL_EDIT_OK || current.remove_result==WL_EDIT_OK); }
+{ return (current.has_place && current.place_result==WL_EDIT_OK) ||
+         (current.has_remove && current.remove_result==WL_EDIT_OK); }
 
 static void FitOverlayLine(char *line,size_t size,int max_width)
 {

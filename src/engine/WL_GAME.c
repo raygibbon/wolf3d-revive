@@ -6,6 +6,7 @@
 #include "ID_PM.h"
 #include "WL_LEVEL.h"
 #include "WL_WORKSHOP.h"
+#include <stdio.h>
 #include <string.h>
 objtype player;
 w3r_byte tilemap[64][64];
@@ -13,14 +14,23 @@ doorobj_t doorobjlist[64];
 unsigned doornum;
 exit_t playstate;
 static maptype authored_map;
+static wl_level authored_definition;
 static bool authored_map_valid;
 static bool authored_level;
 bool GameAuthoredLevel(void) { return authored_level; }
-void GameClearAuthoredLevel(void) { authored_level=false;authored_map_valid=false;memset(&authored_map,0,sizeof(authored_map)); }
+void GameClearAuthoredLevel(void)
+{
+    authored_level=false;authored_map_valid=false;
+    memset(&authored_map,0,sizeof(authored_map));
+    memset(&authored_definition,0,sizeof(authored_definition));
+}
 
 bool StartAuthoredLevel(unsigned difficulty)
 {
-    /* Don't clear authored state - preserve the installed map */
+    if(difficulty>3 || !authored_level || !authored_map_valid)
+        return CA_Fail("No valid authored level is staged");
+    /* Authored startup deliberately preserves the installed map. Campaign
+       startup continues to clear it in NewGame(). */
     memset(&gamestate,0,sizeof(gamestate));
     memset(LevelRatios,0,sizeof(LevelRatios));
     gamestate.episode=(int)0;gamestate.difficulty=(int)difficulty;
@@ -94,9 +104,40 @@ bool GameAuthoredLevelValidate(const wl_level *level)
 bool GameInstallAuthoredLevel(const wl_level *level)
 {
     maptype map;
-    if(!level || !WL_LevelToMap(level,&map)) return CA_Fail("Cannot convert authored level to a map");
-    authored_map=map;authored_map_valid=true;authored_level=true;
+    if(!GameAuthoredLevelValidate(level) || !WL_LevelToMap(level,&map))
+        return CA_Fail("Cannot install authored level");
+    authored_map=map;authored_definition=*level;
+    authored_map_valid=true;authored_level=true;
     return true;
+}
+
+bool GameCaptureAuthoredLevel(wl_level *level)
+{
+    if(!authored_level || !authored_map_valid || !level)
+        return CA_Fail("No authored level is active");
+    return WL_LevelFromWorld(level,(const w3r_byte (*)[WL_LEVEL_SIZE])tilemap,authored_definition.spawn_x,
+                             authored_definition.spawn_y,(int)authored_definition.spawn_angle);
+}
+
+bool GameSaveAuthoredLevel(const char *directory,char *error,size_t error_size)
+{
+    wl_level level;
+    if(!GameCaptureAuthoredLevel(&level)) {
+        if(error && error_size) (void)snprintf(error,error_size,"%s",CA_Error());
+        return false;
+    }
+    if(!WL_LevelSave(&level,directory,error,error_size)) return false;
+    authored_definition=level;
+    return true;
+}
+
+bool GameLoadAuthoredLevel(const char *directory,char *error,size_t error_size)
+{
+    wl_level level;
+    if(!WL_LevelLoad(&level,directory,error,error_size)) return false;
+    if(GameInstallAuthoredLevel(&level)) return true;
+    if(error && error_size) (void)snprintf(error,error_size,"%s",CA_Error());
+    return false;
 }
 
 static bool SetupGameLevelInstalled(void)
@@ -168,7 +209,11 @@ bool SetupGameLevel(void)
         if (!authored_map_valid) { ShutdownGameLevel(); return CA_Fail("No authored map is staged"); }
         if (!PM_Ready() && !PM_Startup()) { ShutdownGameLevel(); return false; }
         if (!CA_InstallMap(&authored_map)) { ShutdownGameLevel(); return false; }
-        return SetupGameLevelInstalled();
+        if(!SetupGameLevelInstalled()) return false;
+        /* The legacy map plane stores only cardinal starts. Preserve the
+           authored angle exactly across save, load and game startup. */
+        player.angle=(int)authored_definition.spawn_angle;
+        return true;
     }
     if (gamestate.episode<0 || gamestate.episode>5 || gamestate.mapon<0 || gamestate.mapon>9 ||
         gamestate.difficulty<0 || gamestate.difficulty>3) return CA_Fail("Invalid game selection");

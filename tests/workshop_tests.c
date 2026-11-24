@@ -2,7 +2,13 @@
 #include "engine/WL_WORKSHOP.h"
 #include "engine/WL_ACTOR.h"
 #include "engine/WL_RENDER.h"
+#include "engine/WL_MAIN.h"
+#include "engine/WL_MENU.h"
+#include "engine/WL_LEVEL.h"
+#include "engine/WL_SAVE.h"
 #include "engine/ID_CA.h"
+#include "engine/ID_IN.h"
+#include "engine/ID_MM.h"
 #include "engine/ID_PM.h"
 #include "engine/ID_VL.h"
 #include <stdio.h>
@@ -16,6 +22,7 @@ static objtype *actors[64][64];
 static bool blocks[64][64],pushables[64][64];
 static objtype subject,occupant;
 static statobj_t statics[2];
+static void PrepareOverlayWorld(void);
 
 static wl_edit_world Fixture(void)
 {
@@ -87,15 +94,106 @@ static void TestSelection(void)
     tiles[12][8]=0;tiles[13][10]=2;
     CHECK(WL_WorkshopSelect(&world,subject.x,subject.y,0,4,&target)); /* 2.5 tiles */
     tiles[13][10]=0;tiles[14][10]=2;
-    CHECK(!WL_WorkshopSelect(&world,subject.x,subject.y,0,4,&target)); /* 3.5 tiles */
+    CHECK(WL_WorkshopSelect(&world,subject.x,subject.y,0,4,&target)); /* free cell before 3.5-tile wall */
+    CHECK(!target.hit && target.place_x==11 && target.place_y==10);
     tiles[14][10]=0;tiles[12][10]=2;subject.x=10*TILEGLOBAL;
     for(unsigned i=0;i<20;++i) {
         CHECK(WL_WorkshopSelect(&world,subject.x,subject.y,0,4,&target));
         CHECK(target.remove_x==12 && target.place_x==11);
     }
+    /* Free placement follows the first crossed grid boundary, even when the
+       player is near the rear edge of the current tile. */
+    tiles[12][10]=0;subject.x=10*TILEGLOBAL+100;subject.y=10*TILEGLOBAL+TILEGLOBAL/2;
+    subject.tilex=subject.tiley=10;
+    CHECK(WL_WorkshopSelect(&world,subject.x,subject.y,0,4,&target));
+    CHECK(!target.hit && target.has_place && target.place_x==11 && target.place_y==10);
+    CHECK(target.place_result==WL_EDIT_OK);
     subject.x=TILEGLOBAL+TILEGLOBAL/2;subject.y=TILEGLOBAL+TILEGLOBAL/2;
     tiles[0][1]=0;
     CHECK(!WL_WorkshopSelect(&world,subject.x,subject.y,180,4,&target));
+}
+
+static void TestDisconnectedRoomsValidate(void)
+{
+    wl_level level;char error[128];CHECK(WL_LevelBlank(&level,1));
+    for(unsigned x=5;x<=9;++x) level.tiles[x][5]=level.tiles[x][9]=2;
+    for(unsigned y=5;y<=9;++y) level.tiles[5][y]=level.tiles[9][y]=2;
+    CHECK(WL_LevelValidate(&level,error,sizeof(error)));
+    level.tiles[0][7]=0;CHECK(!WL_LevelValidate(&level,error,sizeof(error)));
+    CHECK(strstr(error,"boundary")!=NULL);
+}
+
+static void TestPickerAssignment(void)
+{
+    PrepareOverlayWorld();WL_WorkshopSetEnabled(true);
+    unsigned ids[12];for(unsigned i=0;i<12;++i) ids[i]=i+1;
+    CHECK(WL_WorkshopSetMaterials(ids,12));
+    CHECK(WL_WorkshopSelectSlot(2));CHECK(WL_WorkshopSetSlotMaterial(2,12));
+    WL_WorkshopPickerToggle();CHECK(WL_WorkshopPickerOpen() && WL_WorkshopPickerPage()==1);
+    IN_KeyEvent(0x02,true);IN_KeyEvent(0x02,false);WL_WorkshopTick();
+    CHECK(!WL_WorkshopPickerOpen());CHECK(WL_WorkshopSelectedSlot()==2);
+    CHECK(WL_WorkshopHotbarMaterial(2)==10);
+    IN_KeyEvent(0x03,true);IN_KeyEvent(0x03,false);WL_WorkshopTick();
+    CHECK(WL_WorkshopSelectedSlot()==1);
+    WL_WorkshopSetEnabled(false);
+}
+
+static void BuildRoom(wl_edit_world *world,int left,int top,int right,int bottom,unsigned material)
+{
+    for(int x=left;x<=right;++x) {
+        CHECK(WL_EditSetWall(world,x,top,material)==WL_EDIT_OK);
+        CHECK(WL_EditSetWall(world,x,bottom,material)==WL_EDIT_OK);
+    }
+    for(int y=top+1;y<bottom;++y) {
+        CHECK(WL_EditSetWall(world,left,y,material)==WL_EDIT_OK);
+        CHECK(WL_EditSetWall(world,right,y,material)==WL_EDIT_OK);
+    }
+}
+
+static void Tap(unsigned scan) { IN_KeyEvent(scan,true);IN_KeyEvent(scan,false); }
+
+static void TestAuthoredLifecycle(const char *data_directory,const char *save_directory)
+{
+    MM_Startup();CHECK(CA_Startup(data_directory));CHECK(Save_SetDirectory(save_directory));
+    /* New Level must pass through UI_GAME's authored startup, not campaign
+       NewGame(). */
+    CHECK(DemoLoopStartup(0,true));CHECK(DemoLoop(10));
+    MainItems.curpos=newlevel;Tap(sc_Enter);
+    CHECK(DemoLoop(11) && DemoLoop(31) && DemoLoopState()==UI_GAME);
+    CHECK(GameRunning() && GameAuthoredLevel() && WL_WorkshopEnabled());
+    CHECK(player.tilex==32 && player.tiley==32 && player.angle==0);
+    GamePreloadConsumed();
+
+    /* Give this authored definition a non-cardinal spawn to prove metadata
+       survives a complete install/start/save/load cycle. */
+    wl_level level;CHECK(GameCaptureAuthoredLevel(&level));level.spawn_angle=37;
+    CHECK(GameInstallAuthoredLevel(&level));CHECK(GameStartAuthored(100,2,42));
+    CHECK(player.angle==37 && WL_WorkshopEnabled());GamePreloadConsumed();
+
+    wl_edit_world world=WL_WorkshopLiveWorld();
+    BuildRoom(&world,8,8,12,12,2);BuildRoom(&world,18,8,23,13,2);
+    char error[128];CHECK(GameSaveAuthoredLevel(save_directory,error,sizeof(error)));
+    wl_level saved;CHECK(WL_LevelLoad(&saved,save_directory,error,sizeof(error)));
+    CHECK(saved.spawn_x==32 && saved.spawn_y==32 && saved.spawn_angle==37);
+    CHECK(saved.tiles[8][8]==2 && saved.tiles[12][12]==2);
+    CHECK(saved.tiles[18][8]==2 && saved.tiles[23][13]==2);
+
+    GameStop();GameClearAuthoredLevel();CHECK(!GameAuthoredLevel());
+    /* Load Level stages the file and enters through the same fresh authored
+       game lifecycle. It must not pretend an old game is being resumed. */
+    CHECK(DemoLoopStartup(200,true));CHECK(DemoLoop(210));
+    MainItems.curpos=loadlevel;Tap(sc_Enter);
+    CHECK(DemoLoop(211) && DemoLoop(231) && DemoLoopState()==UI_GAME);
+    CHECK(GameAuthoredLevel() && WL_WorkshopEnabled());GamePreloadConsumed();
+    CHECK(tilemap[8][8]==2 && tilemap[12][12]==2 && tilemap[18][8]==2 && tilemap[23][13]==2);
+    CHECK(player.angle==37);
+    world=WL_WorkshopLiveWorld();CHECK(WL_EditSetWall(&world,25,25,2)==WL_EDIT_OK);
+
+    /* Ordinary campaign startup remains independent and clears the staged
+       authored definition. */
+    CHECK(GameStart(300));CHECK(!GameAuthoredLevel());
+    CHECK(player.tilex==2 && player.tiley==2);
+    GameStop();CA_Shutdown();MM_Shutdown();CHECK(!MM_TotalBytes());
 }
 
 static void TestProductionCollision(void)
@@ -222,9 +320,11 @@ static void TestTargetOverlay(void)
     CHECK(!memcmp(pixels,before,sizeof(before)));
 }
 
-int main(void)
+int main(int argc,char **argv)
 {
+    CHECK(argc==3);
     TestEditing();TestAtomicFailure();TestSelection();TestProductionCollision();
-    TestOverlayCleanup();TestOverlayViewSizes();TestTargetOverlay();
-    puts("workshop edit/selection/collision/overlay tests passed");return 0;
+    TestDisconnectedRoomsValidate();TestOverlayCleanup();TestOverlayViewSizes();TestTargetOverlay();
+    TestPickerAssignment();TestAuthoredLifecycle(argv[1],argv[2]);
+    puts("workshop edit/selection/collision/overlay/authored lifecycle tests passed");return 0;
 }

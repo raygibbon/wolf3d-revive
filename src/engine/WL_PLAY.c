@@ -68,6 +68,18 @@ bool GameStartMap(uint64_t ticks,unsigned map,unsigned difficulty,unsigned seed)
     deathphase=deathwait=0;finished=intermission=false;
     preload_pending=true;lasttimecount=ticks;running=true; IN_ClearKeysDown();WL_PresentCapture(ticks);return true;
 }
+bool GameStartAuthored(uint64_t ticks,unsigned difficulty,unsigned seed)
+{
+    GameStop();
+    if(!StartAuthoredLevel(difficulty)) return false;
+    US_InitRndT(seed);
+    if(!SetupGameLevel() || !DrawPlayScreen() || !ThreeDRefresh()) { GameStop();return false; }
+    SD_StartMusic(SD_LevelMusic(0,0));
+    deathphase=deathwait=0;finished=intermission=false;
+    preload_pending=true;lasttimecount=ticks;running=true;IN_ClearKeysDown();
+    WL_WorkshopSetEnabled(true);WL_WorkshopDrawStatusBar();WL_WorkshopDrawClassicOverlay();
+    WL_PresentCapture(ticks);return true;
+}
 /* WL_DEBUG.C Tab-W returns ex_warped to GameLoop: preserve inventory and
    episode, restore entry score, then perform the ordinary level setup. */
 bool GameWarp(uint64_t ticks,unsigned floor)
@@ -227,7 +239,6 @@ bool GameStep(uint64_t ticks)
            so that IN_ConsumePress() can actually detect the key presses. */
         if(workshop) WL_WorkshopTick();
         IN_ClearPressed();
-        CT_EndTic();
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
         if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh()) return false;
