@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "game_definition.h"
+#include "WL_LEVEL.h"
 typedef enum { UI_TITLE, UI_CREDITS, UI_HIGHSCORES, UI_MENU, UI_SCORES, UI_CONFIRM, UI_GAME, UI_EPISODE, UI_DIFFICULTY, UI_ERROR, UI_SOUND, UI_SAVE, UI_LOAD, UI_CONTROLS, UI_DISPLAY, UI_VIEW, UI_BOSS, UI_DEMO, UI_QUICK, UI_DONE, UI_RATING, UI_SIGNON, UI_PAUSE, UI_RESULTS, UI_MESSAGE, UI_JUKEBOX, UI_DISK, UI_WARP } ui_state;
 /* Runtime equivalents of DOS capability lights; no invented EMS/XMS counts. */
 void DemoLoopStartupDevices(bool mouse,bool synthesis,bool digitized);
@@ -21,6 +22,7 @@ bool DemoLoop(uint64_t ticks);
 ui_state DemoLoopState(void);
 void DemoLoopPrepareExit(void);
 bool DemoLoopStartGame(uint64_t ticks);
+bool GameInstallAuthoredLevel(const wl_level *level);
 /* Select/clear the borrowed game definition used by menu and jukebox
    consumers. NULL (or an invalid definition) restores the compiled-in
    Wolf3D default. A non-default definition must stay alive until replaced

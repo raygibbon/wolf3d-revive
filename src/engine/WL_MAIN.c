@@ -427,19 +427,29 @@ static bool StepDemoLoop(uint64_t ticks)
             if(WL_LevelBlank(&level,1)) {
                 char error[128];
                 if(WL_LevelSave(&level,Save_Directory(),error,sizeof(error))) {
-                    /* Level created and saved successfully - enter Workshop mode
-                       with the blank level as the authoritative world. */
-                    WL_WorkshopSetEnabled(true);
-                    WL_WorkshopRefreshMaterials();
-                    WL_WorkshopUpdateTarget();
-                    return true;
+                    /* Level created and saved successfully - load and install as authored map */
+                    if(WL_LevelLoad(&level,Save_Directory(),error,sizeof(error))) {
+                        if(GameInstallAuthoredLevel(&level)) {
+                            /* Authored level is now the active world; start gameplay */
+                            return Transition(UI_GAME,ticks,10);
+                        }
+                    }
+                    /* Failed to load/install; reset and stay in menu */
+                    WL_WorkshopMessage(error,true);
                 }
-                /* Failed to save; show error and stay in menu */
-                WL_WorkshopMessage(error,true);
                 return Transition(UI_MENU,ticks,10);
             }
             return Transition(UI_MENU,ticks,10);
         }
+        if (Keyboard[0x02]) { WL_WorkshopSelectSlot(0); IN_ClearKeysDown(); }
+        if (Keyboard[0x03]) { WL_WorkshopSelectSlot(1); IN_ClearKeysDown(); }
+        if (Keyboard[0x04]) { WL_WorkshopSelectSlot(2); IN_ClearKeysDown(); }
+        if (Keyboard[0x05]) { WL_WorkshopSelectSlot(3); IN_ClearKeysDown(); }
+        if (Keyboard[0x06]) { WL_WorkshopSelectSlot(4); IN_ClearKeysDown(); }
+        if (Keyboard[0x07]) { WL_WorkshopSelectSlot(5); IN_ClearKeysDown(); }
+        if (Keyboard[0x08]) { WL_WorkshopSelectSlot(6); IN_ClearKeysDown(); }
+        if (Keyboard[0x09]) { WL_WorkshopSelectSlot(7); IN_ClearKeysDown(); }
+        if (Keyboard[0x0A]) { WL_WorkshopSelectSlot(8); IN_ClearKeysDown(); }
         if (action == viewscores) return GameRunning()?QuickDialog(QUICK_END,ticks):Transition(UI_SCORES,ticks,10);
         if (action == backtodemo) { resuming=GameRunning();return Transition(resuming?UI_GAME:UI_TITLE,ticks,10); }
         if (action == quit || action == -1) {

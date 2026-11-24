@@ -133,7 +133,7 @@ void WL_WorkshopClearOverlay(void)
 void WL_WorkshopReset(void)
 { WL_WorkshopClearOverlay();enabled=false;pending=WL_WORKSHOP_NONE;memset(&current,0,sizeof(current));feedback=WL_EDIT_OK;feedback_tics=0;wall_id=1; }
 bool WL_WorkshopEnabled(void) { return enabled; }
-unsigned WL_WorkshopWall(void) { return wall_id; }
+unsigned WL_WorkshopWall(void) { return WL_WorkshopHotbarMaterial(selected_slot); }
 
 void WL_WorkshopSetEnabled(bool value)
 {

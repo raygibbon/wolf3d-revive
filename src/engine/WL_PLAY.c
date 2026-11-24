@@ -227,7 +227,9 @@ bool GameStep(uint64_t ticks)
         /* A_StartDeathCam's original blocking hold begins before the outer
            palette update. Keep that ordering while its wait is resumed. */
         if(workshop) WL_WorkshopTick();
-        if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh() || !DrawStatus()) return false;
+        if ((!DeathCameraActive() && !UpdatePaletteShifts()) || !ThreeDRefresh()) return false;
+        if (!workshop && !DrawStatus()) return false;
+        if(workshop) WL_WorkshopDrawStatusBar();
         if(workshop) WL_WorkshopDrawClassicOverlay();
         WL_PresentCapture(ticks-elapsed+tic+dt);
     }
